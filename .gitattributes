@@ -2,5 +2,6 @@
 *.parquet binary
 *.gz binary
 *.png binary
-*.ipynb text eol=lf# Datos originales byte a byte (el SHA-256 del manifiesto debe coincidir)
+*.ipynb text eol=lf
+# Datos originales byte a byte (el SHA-256 del manifiesto debe coincidir)
 data/raw/** -text
