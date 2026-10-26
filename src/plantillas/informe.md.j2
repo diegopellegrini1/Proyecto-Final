@@ -1,0 +1,205 @@
+{#- Plantilla del informe. Ninguna cifra se escribe a mano: todas salen de findings.json vía cifra(). -#}
+{%- set e = "estadistica." -%}
+{%- set d = "descriptivo." -%}
+# Informe: mercado de alquiler turístico de Airbnb en {{ valor("meta.ciudad") }}
+
+**Autor:** {{ valor("meta.autor") }} (GitHub [{{ valor("meta.github") }}](https://github.com/diegopellegrini1)) · **Datos:** Inside Airbnb, snapshot {{ cifra("meta.fecha_snapshot_url", "fecha") }} · **Documento generado** desde `reports/findings.json` por `run_pipeline.py`.
+
+> Todas las cifras de este informe se insertan automáticamente desde [findings.json](findings.json) y se verifican con `scripts/verificar_consistencia.py`. Si se vuelve a ejecutar el pipeline con otro snapshot, el texto se regenera y las frases que dependen del sentido de un resultado se comprueban por código.
+
+## 1. Introducción y objetivo
+
+El objetivo es entender **qué explica el precio por noche** de los anuncios de Airbnb en {{ valor("meta.ciudad") }} y **cómo está estructurada la oferta** (tipos de alojamiento, zonas, anfitriones profesionales frente a particulares), y convertirlo en una herramienta operativa: un dashboard con filtros que permite explorar el mercado por distrito, barrio, tipo de habitación y rango de precio.
+
+Preguntas de trabajo:
+
+- ¿Cómo se distribuye el precio y qué tan asimétrico es?
+- ¿Cuánto cambia el precio según el tipo de habitación, el distrito y la capacidad?
+- ¿Cobran más los superhosts? ¿Se mantiene la diferencia al controlar por otras variables?
+- ¿Qué peso tienen los anfitriones con muchos anuncios?
+- ¿Qué variables se asocian con el precio en un modelo multivariante?
+
+## 2. Datos y fuente
+
+- **Fuente:** [Inside Airbnb](https://insideairbnb.com/get-the-data/), ficheros `listings.csv.gz`, `neighbourhoods.csv` y `neighbourhoods.geojson` de {{ valor("meta.ciudad") }}.
+- **Fecha:** el snapshot publicado lleva la fecha {{ cifra("meta.fecha_snapshot_url", "fecha") }} (es la fecha de la URL); los anuncios se scrapearon entre el {{ cifra("meta.last_scraped_min", "fecha") }} y el {{ cifra("meta.last_scraped_max", "fecha") }} (`last_scraped`). En este proyecto, «fecha de scrape» se refiere a ese rango, y la fecha de referencia para calcular antigüedades es {{ cifra("meta.fecha_referencia", "fecha") }}.
+- **Licencia:** {{ valor("dataset.licencia.nombre") }}{% if valor("dataset.licencia.verificada_en_pagina") %}, verificada en la página de descargas el {{ cifra("dataset.licencia.fecha_verificacion", "fecha") }}{% else %} (no se pudo verificar en la página){% endif %}. Los datos se han transformado (limpieza y variables derivadas).
+- **Volumen:** {{ cifra("dataset.filas_raw", "n0") }} anuncios × {{ cifra("dataset.columnas_raw", "n0") }} columnas, {{ cifra("dataset.n_distritos", "n0") }} distritos, {{ cifra("dataset.n_barrios", "n0") }} barrios y {{ cifra("dataset.n_hosts", "n0") }} anfitriones.
+- **Tipos de variable** (clasificación por código del fichero original): {{ cifra("dataset.tipos_raw.numerico", "n0") }} numéricas, {{ cifra("dataset.tipos_raw.categorico", "n0") }} categóricas, {{ cifra("dataset.tipos_raw.booleano", "n0") }} booleanas, {{ cifra("dataset.tipos_raw.fecha", "n0") }} de fecha, {{ cifra("dataset.tipos_raw.texto", "n0") }} de texto libre, {{ cifra("dataset.tipos_raw.geoespacial", "n0") }} geoespaciales y {{ cifra("dataset.tipos_raw.identificador", "n0") }} identificadores.{{ afirmacion("dataset_cumple_umbrales") }} Cumple los umbrales propios del proyecto (al menos {{ cifra("meta.parametros.umbral_filas", "n0") }} filas, {{ cifra("meta.parametros.umbral_columnas", "n0") }} columnas y los cinco tipos de variable).
+- **Moneda y naturaleza del precio.**{{ afirmacion("moneda_eur") }}{{ afirmacion("precio_es_cotizacion") }} `price` viene como texto con símbolo `$`, pero el {{ cifra("moneda.pct_moneda", "pct1") }} de las {{ cifra("moneda.n_cotizaciones_con_moneda", "n0") }} cotizaciones con moneda indica {{ valor("moneda.moneda") }}, así que el símbolo es un artefacto y se trabaja en euros. Además, `price` coincide con el precio por noche de la cotización (`price_quote_price_per_night`) en el {{ cifra("precio_naturaleza.pct_precio_igual_cotizacion", "pct1") }} de los casos comparables, con fechas de entrada entre el {{ cifra("precio_naturaleza.checkin_min", "fecha") }} y el {{ cifra("precio_naturaleza.checkin_max", "fecha") }}. **El precio es una cotización para unas fechas concretas, no una tarifa media anual.**
+
+## 3. Metodología
+
+### Limpieza y transformación
+
+El orden es: perfilar → convertir tipos → derivar → eliminar columnas → reglas de calidad. El detalle completo está en [calidad_datos.json](calidad_datos.json) y el diccionario de columnas en [diccionario_datos.md](diccionario_datos.md).
+
+- **Conversiones:** precio de texto a número, booleanos `t/f` a `bool`, fechas ISO a `datetime64`, porcentajes de texto a número (las tasas de respuesta vienen vacías en este snapshot), `bathrooms_text` a número de baños más un indicador de baño compartido, y `amenities` (lista JSON) a número de amenities y {{ cifra("features.n_flags_amenities", "n0") }} indicadores; {{ cifra("limpieza.amenities_malformadas", "n0") }} listas tenían JSON malformado (el parser tiene plan B por expresión regular).
+- **Columnas eliminadas:** {{ cifra("limpieza.n_columnas_eliminadas", "n0") }}, cada una con su motivo: {{ cifra("calidad.n_columnas_100_nulas", "n0") }} venían completamente vacías en este snapshot (entre ellas `host_since`, `host_response_rate` e `instant_bookable`), además de URLs, identificadores técnicos, el nombre del anfitrión (privacidad) y textos largos sustituidos por métricas de longitud. Se crearon {{ cifra("limpieza.n_columnas_derivadas", "n0") }} columnas nuevas. El resultado tiene {{ cifra("dataset.filas_procesadas", "n0") }} filas × {{ cifra("dataset.columnas_procesadas", "n0") }} columnas y se guarda en Parquet.
+- **Duplicados:** {{ cifra("limpieza.duplicados.por_id", "n0") }} por `id` y {{ cifra("limpieza.duplicados.filas_completas", "n0") }} filas completas repetidas; no se eliminó ninguna fila sin contabilizarla.
+- **Nulos:** cada columna con nulos tiene una regla documentada (política declarativa en `src/limpieza.py`). Las puntuaciones de reseñas se dejan vacías (no tener reseñas no es puntuar cero). Solo se imputan `bedrooms` ({{ cifra("limpieza.imputados.bedrooms", "n0") }} filas) y `beds` ({{ cifra("limpieza.imputados.beds", "n0") }} filas) con la mediana por tipo de habitación y capacidad, con indicador de imputación.
+- **Precio:**{{ afirmacion("nulos_precio_sin_disponibilidad") }} {{ cifra("limpieza.precio.nulo", "n0") }} anuncios ({{ cifra("limpieza.precio.pct_nulo", "pct1") }}) no tienen precio y {{ cifra("limpieza.precio.cero", "n0") }} tienen precio cero. No se imputa el precio porque es la variable objetivo. El {{ cifra("limpieza.precio.pct_nulos_sin_disponibilidad", "pct1") }} de los precios nulos corresponde a anuncios sin ningún día disponible en el año, así que los nulos no son aleatorios.
+- **Outliers:** vallas de Tukey (k = {{ cifra("limpieza.outliers.k", "n1") }}) sobre el logaritmo del precio, porque la escala original es muy asimétrica. Valla inferior {{ cifra("limpieza.outliers.valla_inf", "eur2") }} y superior {{ cifra("limpieza.outliers.valla_sup", "eur2") }}: {{ cifra("limpieza.outliers.n_bajo", "n0") }} anuncios por debajo y {{ cifra("limpieza.outliers.n_alto", "n0") }} por encima, {{ cifra("limpieza.outliers.n_total", "n0") }} en total ({{ cifra("limpieza.outliers.pct_total", "pct1") }} de los anuncios con precio). **No se borran:** se marcan con `es_outlier_precio`. Los contrastes no paramétricos y el bootstrap usan todos los precios; la regresión los excluye y repite el ajuste con ellos como análisis de sensibilidad.
+- **Estancias mínimas:** {{ cifra("limpieza.minimum_nights.extremo_mayor_365", "n0") }} anuncios exigen más de {{ cifra("meta.parametros.min_nights_extremo", "n0") }} noches (máximo {{ cifra("limpieza.minimum_nights.max", "n0") }}) y {{ cifra("limpieza.minimum_nights.larga_estancia_30_o_mas", "n0") }} exigen al menos {{ cifra("meta.parametros.min_nights_larga_estancia", "n0") }}; se marcan, no se modifican.
+- **Coordenadas:** {{ cifra("limpieza.coordenadas.fuera_bbox_o_nulas", "n0") }} anuncios quedan fuera del rectángulo de validación de {{ valor("meta.ciudad") }}.
+
+### Variables derivadas
+
+Precio por persona, logaritmo del precio, antigüedad del anfitrión (fuente: {{ valor("features.antiguedad_fuente") }}), ocupación estimada `(365 − availability_365) / 365`, indicador de anuncio activo probable (descarta los que no tienen disponibilidad ni reseñas en el último año), ingresos anuales estimados `price × (365 − availability_365)`, distancia haversine a la {{ valor("meta.centro_nombre") }}, categoría de precio por cuartiles (cortes en {{ cifra("features.cortes_categoria_precio.1", "eur2") }}, {{ cifra("features.cortes_categoria_precio.2", "eur2") }} y {{ cifra("features.cortes_categoria_precio.3", "eur2") }}), tramos de capacidad, segmento del anfitrión según su número de anuncios, tipo de licencia, indicadores de amenities y tipo de habitación agrupado: las categorías con menos de {{ cifra("meta.parametros.min_n_categoria_rara", "n0") }} anuncios con precio (habitación compartida y de hotel) se agrupan en «{{ valor("features.agrupacion_tipo.etiqueta") }}» para los contrastes, el bootstrap y la regresión.
+
+### Análisis estadístico
+
+Nivel de significación α = {{ cifra("meta.alfa", "n2") }} en todos los contrastes. Para cada uno se declaran H0 y H1 antes de ejecutarlo, se comprueban los supuestos y se informa el tamaño del efecto, porque con miles de observaciones casi cualquier diferencia es «significativa». Los grupos con menos de {{ cifra("meta.parametros.min_n_grupo", "n0") }} anuncios con precio se excluyen de la inferencia. Semilla fija {{ cifra("meta.semilla", "n0") }} para muestreos, bootstrap y modelo.
+
+## 4. Hallazgos descriptivos
+
+![Distribución del precio](figures/01_distribucion_precio.png)
+
+**Precio.**{{ afirmacion("precio_asimetrico") }}{{ afirmacion("log_mas_simetrico") }} Sobre {{ cifra("descriptivo.precio.n", "n0") }} anuncios con precio, la mediana es {{ cifra("descriptivo.precio.mediana", "eur2") }} y la media {{ cifra("descriptivo.precio.media", "eur2") }} (desviación típica {{ cifra("descriptivo.precio.std", "eur2") }}). El rango intercuartílico va de {{ cifra("descriptivo.precio.q1", "eur2") }} a {{ cifra("descriptivo.precio.q3", "eur2") }} (IQR = {{ cifra("descriptivo.precio.iqr", "eur2") }}). La distribución es muy asimétrica a la derecha (asimetría {{ cifra("descriptivo.precio.asimetria", "n2") }}, curtosis de exceso {{ cifra("descriptivo.precio.curtosis_exceso", "n1") }}), con un máximo de {{ cifra("descriptivo.precio.max", "eur0") }}. Sin outliers, la media baja a {{ cifra("descriptivo.precio_sin_outliers.media", "eur2") }} y la mediana queda en {{ cifra("descriptivo.precio_sin_outliers.mediana", "eur2") }}. En escala logarítmica la asimetría es {{ cifra("descriptivo.log_precio.asimetria", "n2") }}, por eso la regresión modela `ln(precio)`.
+
+**Tipo de habitación.**
+
+| Tipo | Anuncios con precio | Mediana | Media | Q1 | Q3 |
+|---|---|---|---|---|---|
+{% for g in valor("descriptivo.por_tipo") %}
+| {{ g.grupo }} | {{ cifra("descriptivo.por_tipo." ~ loop.index0 ~ ".n", "n0") }} | {{ cifra("descriptivo.por_tipo." ~ loop.index0 ~ ".mediana", "eur2") }} | {{ cifra("descriptivo.por_tipo." ~ loop.index0 ~ ".media", "eur2") }} | {{ cifra("descriptivo.por_tipo." ~ loop.index0 ~ ".q1", "eur2") }} | {{ cifra("descriptivo.por_tipo." ~ loop.index0 ~ ".q3", "eur2") }} |
+{% endfor %}
+
+![Precio por tipo de habitación](figures/02_precio_por_tipo_habitacion.png)
+
+**Distritos y barrios.** El distrito con la mediana más alta es {{ valor("descriptivo.por_distrito.0.grupo") }} ({{ cifra("descriptivo.por_distrito.0.mediana", "eur2") }}, n = {{ cifra("descriptivo.por_distrito.0.n", "n0") }}), seguido de {{ valor("descriptivo.por_distrito.1.grupo") }} ({{ cifra("descriptivo.por_distrito.1.mediana", "eur2") }}); el de mediana más baja es {{ valor("descriptivo.distrito_mas_barato.grupo") }} ({{ cifra("descriptivo.distrito_mas_barato.mediana", "eur2") }}, n = {{ cifra("descriptivo.distrito_mas_barato.n", "n0") }}). Entre los {{ cifra("descriptivo.n_barrios_con_n_min", "n0") }} barrios con al menos {{ cifra("descriptivo.barrios_n_min", "n0") }} anuncios con precio, el más caro es {{ valor("descriptivo.barrios_top.0.grupo") }} ({{ cifra("descriptivo.barrios_top.0.mediana", "eur2") }}) y el más barato {{ valor("descriptivo.barrios_bottom.0.grupo") }} ({{ cifra("descriptivo.barrios_bottom.0.mediana", "eur2") }}). El mapa muestra que los precios más altos se concentran en los barrios centrales, y la regresión confirma que el precio baja con la distancia al centro.
+
+![Precio por distrito](figures/03_precio_por_distrito.png)
+
+![Precio por barrio](figures/04_precio_por_barrio.png)
+
+![Mapa de precio por barrio](figures/08_mapa_precio_barrio.png)
+
+![Densidad de anuncios](figures/07_mapa_densidad.png)
+
+**Capacidad.**{{ afirmacion("capacidad_creciente") }} La mediana crece con la capacidad: {% for g in valor("descriptivo.por_capacidad") %}{{ g.grupo }}, {{ cifra("descriptivo.por_capacidad." ~ loop.index0 ~ ".mediana", "eur2") }} (n = {{ cifra("descriptivo.por_capacidad." ~ loop.index0 ~ ".n", "n0") }}){{ "; " if not loop.last else "." }}{% endfor %}
+
+![Precio por capacidad](figures/05_precio_por_capacidad.png)
+
+**Anfitriones.**{{ afirmacion("multianuncio_mayoria") }}{{ afirmacion("mayoria_hosts_un_anuncio") }} Hay {{ cifra("descriptivo.hosts.n_hosts", "n0") }} anfitriones. El {{ cifra("descriptivo.hosts.pct_hosts_un_anuncio", "pct1") }} de ellos tiene un solo anuncio, pero el {{ cifra("descriptivo.hosts.pct_anuncios_multianuncio", "pct1") }} de los anuncios pertenece a anfitriones con varios. El {{ cifra("descriptivo.hosts.pct_anuncios_hosts_6_o_mas", "pct1") }} de los anuncios está en manos de anfitriones con seis o más, y los diez mayores concentran el {{ cifra("descriptivo.hosts.pct_anuncios_top10_hosts", "pct1") }} (el mayor tiene {{ cifra("descriptivo.hosts.anuncios_por_host_max", "n0") }}). Son superhosts el {{ cifra("descriptivo.hosts.pct_hosts_superhost", "pct1") }} de los anfitriones y el {{ cifra("descriptivo.hosts.pct_anuncios_superhost", "pct1") }} de los anuncios. Es un mercado con fuerte peso de la gestión profesional.
+
+![Composición de anfitriones](figures/06_composicion_hosts.png)
+
+**Ocupación e ingresos (estimaciones).**{{ afirmacion("ocupacion_propia_mayor") }}{{ afirmacion("ingresos_propios_mayores") }} Entre los {{ cifra("descriptivo.ocupacion_ingresos.n_activos_con_precio", "n0") }} anuncios activos con precio, la ocupación estimada como complemento de la disponibilidad tiene una media del {{ cifra("descriptivo.ocupacion_ingresos.ocupacion_estimada_media", "pct1") }}, frente al {{ cifra("descriptivo.ocupacion_ingresos.ocupacion_inside_airbnb_media", "pct1") }} que estima Inside Airbnb a partir de reseñas. Los ingresos anuales estimados propios tienen una mediana de {{ cifra("descriptivo.ocupacion_ingresos.ingresos_propios_mediana", "eur0") }}, {{ cifra("descriptivo.ocupacion_ingresos.cociente_medianas", "n2") }} veces la mediana de Inside Airbnb ({{ cifra("descriptivo.ocupacion_ingresos.ingresos_inside_airbnb_mediana", "eur0") }}); la correlación de Spearman entre ambas estimaciones es {{ cifra("descriptivo.ocupacion_ingresos.spearman_propio_vs_inside", "n2") }}. La estimación propia es una **cota superior**: los días no disponibles incluyen bloqueos del anfitrión, no solo reservas.
+
+![Ocupación e ingresos](figures/14_ocupacion_ingresos.png)
+
+**Amenities.** Las más frecuentes son {% for a in valor("descriptivo.amenities")[:3] %}{{ a.nombre|lower }} ({{ cifra("descriptivo.amenities." ~ loop.index0 ~ ".prevalencia_pct", "pct1") }}){{ ", " if not loop.last else "" }}{% endfor %}. Las diferencias de mediana entre anuncios con y sin cada amenity son asociaciones brutas y pueden reflejar diferencias de tipo de alojamiento o de zona.
+
+![Amenities](figures/17_amenities.png)
+
+**Correlaciones.**{{ afirmacion("capacidad_mayor_correlacion") }} La variable más correlacionada con el precio es `{{ valor("descriptivo.correlaciones.con_precio.0.variable") }}` (ρ de Spearman = {{ cifra("descriptivo.correlaciones.con_precio.0.spearman", "n2") }}; Pearson con `ln(precio)` = {{ cifra("descriptivo.correlaciones.con_precio.0.pearson_log", "n2") }}), seguida de `{{ valor("descriptivo.correlaciones.con_precio.1.variable") }}` ({{ cifra("descriptivo.correlaciones.con_precio.1.spearman", "n2") }}) y `{{ valor("descriptivo.correlaciones.con_precio.2.variable") }}` ({{ cifra("descriptivo.correlaciones.con_precio.2.spearman", "n2") }}). La distancia al centro tiene ρ = {{ cifra("descriptivo.correlaciones.con_precio_por_variable.distancia_centro_km.spearman", "n2") }}. Pearson sobre el precio en escala original es mucho menor que Spearman porque los valores extremos dominan la covarianza: un motivo más para usar rangos o logaritmos.
+
+![Correlaciones](figures/09_correlaciones.png)
+
+## 5. Hallazgos estadísticos
+
+{% macro test(clave, titulo) -%}
+### {{ titulo }}
+
+- **H0:** {{ valor(e ~ clave ~ ".h0") }}
+- **H1:** {{ valor(e ~ clave ~ ".h1") }}
+- **Resultado:** estadístico = {{ cifra(e ~ clave ~ ".estadistico", "n2") }}, {{ cifra(e ~ clave ~ ".p_valor", "p") }}; {{ valor(e ~ clave ~ ".tamano_efecto.nombre") }} = {{ cifra(e ~ clave ~ ".tamano_efecto.valor", "n3") }} (efecto {{ valor(e ~ clave ~ ".tamano_efecto.interpretacion") }}).
+- **Conclusión:** {{ valor(e ~ clave ~ ".conclusion") }}
+{%- endmacro %}
+{{ test("normalidad_precio", "Normalidad del precio") }}
+- **Supuestos y detalle:** Shapiro-Wilk sobre una muestra aleatoria de {{ cifra("estadistica.normalidad_precio.supuestos.n_muestra_shapiro", "n0") }} precios (W = {{ cifra("estadistica.normalidad_precio.extra.shapiro_w", "n3") }}, {{ cifra("estadistica.normalidad_precio.extra.shapiro_p", "p") }}) y D'Agostino-K² sobre todos.{{ afirmacion("normalidad_rechazada") }} Para `ln(precio)` también se rechaza (K² = {{ cifra("estadistica.normalidad_log_precio.estadistico", "n1") }}, {{ cifra("estadistica.normalidad_log_precio.p_valor", "p") }}), aunque su asimetría es solo {{ cifra("estadistica.normalidad_log_precio.tamano_efecto.valor", "n2") }}. **Decisión:** contrastes no paramétricos (Mann-Whitney, Kruskal-Wallis) para comparar grupos, y regresión sobre `ln(precio)` con errores robustos.
+
+{{ test("mann_whitney_superhost", "Superhosts frente a no superhosts (Mann-Whitney U)") }}
+- **Detalle:**{{ afirmacion("superhost_mediana_mayor") }}{{ afirmacion("superhost_significativo_despreciable") }} n = {{ cifra("estadistica.mann_whitney_superhost.n.superhosts", "n0") }} y {{ cifra("estadistica.mann_whitney_superhost.n.no superhosts", "n0") }}; probabilidad de superioridad (CLES) = {{ cifra("estadistica.mann_whitney_superhost.tamano_efecto.cles", "n3") }}. Supuesto de independencia solo parcial (un anfitrión tiene varios anuncios); con **un anuncio por anfitrión** (n = {{ cifra("estadistica.sensibilidad_un_anuncio_por_host.n", "n0") }}) la correlación rank-biserial es {{ cifra("estadistica.sensibilidad_un_anuncio_por_host.mann_whitney_superhost.tamano_efecto.valor", "n3") }} ({{ cifra("estadistica.sensibilidad_un_anuncio_por_host.mann_whitney_superhost.p_valor", "p") }}).{{ afirmacion("sensibilidad_misma_decision") }} La decisión no cambia.{{ afirmacion("superhost_no_significativo_ols") }} **Al controlar por tipo, ubicación y características en la regresión, la diferencia asociada a ser superhost ({{ cifra("estadistica.ols.coef_superhost.pct", "signo_pct") }}) deja de ser significativa con errores agrupados por anfitrión ({{ cifra("estadistica.ols.coef_superhost.p_cluster", "p") }}).**{{ afirmacion("superhost_hc3_significativo") }} Con errores HC3, que ignoran la dependencia entre anuncios del mismo anfitrión, sí lo sería ({{ cifra("estadistica.ols.coef_superhost.p_hc3", "p") }}); como esa dependencia es real, se da por buena la versión agrupada, y en cualquier caso el efecto estimado es pequeño. La diferencia bruta se explica sobre todo por qué y dónde anuncian los superhosts.
+
+{{ test("kruskal_tipo", "Precio por tipo de habitación (Kruskal-Wallis)") }}
+- **Detalle:**{{ afirmacion("entero_mas_caro") }}{{ afirmacion("kruskal_tipo_grande") }}{{ afirmacion("posthoc_tipo_todos") }} grupos: {% for g, n in valor("estadistica.kruskal_tipo.n").items() %}{{ g }} (n = {{ cifra("estadistica.kruskal_tipo.n." ~ g, "n0") }}){{ ", " if not loop.last else "" }}{% endfor %}. Post-hoc ({{ valor("estadistica.posthoc_tipo.metodo") }}): {{ cifra("estadistica.posthoc_tipo.n_pares_significativos", "n0") }} de {{ cifra("estadistica.posthoc_tipo.n_pares", "n0") }} pares significativos. La habitación compartida y la de hotel se describen aparte porque son pocas: {% for g in valor("estadistica.tipos_solo_descriptivos") %}{{ g.grupo }} con {{ cifra("estadistica.tipos_solo_descriptivos." ~ loop.index0 ~ ".n", "n0") }} anuncios con precio y mediana {{ cifra("estadistica.tipos_solo_descriptivos." ~ loop.index0 ~ ".mediana", "eur2") }}{{ "; " if not loop.last else "" }}{% endfor %}. Agruparlas mezcla dos productos muy distintos, así que la categoría «Otras» solo se interpreta como control.
+
+{{ test("kruskal_distrito", "Precio por distrito (Kruskal-Wallis)") }}
+- **Detalle:**{{ afirmacion("kruskal_distrito_significativo") }}{{ afirmacion("posthoc_distrito_mayoria") }}{{ afirmacion("salamanca_o_centro_top") }} {{ cifra("estadistica.kruskal_distrito.supuestos.n_grupos", "n0") }} distritos con al menos {{ cifra("meta.parametros.min_n_grupo", "n0") }} anuncios con precio. Post-hoc sobre los {{ cifra("meta.parametros.top_n_distritos", "n0") }} distritos con más anuncios ({{ valor("estadistica.posthoc_distrito.metodo") }}): {{ cifra("estadistica.posthoc_distrito.n_pares_significativos", "n0") }} de {{ cifra("estadistica.posthoc_distrito.n_pares", "n0") }} pares difieren.
+
+![Post-hoc de Dunn entre distritos](figures/15_posthoc_dunn_distritos.png)
+
+{{ test("chi2_tipo_superhost", "Tipo de habitación × superhost (chi-cuadrado)") }}
+- **Supuestos:** frecuencia esperada mínima {{ cifra("estadistica.chi2_tipo_superhost.supuestos.min_esperada", "n1") }}; {{ cifra("estadistica.chi2_tipo_superhost.supuestos.pct_celdas_esperada_menor_5", "pct1") }} de celdas con esperada menor que cinco.{{ afirmacion("chi2_tipo_superhost_despreciable") }}
+
+{{ test("chi2_distrito_tipo", "Distrito × tipo de habitación (chi-cuadrado)") }}
+- **Supuestos:**{{ afirmacion("chi2_distrito_tipo_mayor") }} {% if valor("estadistica.chi2_distrito_tipo.extra").get("agrupacion") %}con todos los distritos, demasiadas celdas tenían frecuencia esperada baja, así que se agruparon en «Otros distritos» los de menos de {{ cifra("meta.parametros.min_n_categoria_rara", "n0") }} anuncios ({{ valor("estadistica.chi2_distrito_tipo.extra.agrupacion.agrupadas")|join(", ") }}); {% endif %}tras ello, {{ cifra("estadistica.chi2_distrito_tipo.supuestos.pct_celdas_esperada_menor_5", "pct1") }} de celdas con esperada menor que cinco. La mezcla de tipos de alojamiento cambia de un distrito a otro.
+
+{{ test("chi2_multi_tipo", "Anfitrión multi-anuncio × tipo de habitación (chi-cuadrado)") }}
+- **Supuestos:** {{ cifra("estadistica.chi2_multi_tipo.supuestos.pct_celdas_esperada_menor_5", "pct1") }} de celdas con esperada menor que cinco.{{ afirmacion("chi2_multi_tipo_despreciable") }}
+
+### Intervalos de confianza bootstrap de la mediana
+
+{{ cifra("estadistica.bootstrap.n_boot", "n0") }} remuestreos con reemplazo por grupo, IC 95 % por percentiles, semilla fija.{{ afirmacion("ic_entero_no_solapa_privada") }} Los intervalos de alojamiento entero y habitación privada no se solapan.
+
+| Grupo | n | Mediana | IC 95 % |
+|---|---|---|---|
+{% for g in valor("estadistica.bootstrap.tipo") %}
+| {{ g.grupo }} | {{ cifra("estadistica.bootstrap.tipo." ~ loop.index0 ~ ".n", "n0") }} | {{ cifra("estadistica.bootstrap.tipo." ~ loop.index0 ~ ".mediana", "eur2") }} | {{ cifra("estadistica.bootstrap.tipo." ~ loop.index0 ~ ".ic_inf", "eur2") }} – {{ cifra("estadistica.bootstrap.tipo." ~ loop.index0 ~ ".ic_sup", "eur2") }} |
+{% endfor %}
+{% for g in valor("estadistica.bootstrap.distritos") %}
+| Distrito: {{ g.grupo }} | {{ cifra("estadistica.bootstrap.distritos." ~ loop.index0 ~ ".n", "n0") }} | {{ cifra("estadistica.bootstrap.distritos." ~ loop.index0 ~ ".mediana", "eur2") }} | {{ cifra("estadistica.bootstrap.distritos." ~ loop.index0 ~ ".ic_inf", "eur2") }} – {{ cifra("estadistica.bootstrap.distritos." ~ loop.index0 ~ ".ic_sup", "eur2") }} |
+{% endfor %}
+
+![IC bootstrap](figures/10_ic_bootstrap_mediana.png)
+
+### Regresión OLS sobre ln(precio)
+
+- **H0 por coeficiente:** {{ valor("estadistica.ols.h0") }} **H1:** {{ valor("estadistica.ols.h1") }}
+- **Muestra:** anuncios con precio, sin outliers y con coordenadas válidas; n efectivo = {{ cifra("estadistica.ols.n_efectivo", "n0") }} ({{ cifra("estadistica.ols.perdidas_por_nulos", "n0") }} perdidos por nulos en covariables). Distritos como efectos fijos (referencia: {{ valor("estadistica.ols.referencias.distrito") }}); tipo de referencia: {{ valor("estadistica.ols.referencias.tipo") }}.
+- **Ajuste:** R² = {{ cifra("estadistica.ols.r2", "n3") }}, R² ajustado = {{ cifra("estadistica.ols.r2_ajustado", "n3") }}, F = {{ cifra("estadistica.ols.f", "n1") }} ({{ cifra("estadistica.ols.f_p", "p") }}).
+- **Supuestos:**{{ afirmacion("heterocedasticidad") }}{{ afirmacion("residuos_no_normales") }}{{ afirmacion("vif_bajo") }} Breusch-Pagan detecta heterocedasticidad (LM = {{ cifra("estadistica.ols.diagnostico.breusch_pagan_lm", "n1") }}, {{ cifra("estadistica.ols.diagnostico.breusch_pagan_p", "p") }}), por lo que los errores estándar se calculan **agrupados por anfitrión** (también robustos a heterocedasticidad), con HC3 como comparación. Jarque-Bera rechaza la normalidad de los residuos (asimetría {{ cifra("estadistica.ols.diagnostico.asimetria_residuos", "n2") }}, curtosis {{ cifra("estadistica.ols.diagnostico.curtosis_residuos", "n2") }}); con este tamaño muestral la inferencia sobre coeficientes es robusta a ello. {{ cifra("estadistica.ols.diagnostico.n_cook_mayor_4_n", "n0") }} observaciones tienen distancia de Cook alta. El VIF máximo (sin dummies de distrito) es {{ cifra("estadistica.ols.vif_max.vif", "n2") }} ({{ valor("estadistica.ols.vif_max.nombre") }}): no hay multicolinealidad preocupante.
+- **Sensibilidad:**{{ afirmacion("ols_sensibilidad_signos") }} incluyendo outliers, R² ajustado = {{ cifra("estadistica.ols.sensibilidad_con_outliers.r2_ajustado", "n3") }} y los {{ cifra("estadistica.ols.sensibilidad_con_outliers.n_significativos", "n0") }} coeficientes significativos conservan su signo.
+
+Coeficientes (cambio porcentual del precio asociado a cada variable, manteniendo constantes las demás; IC 95 % con errores agrupados por anfitrión):
+
+| Variable | Cambio % | IC 95 % | p (cluster) | p (HC3) |
+|---|---|---|---|---|
+{% for co in valor("estadistica.ols.coeficientes") if not co.es_distrito %}
+{% set i = valor("estadistica.ols.coeficientes").index(co) %}
+| {{ co.nombre }} | {{ cifra("estadistica.ols.coeficientes." ~ i ~ ".pct", "signo_pct") }} | {{ cifra("estadistica.ols.coeficientes." ~ i ~ ".ic_inf_pct", "signo_pct") }} a {{ cifra("estadistica.ols.coeficientes." ~ i ~ ".ic_sup_pct", "signo_pct") }} | {{ cifra("estadistica.ols.coeficientes." ~ i ~ ".p_cluster", "pvalor") }} | {{ cifra("estadistica.ols.coeficientes." ~ i ~ ".p_hc3", "pvalor") }} |
+{% endfor %}
+
+Lectura:{{ afirmacion("capacidad_positiva") }}{{ afirmacion("distancia_negativa") }}{{ afirmacion("privada_negativa") }}{{ afirmacion("larga_estancia_negativa") }}{{ afirmacion("aire_positivo") }}{{ afirmacion("bano_compartido_negativo") }} cada persona más de capacidad se asocia con un precio {{ cifra("estadistica.ols.coef_accommodates.pct", "signo_pct") }}; cada kilómetro más lejos de la {{ valor("meta.centro_nombre") }}, {{ cifra("estadistica.ols.coef_distancia.pct", "signo_pct") }}; una habitación privada frente a un alojamiento entero comparable, {{ cifra("estadistica.ols.coef_privada.pct", "signo_pct") }}; exigir una estancia mínima de al menos {{ cifra("meta.parametros.min_nights_larga_estancia", "n0") }} noches, {{ cifra("estadistica.ols.coef_por_termino.alquiler_larga_estancia.pct", "signo_pct") }} (precios por noche de alquiler mensual); el baño compartido, {{ cifra("estadistica.ols.coef_por_termino.bano_compartido.pct", "signo_pct") }}; y el aire acondicionado, {{ cifra("estadistica.ols.coef_por_termino.tiene_aire_acondicionado.pct", "signo_pct") }}. Los distritos con mayor efecto significativo frente a {{ valor("estadistica.ols.referencias.distrito") }} son {% for co in valor("estadistica.ols.top_distritos")[:3] %}{{ co.nombre|replace("Distrito: ", "") }} ({{ cifra("estadistica.ols.top_distritos." ~ loop.index0 ~ ".pct", "signo_pct") }}){{ ", " if not loop.last else "" }}{% endfor %}. Son **asociaciones, no efectos causales**.
+
+![Coeficientes OLS](figures/12_ols_coeficientes.png)
+
+![Diagnóstico de residuos](figures/11_ols_diagnostico_residuos.png)
+
+### Modelo predictivo (complementario)
+
+{% if valor("estadistica.ml.ejecutado") %}
+{{ afirmacion("ml_supera_base") }}{{ afirmacion("ml_mejor_que_ols") }}Modelo {{ valor("estadistica.ml.modelo") }} sobre `ln(precio)` con {{ cifra("estadistica.ml.n_features", "n0") }} variables de una lista blanca (sin ninguna derivada del precio), partición entrenamiento/test ({{ cifra("estadistica.ml.n_train", "n0") }} / {{ cifra("estadistica.ml.n_test", "n0") }}) con semilla fija. En test: R² = {{ cifra("estadistica.ml.r2_test", "n3") }}, MAE en log = {{ cifra("estadistica.ml.mae_log_test", "n3") }} y MAE ≈ {{ cifra("estadistica.ml.mae_eur_test", "eur0") }} por noche, frente a una línea base (mediana) con R² = {{ cifra("estadistica.ml.r2_base", "n3") }} y MAE ≈ {{ cifra("estadistica.ml.mae_eur_base", "eur0") }}. Las variables más importantes por permutación son `{{ valor("estadistica.ml.importancia_permutacion.0.variable") }}`, `{{ valor("estadistica.ml.importancia_permutacion.1.variable") }}` y `{{ valor("estadistica.ml.importancia_permutacion.2.variable") }}`. Es importancia **predictiva**, no causal; el modelo captura no linealidades que el OLS no recoge.
+
+![Importancia de variables](figures/13_importancia_variables.png)
+{% else %}
+El modelo de machine learning no se ejecutó ({{ valor("estadistica.ml.motivo") }}).
+{% endif %}
+
+## 6. Limitaciones
+
+- **Datos scrapeados:** Inside Airbnb recoge la información pública de los anuncios; puede haber errores de captura y campos vacíos en algunos snapshots (en este, {{ cifra("calidad.n_columnas_100_nulas", "n0") }} columnas vienen completamente vacías, entre ellas la fecha de alta y las tasas de respuesta del anfitrión).
+- **Precio de anuncio ≠ precio pagado:** es el precio publicado, sin descuentos, tasas de limpieza ni negociación.
+- **El precio es una cotización fechada:** corresponde a una ventana de fechas concreta entre el {{ cifra("precio_naturaleza.checkin_min", "fecha") }} y el {{ cifra("precio_naturaleza.checkin_max", "fecha") }}, no a una tarifa media; mezcla temporadas distintas entre anuncios.
+- **Ocupación estimada:** `365 − availability_365` no es ocupación real; los días no disponibles incluyen bloqueos del anfitrión. Se complementa con la estimación de Inside Airbnb, que también es un modelo.
+- **Ingresos estimados con alta incertidumbre:** heredan los dos problemas anteriores; son órdenes de magnitud, no cifras contables.
+- **Sesgo de selección:** el {{ cifra("limpieza.precio.pct_nulo", "pct1") }} de los anuncios no tiene precio y esos nulos se concentran en anuncios sin disponibilidad. Los análisis de precio describen a los anuncios con fechas reservables, no a toda la oferta.
+- **Snapshot único:** una foto de {{ cifra("meta.fecha_snapshot_url", "fecha") }}; no permite estudiar estacionalidad ni tendencias.
+- **Correlación ≠ causalidad:** ni la regresión ni el modelo predictivo identifican efectos causales; hay variables omitidas (calidad de las fotos, reformas, vistas…).
+- **Anuncios inactivos o duplicados:** {{ cifra("descriptivo.n_no_activos", "n0") }} anuncios no tienen disponibilidad ni reseñas en el último año; se excluyen de ocupación e ingresos. Un mismo inmueble podría aparecer con varios anuncios y no hay forma fiable de detectarlo.
+- **Dependencia entre anuncios:** los anuncios de un mismo anfitrión no son independientes; se mitiga con errores agrupados y con el análisis de un anuncio por anfitrión.
+- **Coordenadas anonimizadas:** Airbnb desplaza la ubicación hasta unos cientos de metros, lo que añade ruido a la distancia al centro y a los mapas.
+
+## 7. Recomendaciones accionables
+
+1. **Para quien fija precios, comparar con el segmento correcto.** El tipo de habitación es el factor con mayor efecto (ε² = {{ cifra("estadistica.kruskal_tipo.tamano_efecto.valor", "n3") }}) y la capacidad la variable más correlacionada (ρ = {{ cifra("descriptivo.correlaciones.con_precio.0.spearman", "n2") }}). Las comparaciones de precio deben hacerse dentro del mismo tipo, capacidad y distrito; el dashboard permite filtrar exactamente así.
+2. **No pagar una prima por la etiqueta de superhost sin más.** La diferencia bruta de mediana existe pero su efecto es despreciable (r = {{ cifra("estadistica.mann_whitney_superhost.tamano_efecto.valor", "n3") }}) y desaparece al controlar ({{ cifra("estadistica.ols.coef_superhost.pct", "signo_pct") }}, {{ cifra("estadistica.ols.coef_superhost.p_cluster", "p") }}). Las mejoras con asociación clara y significativa son de producto: capacidad, aire acondicionado ({{ cifra("estadistica.ols.coef_por_termino.tiene_aire_acondicionado.pct", "signo_pct") }}) y baño privado (el compartido se asocia con {{ cifra("estadistica.ols.coef_por_termino.bano_compartido.pct", "signo_pct") }}).
+3. **Para el regulador o un analista de vivienda, vigilar la concentración y las licencias.** El {{ cifra("descriptivo.hosts.pct_anuncios_hosts_6_o_mas", "pct1") }} de los anuncios pertenece a anfitriones con seis o más y el {{ cifra("descriptivo.pct_sin_licencia", "pct1") }} de los anuncios no informa licencia. Priorizar inspecciones en los anfitriones grandes y en los distritos con más oferta ({{ valor("descriptivo.por_distrito_n.0.grupo") }} reúne {{ cifra("descriptivo.por_distrito_n.0.n", "n0") }} anuncios con precio) sería un criterio razonable para priorizar recursos.
+4. **Separar el mercado de media estancia.** Los anuncios con estancia mínima de al menos {{ cifra("meta.parametros.min_nights_larga_estancia", "n0") }} noches ({{ cifra("limpieza.minimum_nights.larga_estancia_30_o_mas", "n0") }}) se asocian con un precio por noche {{ cifra("estadistica.ols.coef_por_termino.alquiler_larga_estancia.pct", "signo_pct") }} a igualdad de características: son otro producto y conviene analizarlos aparte (filtro disponible en los datos procesados).
+5. **No usar `365 − availability_365` como ocupación real.** Da una media del {{ cifra("descriptivo.ocupacion_ingresos.ocupacion_estimada_media", "pct1") }} frente al {{ cifra("descriptivo.ocupacion_ingresos.ocupacion_inside_airbnb_media", "pct1") }} de Inside Airbnb. Para estimar rentabilidad hace falta el calendario o las reseñas (el pipeline puede descargarlos con `--incluir-calendar` y `--incluir-reviews`).
+
+## 8. Conclusiones
+
+El precio de Airbnb en {{ valor("meta.ciudad") }} es muy asimétrico (mediana {{ cifra("descriptivo.precio.mediana", "eur2") }}, media {{ cifra("descriptivo.precio.media", "eur2") }}) y se explica sobre todo por **qué se alquila** (alojamiento entero frente a habitación, capacidad, baño privado) y **dónde** ({{ valor("descriptivo.por_distrito.0.grupo") }} y {{ valor("descriptivo.por_distrito.1.grupo") }} encabezan las medianas; cada kilómetro desde el centro se asocia con {{ cifra("estadistica.ols.coef_distancia.pct", "signo_pct") }}). Un modelo lineal sencillo explica el {{ cifra("estadistica.ols.r2_ajustado_pct", "pct1") }} de la varianza de `ln(precio)`{% if valor("estadistica.ml.ejecutado") %} y un modelo no lineal llega a un R² en test de {{ cifra("estadistica.ml.r2_test", "n3") }}{% endif %}. Ser superhost no se asocia con un precio mayor una vez controladas esas variables. La oferta está muy profesionalizada: la mayoría de anuncios pertenece a anfitriones con varios. Las estimaciones de ocupación e ingresos deben leerse como cotas aproximadas.
