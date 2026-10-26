@@ -3,6 +3,7 @@
 Uso:
     python scripts/verificar_subida.py              # lista de archivos con tamaño; exit 5 si hay problemas
     python scripts/verificar_subida.py --markdown   # la misma lista en tabla Markdown
+    python scripts/verificar_subida.py --limpiar    # borra cachés (__pycache__, .pytest_cache) y verifica
 
 Falla si algún archivo supera 25 MB (límite de subida web) o si hay residuos (caches, entornos virtuales,
 logs, temporales, data/extra) o patrones de secretos. Excluye .git/ y .agents/ (no se suben).
@@ -51,13 +52,27 @@ def problemas(archivos: list[Path]) -> list[str]:
     return sorted(set(salida))
 
 
+def limpiar() -> None:
+    """Borra cachés regenerables de Python/pytest/Jupyter (nunca .venv ni datos)."""
+    import shutil
+    for d in sorted(RAIZ.rglob("*"), reverse=True):
+        if d.is_dir() and d.name in {"__pycache__", ".pytest_cache", ".ipynb_checkpoints"} \
+                and not (set(d.relative_to(RAIZ).parts) & EXCLUIDOS):
+            shutil.rmtree(d)
+            print(f"Borrado: {d.relative_to(RAIZ).as_posix()}")
+
+
 def main() -> int:
     """Imprime la lista de subida y los problemas."""
     if not sys.stdout.isatty():
         sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Lista y valida los archivos a subir a GitHub.")
     parser.add_argument("--markdown", action="store_true", help="salida en tabla Markdown")
+    parser.add_argument("--limpiar", action="store_true",
+                        help="borra antes __pycache__, .pytest_cache y .ipynb_checkpoints (no toca .venv)")
     args = parser.parse_args()
+    if args.limpiar:
+        limpiar()
     archivos = recorrer()
     total = sum(p.stat().st_size for p in archivos)
     if args.markdown:
