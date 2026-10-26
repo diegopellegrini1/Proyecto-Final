@@ -1,0 +1,564 @@
+{
+  "antes": {
+    "filas": 23109,
+    "columnas": 90,
+    "nulos_total": 425829,
+    "pct_nulos_total": 20.474418336290334,
+    "columnas_con_nulos": 46,
+    "columnas_100_nulas": [
+      "bathrooms",
+      "calendar_updated",
+      "host_acceptance_rate",
+      "host_neighbourhood",
+      "host_response_rate",
+      "host_response_time",
+      "host_since",
+      "host_thumbnail_url",
+      "host_total_listings_count",
+      "host_verifications",
+      "instant_bookable",
+      "neighborhood_overview",
+      "neighbourhood"
+    ],
+    "top_nulos": [
+      {
+        "columna": "neighborhood_overview",
+        "n": 23109,
+        "pct": 100.0
+      },
+      {
+        "columna": "host_since",
+        "n": 23109,
+        "pct": 100.0
+      },
+      {
+        "columna": "host_response_time",
+        "n": 23109,
+        "pct": 100.0
+      },
+      {
+        "columna": "host_response_rate",
+        "n": 23109,
+        "pct": 100.0
+      },
+      {
+        "columna": "host_acceptance_rate",
+        "n": 23109,
+        "pct": 100.0
+      },
+      {
+        "columna": "host_thumbnail_url",
+        "n": 23109,
+        "pct": 100.0
+      },
+      {
+        "columna": "host_neighbourhood",
+        "n": 23109,
+        "pct": 100.0
+      },
+      {
+        "columna": "host_total_listings_count",
+        "n": 23109,
+        "pct": 100.0
+      },
+      {
+        "columna": "host_verifications",
+        "n": 23109,
+        "pct": 100.0
+      },
+      {
+        "columna": "neighbourhood",
+        "n": 23109,
+        "pct": 100.0
+      },
+      {
+        "columna": "bathrooms",
+        "n": 23109,
+        "pct": 100.0
+      },
+      {
+        "columna": "calendar_updated",
+        "n": 23109,
+        "pct": 100.0
+      },
+      {
+        "columna": "instant_bookable",
+        "n": 23109,
+        "pct": 100.0
+      },
+      {
+        "columna": "source",
+        "n": 17084,
+        "pct": 73.92790687610888
+      },
+      {
+        "columna": "host_about",
+        "n": 10968,
+        "pct": 47.462027781383874
+      }
+    ],
+    "dtypes": {
+      "float64": 36,
+      "int64": 24,
+      "str": 30
+    },
+    "tipos_logicos": {
+      "booleano": 4,
+      "categorico": 4,
+      "fecha": 6,
+      "geoespacial": 2,
+      "identificador": 10,
+      "numerico": 54,
+      "texto": 10
+    },
+    "duplicados_id": 0,
+    "duplicados_filas": 0,
+    "memoria_mb": 67.718113
+  },
+  "despues": {
+    "filas": 23109,
+    "columnas": 109,
+    "nulos_total": 114173,
+    "pct_nulos_total": 4.53268733219235,
+    "columnas_con_nulos": 31,
+    "columnas_100_nulas": [],
+    "top_nulos": [
+      {
+        "columna": "license",
+        "n": 10913,
+        "pct": 47.224025271539226
+      },
+      {
+        "columna": "host_location",
+        "n": 7864,
+        "pct": 34.030031589424034
+      },
+      {
+        "columna": "price_quote_total_price",
+        "n": 4936,
+        "pct": 21.35964342896707
+      },
+      {
+        "columna": "price_quote_price_per_night",
+        "n": 4936,
+        "pct": 21.35964342896707
+      },
+      {
+        "columna": "price",
+        "n": 4324,
+        "pct": 18.711324592150245
+      },
+      {
+        "columna": "estimated_revenue_l365d",
+        "n": 4324,
+        "pct": 18.711324592150245
+      },
+      {
+        "columna": "log_precio",
+        "n": 4324,
+        "pct": 18.711324592150245
+      },
+      {
+        "columna": "precio_por_persona",
+        "n": 4324,
+        "pct": 18.711324592150245
+      },
+      {
+        "columna": "ingresos_estimados_anuales",
+        "n": 4324,
+        "pct": 18.711324592150245
+      },
+      {
+        "columna": "categoria_precio",
+        "n": 4324,
+        "pct": 18.711324592150245
+      },
+      {
+        "columna": "review_scores_value",
+        "n": 3817,
+        "pct": 16.517374183218656
+      },
+      {
+        "columna": "review_scores_location",
+        "n": 3816,
+        "pct": 16.51304686485785
+      },
+      {
+        "columna": "first_review",
+        "n": 3815,
+        "pct": 16.508719546497037
+      },
+      {
+        "columna": "last_review",
+        "n": 3815,
+        "pct": 16.508719546497037
+      },
+      {
+        "columna": "review_scores_rating",
+        "n": 3815,
+        "pct": 16.508719546497037
+      }
+    ],
+    "dtypes": {
+      "bool": 30,
+      "boolean": 1,
+      "category": 3,
+      "datetime64[us]": 6,
+      "float64": 33,
+      "int64": 26,
+      "str": 7,
+      "string": 3
+    },
+    "tipos_logicos": {
+      "booleano": 31,
+      "categorico": 9,
+      "fecha": 6,
+      "geoespacial": 2,
+      "identificador": 2,
+      "numerico": 55,
+      "texto": 4
+    },
+    "duplicados_id": 0,
+    "duplicados_filas": 0,
+    "memoria_mb": 19.702084
+  },
+  "conversiones": {
+    "price": {
+      "a": "float64 (€)",
+      "no_nulos_antes": 18785,
+      "no_convertibles": 0
+    },
+    "host_response_rate": {
+      "a": "float64 [0, 100]",
+      "no_nulos_antes": 0,
+      "no_convertibles": 0
+    },
+    "host_acceptance_rate": {
+      "a": "float64 [0, 100]",
+      "no_nulos_antes": 0,
+      "no_convertibles": 0
+    },
+    "host_is_superhost": {
+      "a": "bool",
+      "no_nulos_antes": 23109,
+      "no_convertibles": 0
+    },
+    "host_has_profile_pic": {
+      "a": "bool",
+      "no_nulos_antes": 23109,
+      "no_convertibles": 0
+    },
+    "host_identity_verified": {
+      "a": "bool",
+      "no_nulos_antes": 23109,
+      "no_convertibles": 0
+    },
+    "has_availability": {
+      "a": "boolean",
+      "no_nulos_antes": 23026,
+      "no_convertibles": 0
+    },
+    "instant_bookable": {
+      "a": "boolean",
+      "no_nulos_antes": 0,
+      "no_convertibles": 0
+    },
+    "host_since": {
+      "a": "datetime64",
+      "no_nulos_antes": 0,
+      "no_convertibles": 0
+    },
+    "first_review": {
+      "a": "datetime64",
+      "no_nulos_antes": 19294,
+      "no_convertibles": 0
+    },
+    "last_review": {
+      "a": "datetime64",
+      "no_nulos_antes": 19294,
+      "no_convertibles": 0
+    },
+    "last_scraped": {
+      "a": "datetime64",
+      "no_nulos_antes": 23109,
+      "no_convertibles": 0
+    },
+    "calendar_last_scraped": {
+      "a": "datetime64",
+      "no_nulos_antes": 23109,
+      "no_convertibles": 0
+    },
+    "price_quote_checkin_date": {
+      "a": "datetime64",
+      "no_nulos_antes": 19541,
+      "no_convertibles": 0
+    },
+    "price_quote_checkout_date": {
+      "a": "datetime64",
+      "no_nulos_antes": 19541,
+      "no_convertibles": 0
+    },
+    "bathrooms_text": {
+      "a": "bathrooms (float) + bano_compartido (bool)",
+      "no_nulos_antes": 23091,
+      "no_convertibles": 1
+    },
+    "amenities": {
+      "a": "n_amenities + flags",
+      "malformadas_json": 0
+    }
+  },
+  "reglas": {
+    "precio_nulo_o_no_positivo (precio_valido=False)": 4324,
+    "outlier_precio (flag, no se borra)": 609,
+    "minimum_nights > 365 (flag)": 8,
+    "minimum_nights >= 30 (flag larga estancia)": 3151,
+    "coordenadas fuera del bbox o nulas (excluidas de mapa y distancia)": 0,
+    "duplicados por id (eliminados)": 0,
+    "bedrooms imputado con mediana por grupo": 12,
+    "beds imputado con mediana por grupo": 574
+  },
+  "columnas_eliminadas": {
+    "neighborhood_overview": "100 % nulas en este snapshot",
+    "host_since": "100 % nulas en este snapshot",
+    "host_response_time": "100 % nulas en este snapshot",
+    "host_response_rate": "100 % nulas en este snapshot",
+    "host_acceptance_rate": "100 % nulas en este snapshot",
+    "host_thumbnail_url": "100 % nulas en este snapshot",
+    "host_neighbourhood": "100 % nulas en este snapshot",
+    "host_total_listings_count": "100 % nulas en este snapshot",
+    "host_verifications": "100 % nulas en este snapshot",
+    "neighbourhood": "100 % nulas en este snapshot",
+    "calendar_updated": "100 % nulas en este snapshot",
+    "instant_bookable": "100 % nulas en este snapshot",
+    "listing_url": "URL sin valor analítico",
+    "picture_url": "URL sin valor analítico",
+    "host_url": "URL sin valor analítico",
+    "host_profile_url": "URL sin valor analítico",
+    "host_picture_url": "URL sin valor analítico",
+    "scrape_id": "identificador técnico del scrape",
+    "source": "identificador técnico del scrape",
+    "host_profile_id": "identificador técnico del scrape",
+    "host_name": "dato personal innecesario (privacidad)",
+    "description": "texto largo sustituido por métricas de longitud",
+    "host_about": "texto largo sustituido por métricas de longitud",
+    "price_quote_raw": "texto crudo ya convertido en columnas derivadas",
+    "amenities": "texto crudo ya convertido en columnas derivadas",
+    "bathrooms_text": "texto crudo ya convertido en columnas derivadas"
+  },
+  "columnas_reconstruidas": {
+    "bathrooms": "reconstruida desde bathrooms_text"
+  },
+  "politica_nulos": [
+    {
+      "columna": "host_location",
+      "nulos": 7864,
+      "regla": "^(host_location|license)$",
+      "decision": "conservar NaN; license se resume en licencia_tipo",
+      "justificacion": "La ausencia es informativa (p. ej. «Sin licencia»)."
+    },
+    {
+      "columna": "bathrooms",
+      "nulos": 19,
+      "regla": "^bathrooms$",
+      "decision": "conservar NaN",
+      "justificacion": "Texto de baños no parseable en pocos casos; OLS usa casos completos."
+    },
+    {
+      "columna": "bedrooms",
+      "nulos": 0,
+      "regla": "^(bedrooms|beds)$",
+      "decision": "imputar mediana por (room_type, accommodates); flag *_imputado",
+      "justificacion": "Pocos nulos, muy determinados por la capacidad y usados como covariables; el flag permite auditar."
+    },
+    {
+      "columna": "beds",
+      "nulos": 0,
+      "regla": "^(bedrooms|beds)$",
+      "decision": "imputar mediana por (room_type, accommodates); flag *_imputado",
+      "justificacion": "Pocos nulos, muy determinados por la capacidad y usados como covariables; el flag permite auditar."
+    },
+    {
+      "columna": "price",
+      "nulos": 4324,
+      "regla": "^price$",
+      "decision": "conservar NaN; precio_valido=False",
+      "justificacion": "Es la variable objetivo: imputarla fabricaría el resultado. Los nulos se concentran en anuncios sin fechas reservables (sin cotización), así que no son aleatorios."
+    },
+    {
+      "columna": "price_quote_checkin_date",
+      "nulos": 3568,
+      "regla": "^(price_quote_.*|estimated_revenue_l365d)$",
+      "decision": "conservar NaN",
+      "justificacion": "Derivan de la cotización de precio: faltan por el mismo motivo que price."
+    },
+    {
+      "columna": "price_quote_checkout_date",
+      "nulos": 3568,
+      "regla": "^(price_quote_.*|estimated_revenue_l365d)$",
+      "decision": "conservar NaN",
+      "justificacion": "Derivan de la cotización de precio: faltan por el mismo motivo que price."
+    },
+    {
+      "columna": "price_quote_total_price",
+      "nulos": 4936,
+      "regla": "^(price_quote_.*|estimated_revenue_l365d)$",
+      "decision": "conservar NaN",
+      "justificacion": "Derivan de la cotización de precio: faltan por el mismo motivo que price."
+    },
+    {
+      "columna": "price_quote_price_per_night",
+      "nulos": 4936,
+      "regla": "^(price_quote_.*|estimated_revenue_l365d)$",
+      "decision": "conservar NaN",
+      "justificacion": "Derivan de la cotización de precio: faltan por el mismo motivo que price."
+    },
+    {
+      "columna": "minimum_nights",
+      "nulos": 1729,
+      "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
+      "decision": "conservar NaN",
+      "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
+    },
+    {
+      "columna": "maximum_nights",
+      "nulos": 1729,
+      "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
+      "decision": "conservar NaN",
+      "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
+    },
+    {
+      "columna": "minimum_minimum_nights",
+      "nulos": 1729,
+      "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
+      "decision": "conservar NaN",
+      "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
+    },
+    {
+      "columna": "maximum_minimum_nights",
+      "nulos": 1729,
+      "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
+      "decision": "conservar NaN",
+      "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
+    },
+    {
+      "columna": "minimum_maximum_nights",
+      "nulos": 1729,
+      "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
+      "decision": "conservar NaN",
+      "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
+    },
+    {
+      "columna": "maximum_maximum_nights",
+      "nulos": 1729,
+      "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
+      "decision": "conservar NaN",
+      "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
+    },
+    {
+      "columna": "has_availability",
+      "nulos": 83,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "estimated_revenue_l365d",
+      "nulos": 4324,
+      "regla": "^(price_quote_.*|estimated_revenue_l365d)$",
+      "decision": "conservar NaN",
+      "justificacion": "Derivan de la cotización de precio: faltan por el mismo motivo que price."
+    },
+    {
+      "columna": "first_review",
+      "nulos": 3815,
+      "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
+      "decision": "conservar NaN; flag tiene_resenas",
+      "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
+    },
+    {
+      "columna": "last_review",
+      "nulos": 3815,
+      "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
+      "decision": "conservar NaN; flag tiene_resenas",
+      "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
+    },
+    {
+      "columna": "review_scores_rating",
+      "nulos": 3815,
+      "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
+      "decision": "conservar NaN; flag tiene_resenas",
+      "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
+    },
+    {
+      "columna": "review_scores_accuracy",
+      "nulos": 3815,
+      "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
+      "decision": "conservar NaN; flag tiene_resenas",
+      "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
+    },
+    {
+      "columna": "review_scores_cleanliness",
+      "nulos": 3815,
+      "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
+      "decision": "conservar NaN; flag tiene_resenas",
+      "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
+    },
+    {
+      "columna": "review_scores_checkin",
+      "nulos": 3815,
+      "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
+      "decision": "conservar NaN; flag tiene_resenas",
+      "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
+    },
+    {
+      "columna": "review_scores_communication",
+      "nulos": 3815,
+      "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
+      "decision": "conservar NaN; flag tiene_resenas",
+      "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
+    },
+    {
+      "columna": "review_scores_location",
+      "nulos": 3816,
+      "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
+      "decision": "conservar NaN; flag tiene_resenas",
+      "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
+    },
+    {
+      "columna": "review_scores_value",
+      "nulos": 3817,
+      "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
+      "decision": "conservar NaN; flag tiene_resenas",
+      "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
+    },
+    {
+      "columna": "license",
+      "nulos": 10913,
+      "regla": "^(host_location|license)$",
+      "decision": "conservar NaN; license se resume en licencia_tipo",
+      "justificacion": "La ausencia es informativa (p. ej. «Sin licencia»)."
+    },
+    {
+      "columna": "reviews_per_month",
+      "nulos": 3815,
+      "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
+      "decision": "conservar NaN; flag tiene_resenas",
+      "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
+    }
+  ],
+  "contabilidad_filas": {
+    "filas_raw": 23109,
+    "duplicados_eliminados": 0,
+    "filas_procesadas": 23109
+  },
+  "duplicados": {
+    "por_id": 0,
+    "filas_completas": 0,
+    "eliminados": 0
+  },
+  "imputados": {
+    "bedrooms": 12,
+    "beds": 574
+  }
+}
