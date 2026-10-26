@@ -46,7 +46,7 @@
       "plotly": "7.1.0",
       "pyarrow": "26.0.0"
     },
-    "generado_utc": "2026-10-26T15:27:18+00:00"
+    "generado_utc": "2026-10-26T15:35:32+00:00"
   },
   "dataset": {
     "filas_raw": 23109,
@@ -4385,16 +4385,16 @@
   ],
   "rendimiento": {
     "etapas_s": {
-      "1. Datos originales (descarga o verificación offline)": 0.014227599996956997,
-      "2. Lectura y perfil de calidad «antes»": 1.4852050000008603,
-      "3. Limpieza": 1.3406950999997207,
-      "4. Variables derivadas": 0.14181939999980386,
-      "5. Validación y guardado del procesado": 0.4242943999997806,
-      "6. Perfil de calidad «después»": 0.1733377999989898,
-      "7. Análisis descriptivo y estadístico": 16.024169000000256,
-      "8. Figuras": 9.964194800002588
+      "1. Datos originales (descarga o verificación offline)": 0.018227000000479165,
+      "2. Lectura y perfil de calidad «antes»": 1.7835606999979063,
+      "3. Limpieza": 0.9679706000024453,
+      "4. Variables derivadas": 0.09187219999876106,
+      "5. Validación y guardado del procesado": 0.30431769999995595,
+      "6. Perfil de calidad «después»": 0.1242826999987301,
+      "7. Análisis descriptivo y estadístico": 14.54497850000189,
+      "8. Figuras": 12.106543499998224
     },
-    "total_computo_s": 29.567943099998956
+    "total_computo_s": 29.94175289999839
   },
   "afirmaciones": {
     "dataset_cumple_umbrales": true,
@@ -4407,6 +4407,7 @@
     "superhost_mediana_mayor": true,
     "superhost_significativo_despreciable": true,
     "superhost_no_significativo_ols": true,
+    "superhost_hc3_significativo": true,
     "sensibilidad_misma_decision": true,
     "entero_mas_caro": true,
     "kruskal_tipo_grande": true,
