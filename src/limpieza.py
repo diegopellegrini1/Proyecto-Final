@@ -40,7 +40,10 @@ ELIMINAR_URLS: tuple[str, ...] = (
     "listing_url", "picture_url", "host_url", "host_profile_url", "host_picture_url", "host_thumbnail_url",
 )
 ELIMINAR_IDS_TECNICOS: tuple[str, ...] = ("scrape_id", "source", "host_profile_id")
-ELIMINAR_PERSONALES: tuple[str, ...] = ("host_name",)
+# Minimización de datos personales: ni el nombre ni la ubicación declarada del anfitrión se usan
+# en el análisis ni en el dashboard. host_id se conserva porque es imprescindible para agrupar
+# anuncios por anfitrión (errores agrupados, validación por grupos, composición de la oferta).
+ELIMINAR_PERSONALES: tuple[str, ...] = ("host_name", "host_location")
 ELIMINAR_TEXTO_LARGO: tuple[str, ...] = ("description", "host_about")
 ELIMINAR_CRUDOS: tuple[str, ...] = ("price_quote_raw", "amenities", "bathrooms_text")
 
@@ -58,7 +61,7 @@ POLITICA_NULOS: tuple[tuple[str, str, str], ...] = (
     (r"^(bedrooms|beds)$", "imputar mediana por (room_type, accommodates); flag *_imputado",
      "Pocos nulos, muy determinados por la capacidad y usados como covariables; el flag permite auditar."),
     (r"^bathrooms$", "conservar NaN", "Texto de baños no parseable en pocos casos; OLS usa casos completos."),
-    (r"^(host_location|license)$", "conservar NaN; license se resume en licencia_tipo",
+    (r"^license$", "conservar NaN; license se resume en licencia_tipo",
      "La ausencia es informativa (p. ej. «Sin licencia»)."),
     (r"^(price_quote_.*|estimated_revenue_l365d)$", "conservar NaN",
      "Derivan de la cotización de precio: faltan por el mismo motivo que price."),
@@ -77,11 +80,24 @@ def regla_nulos(columna: str) -> tuple[str, str, str]:
 # --------------------------------------------------------------------------
 # Conversores (puros y vectorizados)
 # --------------------------------------------------------------------------
+# Formato de precio de Inside Airbnb: símbolo o código de moneda opcional, signo opcional (antes o
+# después del símbolo), coma como separador de miles (grupos de tres) y punto decimal: «$1,234.00».
+# Política explícita: cualquier otra cosa (coma decimal «25,00», texto, varios puntos) NO se adivina
+# y queda como no convertible (NaN), contabilizada en calidad_datos.json.
+_PATRON_PRECIO = re.compile(
+    r"^(?P<s1>-)?\s*(?:[$€]|[A-Z]{3})?\s*(?P<s2>-)?\s*(?P<num>\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)$")
+
+
 def parse_precio(s: pd.Series) -> pd.Series:
-    """Convierte textos tipo ``'$1,234.00'`` a ``float64``; vacío o basura → NaN."""
-    texto = s.astype("string").str.replace(r"[^\d.]", "", regex=True)
-    texto = texto.mask(texto.str.count(r"\.") > 1)
-    return pd.to_numeric(texto, errors="coerce").astype("float64")
+    """Convierte textos tipo ``'$1,234.00'`` a ``float64`` conservando el signo.
+
+    Valida el formato completo (``_PATRON_PRECIO``): ``'$-10.00'`` → −10,0; ``'1,234.50'`` → 1.234,5;
+    ``'EUR -25,00'`` (coma decimal), ``'abc123xyz'`` o ``'$1.2.3'`` → NaN (no convertible).
+    """
+    partes = s.astype("string").str.strip().str.extract(_PATRON_PRECIO)
+    numero = pd.to_numeric(partes["num"].str.replace(",", "", regex=False), errors="coerce").astype("float64")
+    negativo = partes["s1"].notna() | partes["s2"].notna()
+    return numero.where(~negativo, -numero).astype("float64")
 
 
 def parse_porcentaje(s: pd.Series) -> pd.Series:
@@ -147,13 +163,109 @@ def amenities_validas(s: pd.Series) -> pd.Series:
     return s.map(_ok).astype(bool)
 
 
+def normalizar_amenity(texto: str) -> str:
+    """Minúsculas, espacios (incluido el no separable) colapsados y sin espacios en los extremos."""
+    return re.sub(r"\s+", " ", texto.replace("\xa0", " ")).strip().lower()
+
+
 def flags_amenities(s: pd.Series) -> pd.DataFrame:
-    """Flags booleanos por regex sobre el texto crudo de amenities (``PATRONES_AMENITIES``)."""
-    texto = s.astype("string").str.lower().fillna("")
-    return pd.DataFrame(
-        {col: texto.str.contains(patron, regex=True).astype(bool) for col, patron in config.PATRONES_AMENITIES.items()},
-        index=s.index,
-    )
+    """Flags booleanos de amenities: parsea la lista JSON y aplica cada patrón a cada elemento normalizado.
+
+    Comparar elemento a elemento (y no sobre el texto crudo) evita falsos positivos entre elementos,
+    p. ej. que «Dishwasher» active la lavadora o «Pool table» la piscina.
+    """
+    elementos = s.map(parse_amenities).explode()
+    elementos = elementos.dropna().astype("string").map(normalizar_amenity).astype("string")
+    salida = {}
+    for col, patron in config.PATRONES_AMENITIES.items():
+        coincide = elementos.str.contains(patron, regex=True)
+        por_fila = coincide.groupby(level=0).any() if len(coincide) else pd.Series(dtype=bool)
+        salida[col] = por_fila.reindex(s.index, fill_value=False).astype(bool)
+    return pd.DataFrame(salida, index=s.index)
+
+
+def comprobar_prevalencias(prevalencias: dict[str, float], n_filas: int) -> list[str]:
+    """Patrones de amenities con prevalencia 0 o fuera de ``COTAS_PREVALENCIA_AMENITIES``.
+
+    Las cotas solo se aplican con al menos ``UMBRAL_FILAS`` anuncios; la prevalencia 0 siempre.
+    """
+    rotos = []
+    for col, valor in prevalencias.items():
+        lo, hi = config.COTAS_PREVALENCIA_AMENITIES[col]
+        if valor == 0 or (n_filas >= config.UMBRAL_FILAS and not lo <= valor <= hi):
+            rotos.append(f"{col} = {valor:.2f} % (rango plausible {lo}-{hi} %)")
+    return rotos
+
+
+def analizar_cotizaciones(raw: pd.Series) -> pd.DataFrame:
+    """Extrae de ``price_quote_raw`` (JSON con clave ``quote``) descuento, subtotal y tarifa mensual.
+
+    Devuelve un DataFrame por fila con ``parseada``, ``descuento``, ``subtotal_noches``,
+    ``es_tarifa_mensual`` y ``tipos_descuento`` (descripciones de las partidas de descuento).
+    """
+    def _uno(valor: Any) -> tuple[bool, float, float, bool, tuple[str, ...]]:
+        if not isinstance(valor, str):
+            return False, np.nan, np.nan, False, ()
+        try:
+            q = json.loads(valor).get("quote") or {}
+        except (json.JSONDecodeError, ValueError, AttributeError):
+            return False, np.nan, np.nan, False, ()
+        if not isinstance(q, dict):
+            return False, np.nan, np.nan, False, ()
+
+        def _num(clave: str) -> float:
+            try:
+                return float(q.get(clave)) if q.get(clave) is not None else np.nan
+            except (TypeError, ValueError):
+                return np.nan
+        partidas = q.get("raw_price_line_items") or []
+        tipos = tuple(str(p.get("description", "")) for p in partidas
+                      if isinstance(p, dict) and p.get("item_type") == "discount_amount")
+        return True, _num("discount_amount"), _num("nightly_subtotal"), bool(q.get("is_monthly_priced")), tipos
+
+    filas = [_uno(v) for v in raw]
+    return pd.DataFrame(filas, index=raw.index,
+                        columns=["parseada", "descuento", "subtotal_noches", "es_tarifa_mensual", "tipos_descuento"])
+
+
+def resumen_cotizaciones(cot: pd.DataFrame, precio: pd.Series, minimum_nights: pd.Series,
+                         noches: pd.Series) -> dict[str, Any]:
+    """Cifras de la naturaleza del precio calculadas por código desde ``price_quote_raw``.
+
+    Todas sobre anuncios con precio positivo y cotización parseable.
+    """
+    base = cot["parseada"] & precio.gt(0)
+    n = _contar(base)
+    con_desc = base & cot["descuento"].gt(0)
+    pct_desc = (cot.loc[con_desc, "descuento"] / cot.loc[con_desc, "subtotal_noches"] * 100)
+    mensual = base & cot["es_tarifa_mensual"]
+    min30 = base & minimum_nights.ge(config.MIN_NIGHTS_LARGA_ESTANCIA)
+    comparables = base & noches.notna() & minimum_nights.notna()
+    tipos = cot.loc[con_desc, "tipos_descuento"].explode().dropna()
+    tipos = tipos[tipos.astype(str).str.len() > 0]
+    return {
+        "n_cotizaciones_con_precio": n,
+        "n_con_descuento": _contar(con_desc),
+        "pct_con_descuento": float(con_desc.sum() / n * 100) if n else float("nan"),
+        "mediana_pct_descuento": float(pct_desc.median()) if len(pct_desc) else float("nan"),
+        "n_tarifa_mensual": _contar(mensual),
+        "pct_tarifa_mensual": float(mensual.sum() / n * 100) if n else float("nan"),
+        "n_min30": _contar(min30),
+        "pct_mensual_entre_min30": float((mensual & min30).sum() / max(min30.sum(), 1) * 100),
+        "n_noches_comparables": _contar(comparables),
+        "pct_noches_igual_minimo": float((noches[comparables] == minimum_nights[comparables]).mean() * 100)
+        if comparables.any() else float("nan"),
+        "partidas_descuento": {str(k): int(v) for k, v in tipos.value_counts().head(8).items()},
+    }
+
+
+def comprobar_columnas(df: pd.DataFrame, columnas: tuple[str, ...], contexto: str) -> None:
+    """Lanza ``ErrorDatos`` (accionable, no ``KeyError``) si falta alguna columna requerida."""
+    faltan = [c for c in columnas if c not in df.columns]
+    if faltan:
+        raise ErrorDatos(f"Faltan columnas obligatorias para {contexto}: {', '.join(faltan)}. "
+                         "Puede que Inside Airbnb haya cambiado el formato del snapshot; revisa "
+                         "config.COLUMNAS_OBLIGATORIAS.")
 
 
 def limpiar_html(s: pd.Series) -> pd.Series:
@@ -198,6 +310,7 @@ def _contar(mascara: pd.Series) -> int:
 
 def limpiar(df_raw: pd.DataFrame, barrios: pd.DataFrame, ciudad: Ciudad) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Aplica todas las conversiones y reglas. Devuelve (DataFrame limpio, registro de limpieza)."""
+    comprobar_columnas(df_raw, config.COLUMNAS_OBLIGATORIAS, "la limpieza")
     df = df_raw.copy()
     n_raw = len(df)
     registro: dict[str, Any] = {"conversiones": {}, "reglas": {}, "columnas_eliminadas": {},
@@ -250,9 +363,10 @@ def limpiar(df_raw: pd.DataFrame, barrios: pd.DataFrame, ciudad: Ciudad) -> tupl
     df = pd.concat([df, flags_amenities(df["amenities"])], axis=1)
     registro["conversiones"]["amenities"] = {"a": "n_amenities + flags", "malformadas_json": _contar(~validas)}
     prevalencias = {c: float(df[c].mean() * 100) for c in config.PATRONES_AMENITIES}
-    rotos = [c for c, v in prevalencias.items() if v == 0]
+    rotos = comprobar_prevalencias(prevalencias, len(df))
     if rotos:
-        raise ErrorDatos(f"Patrones de amenities sin coincidencias (¿formato cambiado?): {', '.join(rotos)}")
+        raise ErrorDatos("Patrones de amenities con prevalencia nula o fuera de rango plausible "
+                         f"(¿formato cambiado?): {'; '.join(rotos)}")
     registro["prevalencia_amenities"] = prevalencias
 
     nombre_limpio = limpiar_html(df["name"])
@@ -274,15 +388,25 @@ def limpiar(df_raw: pd.DataFrame, barrios: pd.DataFrame, ciudad: Ciudad) -> tupl
             "n_cotizaciones_sin_moneda": _contar(df["price_quote_raw"].notna() & moneda.isna()),
             "monedas_distintas": int(len(conteo)),
         }
-    if {"price_quote_price_per_night", "price"} <= set(df.columns):
+    df["noches_cotizadas"] = (df["price_quote_checkout_date"] - df["price_quote_checkin_date"]).dt.days.astype("float64")
+    registro["precio_naturaleza"] = {
+        "checkin_min": df["price_quote_checkin_date"].min(),
+        "checkin_max": df["price_quote_checkin_date"].max(),
+    }
+    if "price_quote_price_per_night" in df:
         ambos = df["price"].notna() & df["price_quote_price_per_night"].notna()
         iguales = np.isclose(df.loc[ambos, "price"], df.loc[ambos, "price_quote_price_per_night"])
-        registro["precio_naturaleza"] = {
+        registro["precio_naturaleza"].update({
             "n_ambos": _contar(ambos),
             "pct_precio_igual_cotizacion": float(iguales.mean() * 100) if ambos.any() else float("nan"),
-            "checkin_min": df["price_quote_checkin_date"].min(),
-            "checkin_max": df["price_quote_checkin_date"].max(),
-        }
+        })
+    if "price_quote_raw" in df:
+        cot = analizar_cotizaciones(df["price_quote_raw"])
+        df["es_tarifa_mensual"] = cot["es_tarifa_mensual"].astype(bool)
+        registro["precio_naturaleza"].update(
+            resumen_cotizaciones(cot, df["price"], df["minimum_nights"], df["noches_cotizadas"]))
+    else:
+        df["es_tarifa_mensual"] = False
 
     # 3. Eliminación de columnas (motivo documentado) -------------------------
     eliminar: dict[str, str] = {}
@@ -375,6 +499,7 @@ def limpiar(df_raw: pd.DataFrame, barrios: pd.DataFrame, ciudad: Ciudad) -> tupl
 
     registro["reglas"] = {
         "precio_nulo_o_no_positivo (precio_valido=False)": _contar(~df["precio_valido"]),
+        "precio negativo (precio_valido=False)": registro["precio"]["negativo"],
         "outlier_precio (flag, no se borra)": registro["outliers"]["n_total"],
         "minimum_nights > 365 (flag)": registro["minimum_nights"]["extremo_mayor_365"],
         "minimum_nights >= 30 (flag larga estancia)": registro["minimum_nights"]["larga_estancia_30_o_mas"],
@@ -407,8 +532,8 @@ def validar_procesado(df: pd.DataFrame, documentadas: set[str] | None = None) ->
     for col in ("last_scraped", "first_review", "last_review"):
         if col in df and not tipos.is_datetime64_any_dtype(df[col]):
             errores.append(f"{col} no es datetime64")
-    if "ocupacion_estimada" in df and not df["ocupacion_estimada"].dropna().between(0, 1).all():
-        errores.append("ocupacion_estimada fuera de [0, 1]")
+    if "no_disponible_365" in df and not df["no_disponible_365"].dropna().between(0, 1).all():
+        errores.append("no_disponible_365 fuera de [0, 1]")
     if "distancia_centro_km" in df and (df["distancia_centro_km"].dropna() < 0).any():
         errores.append("distancia_centro_km negativa")
     if "n_amenities" in df and (not tipos.is_integer_dtype(df["n_amenities"]) or (df["n_amenities"] < 0).any()):

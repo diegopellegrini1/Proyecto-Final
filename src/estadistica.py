@@ -344,6 +344,38 @@ def bootstrap_mediana(valores: np.ndarray, n_boot: int, rng: np.random.Generator
             "ic_sup": float(np.quantile(medianas, 1 - a)), "n_boot": int(n_boot)}
 
 
+
+def bootstrap_mediana_cluster(valores: np.ndarray, grupos: np.ndarray, n_boot: int, rng: np.random.Generator,
+                              lote: int = 100, nivel: float = 0.95) -> dict[str, float]:
+    """IC percentil de la mediana por bootstrap **por anfitrión** (cluster bootstrap).
+
+    Se remuestrean anfitriones con reemplazo (cada uno con todos sus anuncios), lo que respeta la
+    dependencia entre anuncios del mismo anfitrión. Cada réplica es la mediana ponderada (inferior)
+    con peso = nº de veces que salió el anfitrión. Vectorizado por lotes.
+    """
+    x = np.asarray(valores, dtype="float64")
+    g = np.asarray(grupos)
+    ok = ~np.isnan(x)
+    x, g = x[ok], g[ok]
+    orden = np.argsort(x, kind="mergesort")
+    x, g = x[orden], g[orden]
+    _, inversa = np.unique(g, return_inverse=True)
+    n_grupos = int(inversa.max()) + 1
+    medianas = np.empty(n_boot)
+    hecho = 0
+    while hecho < n_boot:
+        b = min(lote, n_boot - hecho)
+        cuentas = rng.multinomial(n_grupos, np.full(n_grupos, 1 / n_grupos), size=b)
+        acumulado = np.cumsum(cuentas[:, inversa], axis=1)
+        idx = (acumulado >= acumulado[:, -1:] / 2).argmax(axis=1)
+        medianas[hecho:hecho + b] = x[idx]
+        hecho += b
+    a = (1 - nivel) / 2
+    return {"n": int(len(x)), "n_anfitriones": n_grupos, "mediana": float(np.median(x)),
+            "ic_inf": float(np.quantile(medianas, a)), "ic_sup": float(np.quantile(medianas, 1 - a)),
+            "n_boot": int(n_boot)}
+
+
 # --------------------------------------------------------------------------
 # OLS
 # --------------------------------------------------------------------------
@@ -358,30 +390,45 @@ NOMBRES_TERMINOS: dict[str, str] = {
     "distancia_centro_km": "Distancia al centro (+1 km)", "host_is_superhost": "Superhost",
     "es_multianuncio": "Anfitrión multi-anuncio", "alquiler_larga_estancia": "Estancia mínima ≥ 30 noches",
     "tiene_aire_acondicionado": "Aire acondicionado", "tiene_ascensor": "Ascensor",
-    "tiene_terraza_balcon": "Terraza/balcón", "tiene_parking_cualquiera": "Parking", "tiene_wifi": "Wifi",
+    "tiene_terraza_balcon": "Terraza/balcón", "tiene_parking_cualquiera": "Parking (cualquiera)", "tiene_wifi": "Wifi",
     "log1p_resenas": "ln(1 + nº reseñas)",
 }
+# Términos cuyos coeficientes se comparan entre especificaciones (sensibilidades).
+TERMINOS_CLAVE: tuple[str, ...] = (
+    "accommodates", "distancia_centro_km", "host_is_superhost", "tiene_aire_acondicionado", "bano_compartido",
+    "alquiler_larga_estancia",
+)
 
 
-def _matriz_ols(df: pd.DataFrame, ref_distrito: str) -> pd.DataFrame:
+def _matriz_ols(df: pd.DataFrame) -> pd.DataFrame:
     """Prepara el DataFrame de la regresión (booleanos a 0/1, casos completos)."""
     d = pd.DataFrame({
         "log_precio": df["log_precio"],
         **{c: df[c].astype("float64") for c in VARIABLES_OLS_NUMERICAS if c != "log1p_resenas"},
         "log1p_resenas": np.log1p(df["number_of_reviews"].astype("float64")),
-        "tipo": df["tipo_habitacion_agrupado"].astype(str),
-        "licencia": df["licencia_tipo"].astype(str),
-        "distrito": df["neighbourhood_group_cleansed"].astype(str),
+        "tipo": df["tipo_habitacion_agrupado"].astype("string"),
+        "licencia": df["licencia_tipo"].astype("string"),
+        "distrito": df["neighbourhood_group_cleansed"].astype("string"),
+        "mes": df["mes_cotizacion_agrupado"].astype("string"),
         "host_id": df["host_id"],
     })
-    return d.dropna()
+    d = d.dropna()
+    for c in ("tipo", "licencia", "distrito", "mes"):
+        d[c] = d[c].astype(str)
+    return d
 
 
-def formula_ols(ref_tipo: str, ref_distrito: str, ref_licencia: str) -> str:
-    """Fórmula de statsmodels para ln(precio)."""
-    numericas = " + ".join(VARIABLES_OLS_NUMERICAS)
-    return (f"log_precio ~ C(tipo, Treatment('{ref_tipo}')) + {numericas} + "
-            f"C(licencia, Treatment('{ref_licencia}')) + C(distrito, Treatment('{ref_distrito}'))")
+def formula_ols(ref_tipo: str, ref_distrito: str, ref_licencia: str, ref_mes: str | None = None,
+                con_distrito: bool = True, excluir: tuple[str, ...] = ()) -> str:
+    """Fórmula de statsmodels para ln(precio). ``ref_mes=None`` omite el control de mes de cotización."""
+    numericas = " + ".join(v for v in VARIABLES_OLS_NUMERICAS if v not in excluir)
+    formula = (f"log_precio ~ C(tipo, Treatment('{ref_tipo}')) + {numericas} + "
+               f"C(licencia, Treatment('{ref_licencia}'))")
+    if con_distrito:
+        formula += f" + C(distrito, Treatment('{ref_distrito}'))"
+    if ref_mes is not None:
+        formula += f" + C(mes, Treatment('{ref_mes}'))"
+    return formula
 
 
 def _nombre_termino(t: str) -> str:
@@ -390,18 +437,72 @@ def _nombre_termino(t: str) -> str:
         return NOMBRES_TERMINOS[t]
     if "[T." in t:
         nivel = t.split("[T.", 1)[1].rstrip("]")
-        if t.startswith("C(tipo"):
-            return f"Tipo: {nivel}"
-        if t.startswith("C(licencia"):
-            return f"Licencia: {nivel}"
-        if t.startswith("C(distrito"):
-            return f"Distrito: {nivel}"
+        for prefijo, etiqueta in (("C(tipo", "Tipo"), ("C(licencia", "Licencia"), ("C(distrito", "Distrito"),
+                                  ("C(mes", "Mes de cotización")):
+            if t.startswith(prefijo):
+                return f"{etiqueta}: {nivel}"
     return t
 
 
-def ajustar_ols(df: pd.DataFrame, ref_distrito: str, incluir_outliers: bool = False,
-                alfa: float = config.ALFA) -> dict[str, Any]:
-    """OLS sobre ln(precio) con errores agrupados por anfitrión, HC3, diagnóstico de residuos y VIF."""
+def _termino_de(columna: str) -> str:
+    """Término del modelo al que pertenece una columna de la matriz de diseño (para el GVIF)."""
+    return columna.split("[T.", 1)[0] if "[T." in columna else columna
+
+
+def gvif(exog: pd.DataFrame) -> list[dict[str, Any]]:
+    """GVIF de Fox y Monette por término (agrupa las dummies de cada factor) sobre la matriz COMPLETA.
+
+    GVIF_j = det(R_jj)·det(R_−j−j) / det(R), con R la matriz de correlaciones de las columnas sin
+    intercepto. Para términos de un solo grado de libertad coincide con el VIF. Se informa también
+    GVIF^(1/(2·gl)), comparable entre términos con distinto nº de columnas.
+    """
+    x = exog.drop(columns=[c for c in exog.columns if c == "Intercept"])
+    x = x.loc[:, x.std() > 0]
+    r = np.corrcoef(x.to_numpy(), rowvar=False)
+    _, logdet_r = np.linalg.slogdet(r)
+    terminos: dict[str, list[int]] = {}
+    for i, c in enumerate(x.columns):
+        terminos.setdefault(_termino_de(c), []).append(i)
+    filas = []
+    for termino, idx in terminos.items():
+        resto = [i for i in range(len(x.columns)) if i not in idx]
+        _, ld1 = np.linalg.slogdet(r[np.ix_(idx, idx)])
+        _, ld2 = np.linalg.slogdet(r[np.ix_(resto, resto)])
+        valor = float(np.exp(ld1 + ld2 - logdet_r))
+        filas.append({"termino": termino, "nombre": _nombre_termino(termino).split(":")[0],
+                      "gl": len(idx), "gvif": valor, "gvif_ajustado": float(valor ** (1 / (2 * len(idx))))})
+    return sorted(filas, key=lambda f: -f["gvif_ajustado"])
+
+
+def _coeficientes(cluster: Any, hc3: Any, alfa: float) -> list[dict[str, Any]]:
+    """Coeficientes con cambio %, IC 95 % (cluster), p cluster, p HC3 y p de Holm sobre la familia."""
+    from statsmodels.stats.multitest import multipletests
+
+    ic = cluster.conf_int(alpha=alfa)
+    terminos = [t for t in cluster.params.index if t != "Intercept"]
+    p_holm = multipletests([float(cluster.pvalues[t]) for t in terminos], alpha=alfa, method="holm")[1]
+    salida = []
+    for t, ph in zip(terminos, p_holm):
+        b = float(cluster.params[t])
+        salida.append({
+            "termino": t, "nombre": _nombre_termino(t), "beta": b, "pct": 100 * (np.exp(b) - 1),
+            "ic_inf_pct": 100 * (np.exp(ic.loc[t, 0]) - 1), "ic_sup_pct": 100 * (np.exp(ic.loc[t, 1]) - 1),
+            "p_cluster": float(cluster.pvalues[t]), "p_hc3": float(hc3.pvalues[t]), "p_holm": float(ph),
+            "significativo": bool(cluster.pvalues[t] < alfa), "significativo_holm": bool(ph < alfa),
+            "es_distrito": t.startswith("C(distrito"), "es_mes": t.startswith("C(mes"),
+        })
+    return salida
+
+
+def ajustar_ols(df: pd.DataFrame, ref_distrito: str, incluir_outliers: bool = False, alfa: float = config.ALFA,
+                *, mascara_extra: pd.Series | None = None, con_distrito: bool = True, con_mes: bool = True,
+                excluir: tuple[str, ...] = (), diagnostico: bool = True) -> dict[str, Any]:
+    """OLS sobre ln(precio) con errores agrupados por anfitrión, HC3, diagnóstico, VIF/GVIF y sensibilidad Cook.
+
+    El contraste global se publica como Wald/F con la covarianza agrupada (coherente con la inferencia
+    de los coeficientes); el F convencional se conserva solo como referencia «no robusta».
+    ``diagnostico=False`` ajusta una especificación alternativa sin diagnóstico (para sensibilidades).
+    """
     import statsmodels.formula.api as smf
     from statsmodels.stats.diagnostic import het_breuschpagan
     from statsmodels.stats.outliers_influence import variance_inflation_factor
@@ -410,70 +511,89 @@ def ajustar_ols(df: pd.DataFrame, ref_distrito: str, incluir_outliers: bool = Fa
     mascara = df["precio_valido"] & df["coords_validas"]
     if not incluir_outliers:
         mascara &= ~df["es_outlier_precio"]
+    if mascara_extra is not None:
+        mascara &= mascara_extra.reindex(df.index, fill_value=False).astype(bool)
     base = df[mascara]
-    datos = _matriz_ols(base, ref_distrito)
+    datos = _matriz_ols(base)
     n_inicial, n_efectivo = int(len(base)), int(len(datos))
     ref_tipo = config.TRADUCCION_TIPO_HABITACION["Entire home/apt"]
     ref_licencia = "Sin licencia"
-    formula = formula_ols(ref_tipo, ref_distrito, ref_licencia)
-    try:
-        modelo = smf.ols(formula, data=datos)
-        ajuste = modelo.fit()
-        cluster = modelo.fit(cov_type="cluster", cov_kwds={"groups": datos["host_id"].to_numpy()})
-        hc3 = modelo.fit(cov_type="HC3")
-    except (np.linalg.LinAlgError, ValueError) as exc:
-        raise ErrorDatos(f"No se pudo ajustar la regresión OLS: {exc}") from exc
+    ref_mes = str(datos["mes"].value_counts().idxmax()) if con_mes and len(datos) else None
+    formula = formula_ols(ref_tipo, ref_distrito, ref_licencia, ref_mes, con_distrito, excluir)
 
-    ic = cluster.conf_int(alpha=alfa)
-    coeficientes = []
-    for t in cluster.params.index:
-        if t == "Intercept":
-            continue
-        b = float(cluster.params[t])
-        coeficientes.append({
-            "termino": t, "nombre": _nombre_termino(t), "beta": b, "pct": 100 * (np.exp(b) - 1),
-            "ic_inf_pct": 100 * (np.exp(ic.loc[t, 0]) - 1), "ic_sup_pct": 100 * (np.exp(ic.loc[t, 1]) - 1),
-            "p_cluster": float(cluster.pvalues[t]), "p_hc3": float(hc3.pvalues[t]),
-            "significativo": bool(cluster.pvalues[t] < alfa), "es_distrito": t.startswith("C(distrito"),
-        })
+    def _ajustar(d: pd.DataFrame) -> tuple[Any, Any, Any, Any]:
+        try:
+            modelo = smf.ols(formula, data=d)
+            return (modelo, modelo.fit(),
+                    modelo.fit(cov_type="cluster", cov_kwds={"groups": d["host_id"].to_numpy()}),
+                    modelo.fit(cov_type="HC3"))
+        except (np.linalg.LinAlgError, ValueError) as exc:
+            raise ErrorDatos(f"No se pudo ajustar la regresión OLS: {exc}") from exc
+
+    modelo, ajuste, cluster, hc3 = _ajustar(datos)
+    coeficientes = _coeficientes(cluster, hc3, alfa)
     resultado: dict[str, Any] = {
         "formula": formula, "n_inicial": n_inicial, "n_efectivo": n_efectivo,
         "perdidas_por_nulos": n_inicial - n_efectivo, "incluye_outliers": incluir_outliers,
-        "referencias": {"tipo": ref_tipo, "distrito": ref_distrito, "licencia": ref_licencia},
+        "con_distrito": con_distrito, "con_mes": con_mes, "excluidos": list(excluir),
+        "referencias": {"tipo": ref_tipo, "distrito": ref_distrito, "licencia": ref_licencia, "mes": ref_mes},
         "r2": float(ajuste.rsquared), "r2_ajustado": float(ajuste.rsquared_adj), "aic": float(ajuste.aic),
-        "f": float(ajuste.fvalue), "f_p": float(ajuste.f_pvalue), "n_parametros": int(len(ajuste.params)),
+        "f_cluster": float(cluster.fvalue), "f_cluster_p": float(cluster.f_pvalue),
+        "f_cluster_gl": [int(len(ajuste.params) - 1), int(datos["host_id"].nunique() - 1)],
+        "f_no_robusto": float(ajuste.fvalue), "f_no_robusto_p": float(ajuste.f_pvalue),
+        "n_parametros": int(len(ajuste.params)), "n_coeficientes": len(coeficientes),
+        "n_significativos": int(sum(c["significativo"] for c in coeficientes)),
+        "n_significativos_holm": int(sum(c["significativo_holm"] for c in coeficientes)),
         "coeficientes": coeficientes, "errores": "agrupados por anfitrión (cluster); HC3 como comparación",
         "h0": HIPOTESIS["ols"][0], "h1": HIPOTESIS["ols"][1], "alfa": alfa,
     }
-    if incluir_outliers:
+    if not diagnostico:
         return resultado
 
     residuos = ajuste.resid.to_numpy()
     bp_lm, bp_p, _, _ = het_breuschpagan(ajuste.resid, modelo.exog)
     jb, jb_p, asim, curt = jarque_bera(residuos)
-    infl = ajuste.get_influence()
-    cook = infl.cooks_distance[0]
+    cook = ajuste.get_influence().cooks_distance[0]
+    umbral_cook = 4 / n_efectivo
     resultado["diagnostico"] = {
         "breusch_pagan_lm": float(bp_lm), "breusch_pagan_p": float(bp_p), "heterocedasticidad": bool(bp_p < alfa),
         "jarque_bera": float(jb), "jarque_bera_p": float(jb_p), "asimetria_residuos": float(asim),
-        "curtosis_residuos": float(curt), "n_cook_mayor_4_n": int((cook > 4 / n_efectivo).sum()),
+        "curtosis_residuos": float(curt), "n_cook_mayor_4_n": int((cook > umbral_cook).sum()),
+        "pct_cook_mayor_4_n": float((cook > umbral_cook).mean() * 100),
     }
-    # VIF sin dummies de distrito (inflan artificialmente).
+    # VIF sin dummies de distrito ni de mes (variables numéricas y tipo/licencia) …
     exog = pd.DataFrame(modelo.exog, columns=modelo.exog_names)
-    cols = [c for c in exog.columns if not c.startswith("C(distrito")]
-    x_vif = exog[cols]
-    vif = []
-    for i, c in enumerate(cols):
-        if c == "Intercept":
-            continue
-        vif.append({"termino": c, "nombre": _nombre_termino(c), "vif": float(variance_inflation_factor(x_vif.to_numpy(), i))})
+    cols = [c for c in exog.columns if not c.startswith(("C(distrito", "C(mes"))]
+    x_vif = exog[cols].to_numpy()
+    vif = [{"termino": c, "nombre": _nombre_termino(c), "vif": float(variance_inflation_factor(x_vif, i))}
+           for i, c in enumerate(cols) if c != "Intercept"]
     vif.sort(key=lambda r: -r["vif"])
     resultado["vif"] = vif
     resultado["vif_max"] = vif[0]
     resultado["n_vif_mayor_5"] = int(sum(r["vif"] > 5 for r in vif))
     resultado["n_vif_mayor_10"] = int(sum(r["vif"] > 10 for r in vif))
+    # … y con la matriz COMPLETA (con dummies): VIF de la distancia y GVIF por término.
+    i_dist = list(exog.columns).index("distancia_centro_km")
+    resultado["vif_completo_distancia"] = float(variance_inflation_factor(exog.to_numpy(), i_dist))
+    resultado["gvif"] = gvif(exog)
+    resultado["gvif_max"] = resultado["gvif"][0]
+
+    # Sensibilidad: reajuste sin observaciones influyentes (Cook > 4/n).
+    sin_infl = datos[cook <= umbral_cook]
+    _, aj2, cl2, hc2 = _ajustar(sin_infl)
+    coef2 = {c["termino"]: c for c in _coeficientes(cl2, hc2, alfa)}
+    resultado["sensibilidad_sin_influyentes"] = {
+        "n_efectivo": int(len(sin_infl)), "n_excluidas": int(len(datos) - len(sin_infl)),
+        "r2_ajustado": float(aj2.rsquared_adj),
+        "coeficientes": {t: {"pct": coef2[t]["pct"], "significativo": coef2[t]["significativo"],
+                             "pct_principal": next(c["pct"] for c in coeficientes if c["termino"] == t)}
+                         for t in TERMINOS_CLAVE if t in coef2 and t not in excluir},
+        **comparar_signos(resultado, {"coeficientes": list(coef2.values()), "r2_ajustado": float(aj2.rsquared_adj),
+                                      "n_efectivo": int(len(sin_infl))}),
+    }
     resultado["_residuos"] = residuos
     resultado["_ajustados"] = ajuste.fittedvalues.to_numpy()
+    resultado["_indices"] = datos.index
     return resultado
 
 
@@ -487,8 +607,22 @@ def comparar_signos(principal: dict[str, Any], sensibilidad: dict[str, Any]) -> 
             "r2_ajustado": sensibilidad["r2_ajustado"], "n_efectivo": sensibilidad["n_efectivo"]}
 
 
+def coeficientes_clave(principal: dict[str, Any], alternativo: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Cambio % de los ``TERMINOS_CLAVE`` en el modelo principal y en una especificación alternativa."""
+    alt = {c["termino"]: c for c in alternativo["coeficientes"]}
+    salida = {}
+    for c in principal["coeficientes"]:
+        if c["termino"] in TERMINOS_CLAVE and c["termino"] in alt:
+            a = alt[c["termino"]]
+            salida[c["termino"]] = {"nombre": c["nombre"], "pct_principal": c["pct"], "pct_alternativo": a["pct"],
+                                    "ic_inf_alternativo": a["ic_inf_pct"], "ic_sup_alternativo": a["ic_sup_pct"],
+                                    "p_alternativo": a["p_cluster"], "significativo_alternativo": a["significativo"],
+                                    "mismo_signo": bool(np.sign(a["pct"]) == np.sign(c["pct"]))}
+    return salida
+
+
 # --------------------------------------------------------------------------
-# Modelo ML opcional
+# Modelo ML (complementario): validación agrupada por anfitrión
 # --------------------------------------------------------------------------
 def comprobar_fuga(features: list[str]) -> None:
     """Lanza ``ErrorDatos`` si alguna variable está en la lista negra o tiene un prefijo prohibido."""
@@ -498,55 +632,236 @@ def comprobar_fuga(features: list[str]) -> None:
         raise ErrorDatos(f"Fuga del objetivo en el modelo ML: {', '.join(prohibidas)}")
 
 
-def ajustar_modelo_ml(df: pd.DataFrame, semilla: int) -> dict[str, Any]:
-    """HistGradientBoosting sobre ln(precio) con partición train/test, línea base e importancia por permutación."""
+def particiones_por_anfitrion(grupos: pd.Series | np.ndarray, n_folds: int, semilla: int
+                              ) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Particiones GroupKFold (barajadas con semilla) en las que ningún anfitrión está en train y test."""
+    from sklearn.model_selection import GroupKFold
+
+    g = np.asarray(grupos)
+    kf = GroupKFold(n_splits=n_folds, shuffle=True, random_state=semilla)
+    particiones = list(kf.split(np.zeros(len(g)), groups=g))
+    comprobar_sin_solape(g, particiones)
+    return particiones
+
+
+def comprobar_sin_solape(grupos: np.ndarray, particiones: list[tuple[np.ndarray, np.ndarray]]) -> None:
+    """Lanza ``ErrorDatos`` si algún anfitrión aparece a la vez en train y test de una partición."""
+    g = np.asarray(grupos)
+    for i, (tr, te) in enumerate(particiones):
+        comunes = set(g[tr]) & set(g[te])
+        if comunes:
+            raise ErrorDatos(f"Partición {i}: {len(comunes)} anfitriones en train y test (fuga por anfitrión).")
+
+
+def _clases_pipeline() -> tuple[type, type]:
+    """Transformadores con estado aprendido SOLO en ``fit`` (train): imputación y agrupación de raras."""
+    from sklearn.base import BaseEstimator, TransformerMixin
+
+    class ImputadorMedianaGrupo(BaseEstimator, TransformerMixin):
+        """Imputa con la mediana por (tipo, capacidad) del train; después por tipo y después global."""
+
+        def __init__(self, columnas: tuple[str, ...] = config.FEATURES_ML_IMPUTADAS,
+                     grupo: tuple[str, str] = ("tipo_habitacion", "accommodates")):
+            self.columnas = columnas
+            self.grupo = grupo
+
+        def fit(self, X: pd.DataFrame, y: Any = None) -> "ImputadorMedianaGrupo":
+            cols = [c for c in self.columnas if c in X]
+            self.medianas_grupo_ = {c: X.groupby(list(self.grupo))[c].median() for c in cols}
+            self.medianas_tipo_ = {c: X.groupby(self.grupo[0])[c].median() for c in cols}
+            self.medianas_global_ = {c: float(X[c].median()) for c in cols}
+            return self
+
+        def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+            X = X.copy()
+            claves = pd.MultiIndex.from_frame(X[list(self.grupo)])
+            for c, med in self.medianas_grupo_.items():
+                m1 = pd.Series(med.reindex(claves).to_numpy(dtype="float64"), index=X.index)
+                m2 = X[self.grupo[0]].map(self.medianas_tipo_[c]).astype("float64")
+                X[c] = X[c].fillna(m1).fillna(m2).fillna(self.medianas_global_[c])
+            return X
+
+    class AgrupadorRaras(BaseEstimator, TransformerMixin):
+        """Agrupa en ``etiqueta`` las categorías con menos de ``min_n`` filas en el train."""
+
+        def __init__(self, columnas: tuple[str, ...] = (), min_n: int = config.MIN_N_CATEGORIA_RARA_ML,
+                     etiqueta: str = "Otras"):
+            self.columnas = columnas
+            self.min_n = min_n
+            self.etiqueta = etiqueta
+
+        def fit(self, X: pd.DataFrame, y: Any = None) -> "AgrupadorRaras":
+            self.frecuentes_ = {}
+            for c in self.columnas:
+                conteo = X[c].value_counts()
+                self.frecuentes_[c] = set(conteo.index[conteo >= self.min_n])
+            return self
+
+        def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+            X = X.copy()
+            for c in self.columnas:
+                X[c] = X[c].where(X[c].isin(self.frecuentes_[c]), self.etiqueta)
+            return X
+
+    return ImputadorMedianaGrupo, AgrupadorRaras
+
+
+def preparar_X(df: pd.DataFrame, features: list[str]) -> pd.DataFrame:
+    """Matriz de entrada SIN parámetros aprendidos: tipos y valores originales (sin imputar).
+
+    Las variables imputadas en la limpieza (``bedrooms``, ``beds``) vuelven a NaN donde se imputaron,
+    para que la imputación se aprenda dentro del Pipeline solo con el train de cada partición.
+    """
+    X = pd.DataFrame(index=df.index)
+    for c in features:
+        if c == "log1p_resenas":
+            X[c] = np.log1p(df["number_of_reviews"].astype("float64"))
+        elif c in config.FEATURES_ML_CATEGORICAS or c in ("tipo_habitacion",):
+            X[c] = df[c].astype("string").fillna("Desconocido").astype(str)
+        else:
+            X[c] = df[c].astype("float64")
+            flag = f"{c}_imputado"
+            if c in config.FEATURES_ML_IMPUTADAS and flag in df:
+                X.loc[df[flag].astype(bool), c] = np.nan
+    if "tipo_habitacion" not in X and "accommodates" in X:
+        X["tipo_habitacion"] = df["tipo_habitacion"].astype("string").fillna("Desconocido").astype(str)
+    return X
+
+
+def crear_pipeline(features: list[str], tipo: str, semilla: int) -> Any:
+    """Pipeline sklearn: imputación por grupo → agrupación de raras → codificación → modelo.
+
+    ``tipo``: ``"hgb"`` (HistGradientBoosting) o ``"lineal"`` (regresión lineal con one-hot).
+    Todo lo que se aprende de los datos (medianas, categorías frecuentes, codificación) se ajusta
+    en ``fit``, es decir, solo con el train de cada partición.
+    """
+    from sklearn.compose import ColumnTransformer
+    from sklearn.ensemble import HistGradientBoostingRegressor
+    from sklearn.linear_model import LinearRegression
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
+
+    Imputador, Agrupador = _clases_pipeline()
+    cat = [c for c in features if c in config.FEATURES_ML_CATEGORICAS]
+    num = [c for c in features if c not in cat]
+    pasos: list[tuple[str, Any]] = [("imputar", Imputador()), ("raras", Agrupador(columnas=tuple(cat)))]
+    if tipo == "hgb":
+        pre = ColumnTransformer([("cat", OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1), cat),
+                                 ("num", "passthrough", num)])
+        modelo = HistGradientBoostingRegressor(random_state=semilla, max_iter=300, early_stopping=True,
+                                               categorical_features=[True] * len(cat) + [False] * len(num))
+    elif tipo == "lineal":
+        pre = ColumnTransformer([("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=False), cat),
+                                 ("num", "passthrough", num)])
+        modelo = LinearRegression()
+    else:
+        raise ValueError(f"Tipo de modelo desconocido: {tipo}")
+    return Pipeline([*pasos, ("pre", pre), ("modelo", modelo)])
+
+
+def _metricas(y: np.ndarray, pred: np.ndarray) -> dict[str, float]:
+    """R², MAE en ln, MAE en € y mediana del error absoluto en € (robusta a anuncios extremos)."""
+    from sklearn.metrics import mean_absolute_error, r2_score
+
+    err_eur = np.abs(np.exp(y) - np.exp(pred))
+    return {"r2": float(r2_score(y, pred)), "mae_log": float(mean_absolute_error(y, pred)),
+            "mae_eur": float(err_eur.mean()), "medae_eur": float(np.median(err_eur))}
+
+
+def _resumir(por_fold: list[dict[str, float]]) -> dict[str, Any]:
+    """Media, desviación típica (ddof=1) y valores por partición de cada métrica."""
+    claves = por_fold[0].keys()
+    salida: dict[str, Any] = {}
+    for k in claves:
+        v = np.array([f[k] for f in por_fold])
+        salida[f"{k}_media"] = float(v.mean())
+        salida[f"{k}_std"] = float(v.std(ddof=1)) if len(v) > 1 else 0.0
+        salida[f"{k}_folds"] = [float(x) for x in v]
+    return salida
+
+
+def evaluar_cv(df: pd.DataFrame, features: list[str], tipo: str, particiones: list[tuple[np.ndarray, np.ndarray]],
+               semilla: int, importancia: bool = False) -> dict[str, Any]:
+    """Evalúa un Pipeline con las particiones dadas (y la línea base mediana en las mismas)."""
+    from sklearn.dummy import DummyRegressor
+    from sklearn.inspection import permutation_importance
+
+    X = preparar_X(df, features)
+    y = df["log_precio"].to_numpy()
+    modelo_f, base_f, imps = [], [], []
+    for tr, te in particiones:
+        m = crear_pipeline(features, tipo, semilla).fit(X.iloc[tr], y[tr])
+        modelo_f.append(_metricas(y[te], m.predict(X.iloc[te])))
+        base = DummyRegressor(strategy="median").fit(X.iloc[tr], y[tr])
+        base_f.append(_metricas(y[te], base.predict(X.iloc[te])))
+        if importancia:
+            perm = permutation_importance(m, X.iloc[te][features], y[te], scoring="r2", random_state=semilla,
+                                          n_repeats=config.N_REPETICIONES_PERMUTACION)
+            imps.append(perm.importances_mean)
+    salida = {"modelo": _resumir(modelo_f), "base": _resumir(base_f), "n": int(len(y))}
+    if importancia:
+        matriz = np.vstack(imps)
+        salida["importancia"] = sorted(
+            ({"variable": f, "nombre": config.ETIQUETAS_COLUMNAS.get(f, f), "importancia": float(matriz[:, i].mean()),
+              "std": float(matriz[:, i].std(ddof=1))} for i, f in enumerate(features)),
+            key=lambda r: -r["importancia"])
+    return salida
+
+
+def ajustar_modelo_ml(df: pd.DataFrame, semilla: int, filas_ols: pd.Index | None = None) -> dict[str, Any]:
+    """HistGradientBoosting sobre ln(precio) validado con GroupKFold por anfitrión.
+
+    - Validación principal: ``N_FOLDS_ML`` particiones por ``host_id`` (ningún anfitrión en train y test).
+    - Contraste «optimista»: partición aleatoria por fila (como antes), solo para mostrar la fuga.
+    - Comparación homogénea con el lineal: mismas filas (las del OLS), mismas particiones y mismas
+      variables (las del OLS) para regresión lineal y HGB, más HGB con todas las variables.
+    """
     try:
-        from sklearn.compose import ColumnTransformer
-        from sklearn.dummy import DummyRegressor
-        from sklearn.ensemble import HistGradientBoostingRegressor
-        from sklearn.inspection import permutation_importance
-        from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
         from sklearn.model_selection import train_test_split
-        from sklearn.pipeline import Pipeline
-        from sklearn.preprocessing import OrdinalEncoder
     except ImportError:
         return {"ejecutado": False, "motivo": "scikit-learn no está instalado"}
 
     features = [f for f in config.FEATURES_ML if f in df.columns]
     comprobar_fuga(features)
     datos = df[df["precio_valido"]]
-    X = datos[features].copy()
-    for c in X.columns:
-        if c in config.FEATURES_ML_CATEGORICAS:
-            X[c] = X[c].astype(str)
-        else:
-            X[c] = X[c].astype("float64")
+    particiones = particiones_por_anfitrion(datos["host_id"], config.N_FOLDS_ML, semilla)
+    principal = evaluar_cv(datos, features, "hgb", particiones, semilla, importancia=True)
+
+    # Contraste: partición aleatoria por fila (mide interpolación dentro de anfitriones ya vistos).
+    X = preparar_X(datos, features)
     y = datos["log_precio"].to_numpy()
-    X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, random_state=semilla)
-    cat = [c for c in features if c in config.FEATURES_ML_CATEGORICAS]
-    pre = ColumnTransformer([("cat", OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1), cat)],
-                            remainder="passthrough")
-    cat_mask = [True] * len(cat) + [False] * (len(features) - len(cat))
-    modelo = Pipeline([("pre", pre), ("hgb", HistGradientBoostingRegressor(
-        random_state=semilla, max_iter=300, early_stopping=True, categorical_features=cat_mask))])
-    modelo.fit(X_tr, y_tr)
-    pred = modelo.predict(X_te)
-    base = DummyRegressor(strategy="median").fit(X_tr, y_tr).predict(X_te)
-    perm = permutation_importance(modelo, X_te, y_te, n_repeats=5, random_state=semilla, scoring="r2")
-    imp = sorted(({"variable": f, "importancia": float(m), "std": float(s)}
-                  for f, m, s in zip(features, perm.importances_mean, perm.importances_std)),
-                 key=lambda r: -r["importancia"])
+    idx_tr, idx_te = train_test_split(np.arange(len(y)), test_size=config.TEST_SIZE_ALEATORIO, random_state=semilla)
+    m = crear_pipeline(features, "hgb", semilla).fit(X.iloc[idx_tr], y[idx_tr])
+    hosts = datos["host_id"].to_numpy()
+    aleatorio = {**_metricas(y[idx_te], m.predict(X.iloc[idx_te])), "n_train": int(len(idx_tr)),
+                 "n_test": int(len(idx_te)),
+                 "pct_test_con_anfitrion_en_train": float(np.isin(hosts[idx_te], hosts[idx_tr]).mean() * 100)}
+
+    comparacion: dict[str, Any] = {}
+    if filas_ols is not None and len(filas_ols):
+        sub = df.loc[filas_ols]
+        vars_ols = [*VARIABLES_OLS_NUMERICAS, "tipo_habitacion", "licencia_tipo", "neighbourhood_group_cleansed",
+                    "mes_cotizacion"]
+        part_ols = particiones_por_anfitrion(sub["host_id"], config.N_FOLDS_ML, semilla)
+        comparacion = {
+            "n": int(len(sub)), "variables_ols": vars_ols,
+            "lineal_vars_ols": evaluar_cv(sub, vars_ols, "lineal", part_ols, semilla)["modelo"],
+            "hgb_vars_ols": evaluar_cv(sub, vars_ols, "hgb", part_ols, semilla)["modelo"],
+            "hgb_todas": evaluar_cv(sub, features, "hgb", part_ols, semilla)["modelo"],
+        }
+    cv = principal["modelo"]
     return {
         "ejecutado": True, "modelo": "HistGradientBoostingRegressor (max_iter=300, early_stopping)",
-        "objetivo": "ln(precio)", "n_train": int(len(y_tr)), "n_test": int(len(y_te)), "test_size": 0.2,
-        "semilla": semilla, "n_features": len(features), "features": features,
-        "r2_test": float(r2_score(y_te, pred)), "mae_log_test": float(mean_absolute_error(y_te, pred)),
-        "rmse_log_test": float(np.sqrt(mean_squared_error(y_te, pred))),
-        "mae_eur_test": float(mean_absolute_error(np.exp(y_te), np.exp(pred))),
-        "mae_eur_base": float(mean_absolute_error(np.exp(y_te), np.exp(base))),
-        "r2_base": float(r2_score(y_te, base)), "mae_log_base": float(mean_absolute_error(y_te, base)),
-        "importancia_permutacion": imp[:10],
-        "nota": "Importancia predictiva, no causal. El MAE en € tras exp() tiene sesgo de retransformación.",
+        "objetivo": "ln(precio)", "n": principal["n"], "n_anfitriones": int(datos["host_id"].nunique()),
+        "n_folds": config.N_FOLDS_ML, "semilla": semilla, "n_features": len(features), "features": features,
+        "validacion": "GroupKFold por host_id (barajado con semilla); imputación y agrupación de categorías "
+                      "raras aprendidas dentro del Pipeline solo con el train de cada partición",
+        "cv": cv, "cv_base": principal["base"], "aleatorio": aleatorio,
+        "caida_r2_aleatorio_a_grupos": aleatorio["r2"] - cv["r2_media"],
+        "comparacion_misma_muestra": comparacion,
+        "importancia_permutacion": principal["importancia"][:10],
+        "nota": "Importancia predictiva (media de las particiones), no causal. El MAE en € tras exp() tiene sesgo "
+                "de retransformación y lo dominan pocos anuncios extremos; la mediana del error absoluto es robusta.",
     }
 
 

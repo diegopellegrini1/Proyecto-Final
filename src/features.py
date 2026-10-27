@@ -73,9 +73,18 @@ def antiguedad_host(df: pd.DataFrame, fecha_referencia: pd.Timestamp) -> tuple[p
     return resultado, fuente
 
 
-def ocupacion_estimada(availability_365: pd.Series) -> pd.Series:
-    """``(365 − availability_365) / 365`` acotado a [0, 1]. No es ocupación real."""
+def no_disponible_365(availability_365: pd.Series) -> pd.Series:
+    """Fracción de días NO disponibles en los próximos 365: ``(365 − availability_365) / 365`` en [0, 1].
+
+    No es ocupación: mezcla reservas y bloqueos del anfitrión, y mira hacia el futuro (no a los
+    últimos 12 meses, como ``estimated_occupancy_l365d``).
+    """
     return ((365 - availability_365) / 365).clip(0, 1).astype("float64")
+
+
+def mes_cotizacion(checkin: pd.Series) -> pd.Series:
+    """Mes (``AAAA-MM``) de la fecha de entrada de la cotización de precio; ``<NA>`` si no hay cotización."""
+    return checkin.dt.strftime("%Y-%m").astype("string")
 
 
 def licencia_tipo(license_: pd.Series) -> pd.Series:
@@ -106,12 +115,15 @@ def agregar_features(df: pd.DataFrame, ciudad: Ciudad, fecha_referencia: pd.Time
     out["log_precio"] = np.log(out["price"].where(out["precio_valido"])).astype("float64")
     out["precio_por_persona"] = precio_por_persona(out["price"], out["accommodates"])
     out["antiguedad_host_anios"], meta["antiguedad_fuente"] = antiguedad_host(out, fecha_referencia)
-    out["ocupacion_estimada"] = ocupacion_estimada(out["availability_365"])
-    if "estimated_occupancy_l365d" in out:
-        out["ocupacion_inside_airbnb"] = (out["estimated_occupancy_l365d"] / 365).clip(0, 1).astype("float64")
+    out["no_disponible_365"] = no_disponible_365(out["availability_365"])
+    out["ocupacion_inside_airbnb"] = (out["estimated_occupancy_l365d"] / 365).clip(0, 1).astype("float64")
     out["es_activo_probable"] = ~((out["availability_365"] == 0) & (out["number_of_reviews_ltm"] == 0))
-    out["ingresos_estimados_anuales"] = (out["price"].where(out["precio_valido"])
-                                         * (365 - out["availability_365"])).astype("float64")
+    # Proxy hipotético: precio de UNA cotización × días no disponibles futuros. No acota nada.
+    out["ingreso_hipotetico_anual"] = (out["price"].where(out["precio_valido"])
+                                       * (365 - out["availability_365"])).astype("float64")
+    out["mes_cotizacion"] = mes_cotizacion(out["price_quote_checkin_date"])
+    out["mes_cotizacion_agrupado"], meta["agrupacion_mes"] = agrupar_raras(
+        out["mes_cotizacion"], out["precio_valido"], config.MIN_N_CATEGORIA_RARA, config.ETIQUETA_OTROS_MESES)
     distancia = haversine_km(out["latitude"], out["longitude"], *ciudad.centro)
     out["distancia_centro_km"] = pd.Series(distancia, index=out.index).where(out["coords_validas"]).astype("float64")
     out["categoria_precio"], meta["cortes_categoria_precio"] = categoria_precio(out["price"], out["precio_valido"])
@@ -120,7 +132,10 @@ def agregar_features(df: pd.DataFrame, ciudad: Ciudad, fecha_referencia: pd.Time
     out["es_multianuncio"] = (out["calculated_host_listings_count"] > 1).astype(bool)
     out["segmento_host"] = pd.cut(out["calculated_host_listings_count"], bins=list(CORTES_SEGMENTO_HOST),
                                   labels=list(ETIQUETAS_SEGMENTO_HOST), ordered=True)
-    out["licencia_tipo"] = licencia_tipo(out["license"]) if "license" in out else LICENCIA_SIN
+    if "license" in out:
+        out["licencia_tipo"] = licencia_tipo(out["license"])
+    else:  # Serie explícita (no escalar) para conservar el dtype string
+        out["licencia_tipo"] = pd.Series(LICENCIA_SIN, index=out.index, dtype="string")
     out["tiene_resenas"] = (out["number_of_reviews"] > 0).astype(bool)
     out["dias_desde_ultima_resena"] = (fecha_referencia - out["last_review"]).dt.days.astype("float64")
     meta["fecha_referencia"] = fecha_referencia

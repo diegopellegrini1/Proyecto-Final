@@ -1,8 +1,8 @@
 """Arranque real del dashboard: servidor Streamlit headless, HTTP 200 y log sin excepciones.
 
 Uso:  python scripts/verificar_dashboard.py
-Un HTTP 200 solo prueba que el servidor está vivo; la ejecución del script de la app se prueba
-con ``streamlit.testing.v1.AppTest`` en ``tests/test_dashboard_apptest.py``.
+Un HTTP 200 solo prueba que el servidor está vivo; la ejecución del script de la app (filtros, KPIs,
+comparador, GeoJSON ausente…) se prueba con ``streamlit.testing.v1.AppTest`` en ``tests/test_dashboard.py``.
 """
 
 from __future__ import annotations

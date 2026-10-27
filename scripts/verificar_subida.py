@@ -17,7 +17,12 @@ import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
-LIMITE_BYTES = 25_000_000
+sys.path.insert(0, str(RAIZ))
+sys.dont_write_bytecode = True
+
+from src import config  # noqa: E402
+
+LIMITE_BYTES = config.LIMITE_SUBIDA_BYTES  # fuente de verdad única (límite de subida web de GitHub)
 EXCLUIDOS = {".git", ".agents"}
 DIRS_PROHIBIDOS = {"__pycache__", ".venv", "venv", ".ipynb_checkpoints", ".pytest_cache"}
 SUFIJOS_PROHIBIDOS = {".pyc", ".log", ".tmp", ".part"}
@@ -42,7 +47,7 @@ def problemas(archivos: list[Path]) -> list[str]:
         if rel.parts[:2] == ("data", "extra"):
             salida.append(f"data/extra no debe subirse: {rel.as_posix()}")
         if p.stat().st_size > LIMITE_BYTES:
-            salida.append(f"supera 25 MB: {rel.as_posix()} ({p.stat().st_size:,} bytes)")
+            salida.append(f"supera {LIMITE_BYTES / 1e6:.0f} MB: {rel.as_posix()} ({p.stat().st_size:,} bytes)")
         if (p.suffix in SUFIJOS_TEXTO or p.name in SUFIJOS_TEXTO) and p.stat().st_size < 5_000_000:
             if SECRETO.search(p.read_text(encoding="utf-8", errors="ignore")):
                 salida.append(f"posible secreto en {rel.as_posix()}")

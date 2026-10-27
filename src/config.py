@@ -53,6 +53,12 @@ MIN_NIGHTS_LARGA_ESTANCIA: int = 30
 TAM_MUESTRA_CSV: int = 500
 LIMITE_SUBIDA_BYTES: int = 25_000_000
 MAX_DESCARGA_BYTES: int = 300_000_000
+MAX_DESCOMPRIMIDO_BYTES: int = 2_000_000_000   # tope de bytes descomprimidos al validar un .gz
+N_FOLDS_ML: int = 5                            # GroupKFold por anfitrión
+TEST_SIZE_ALEATORIO: float = 0.2               # partición aleatoria (solo contraste optimista)
+MIN_N_CATEGORIA_RARA_ML: int = 30              # agrupación de categorías raras dentro del Pipeline ML
+N_REPETICIONES_PERMUTACION: int = 3
+ETIQUETA_OTROS_MESES: str = "Otros meses"
 UMBRAL_FILAS: int = 1000
 UMBRAL_COLUMNAS: int = 20
 
@@ -120,11 +126,15 @@ CIUDAD_POR_DEFECTO: str = "madrid"
 # --------------------------------------------------------------------------
 # Columnas
 # --------------------------------------------------------------------------
+# Contrato de columnas: todas las que el pipeline lee sin guarda. Si falta alguna, ErrorDatos
+# accionable al leer (nunca KeyError en una etapa posterior). Las demás se usan con «if col in df».
 COLUMNAS_OBLIGATORIAS: tuple[str, ...] = (
-    "id", "price", "room_type", "accommodates", "latitude", "longitude",
+    "id", "name", "price", "room_type", "accommodates", "latitude", "longitude",
     "neighbourhood_cleansed", "neighbourhood_group_cleansed", "host_id",
     "host_is_superhost", "availability_365", "amenities", "minimum_nights",
-    "number_of_reviews", "last_scraped",
+    "number_of_reviews", "number_of_reviews_ltm", "last_scraped", "last_review",
+    "calculated_host_listings_count", "estimated_revenue_l365d", "estimated_occupancy_l365d",
+    "review_scores_rating", "price_quote_checkin_date", "price_quote_checkout_date",
 )
 
 TRADUCCION_TIPO_HABITACION: dict[str, str] = {
@@ -135,21 +145,36 @@ TRADUCCION_TIPO_HABITACION: dict[str, str] = {
 }
 ETIQUETA_OTRAS_TIPO: str = "Otras (compartida + hotel)"
 
-# Patrones (regex, sin distinguir mayúsculas) sobre el texto crudo de amenities.
+# Patrones (regex) que se aplican a CADA elemento de la lista JSON de amenities, ya normalizado
+# (minúsculas, espacios simples). Un anuncio tiene el flag si algún elemento coincide.
+# Casos ambiguos resueltos (comprobados con cadenas reales del snapshot, ver tests):
+# «HDTV» sí es TV; «Dishwasher» no es lavadora; «Pool table», «Pool toys» y «Pool view» no son
+# piscina; «Pocket wifi» (router portátil) no es wifi del alojamiento; «Outdoor kitchen» no es cocina.
 PATRONES_AMENITIES: dict[str, str] = {
-    "tiene_wifi": r"wifi",
-    "tiene_aire_acondicionado": r"air conditioning",
-    "tiene_cocina": r"kitchen",
-    "tiene_calefaccion": r"heating",
-    "tiene_lavadora": r"washer",
-    "tiene_ascensor": r"elevator",
-    "tiene_terraza_balcon": r"balcony|patio|terrace",
-    "tiene_parking_cualquiera": r"parking",
-    "tiene_piscina": r"pool",
-    "tiene_tv": r"\btv\b",
-    "tiene_espacio_trabajo": r"workspace",
-    "admite_mascotas": r"pets allowed",
-    "llegada_autonoma": r"self check-in",
+    "tiene_wifi": r"^(?:fast )?wifi\b",
+    "tiene_aire_acondicionado": r"\bair conditioning\b",
+    "tiene_cocina": r"^kitchen(?:ette)?$",
+    "tiene_calefaccion": r"\bheating\b",
+    "tiene_lavadora": r"(?<!dish)\bwasher\b",
+    "tiene_ascensor": r"\belevator\b",
+    "tiene_terraza_balcon": r"\b(?:balcony|patio|terrace)\b",
+    "tiene_parking_cualquiera": r"\b(?:parking|garage)\b",
+    "tiene_piscina": r"\bpool\b(?! ?(?:table|toys|view))",
+    "tiene_tv": r"\b(?:hd)?tv\b",
+    "tiene_espacio_trabajo": r"\bworkspace\b",
+    "admite_mascotas": r"^pets allowed$",
+    "llegada_autonoma": r"^self check-in$",
+}
+
+# Cotas de prevalencia plausibles (% de anuncios) por patrón. Fuera de ellas el patrón
+# probablemente ha dejado de funcionar (formato cambiado o falso positivo masivo): ErrorDatos.
+# Solo se aplican con al menos UMBRAL_FILAS anuncios (con pocos datos no son informativas).
+COTAS_PREVALENCIA_AMENITIES: dict[str, tuple[float, float]] = {
+    "tiene_wifi": (50, 100), "tiene_aire_acondicionado": (20, 98), "tiene_cocina": (50, 100),
+    "tiene_calefaccion": (30, 100), "tiene_lavadora": (30, 100), "tiene_ascensor": (10, 95),
+    "tiene_terraza_balcon": (2, 70), "tiene_parking_cualquiera": (2, 80), "tiene_piscina": (0.1, 30),
+    "tiene_tv": (30, 100), "tiene_espacio_trabajo": (10, 95), "admite_mascotas": (1, 60),
+    "llegada_autonoma": (5, 90),
 }
 
 # Nombres legibles de los flags de amenities.
@@ -161,38 +186,58 @@ NOMBRES_AMENITIES: dict[str, str] = {
     "admite_mascotas": "Admite mascotas", "llegada_autonoma": "Llegada autónoma",
 }
 
-# Lista blanca de variables del modelo ML (M5).
+# Lista blanca de variables del modelo ML (M5). ``mes_cotizacion`` controla la temporada de la
+# cotización (mes de entrada); no deriva del precio sino de la primera fecha disponible.
 FEATURES_ML: tuple[str, ...] = (
     "accommodates", "bedrooms", "beds", "bathrooms", "bano_compartido", "n_amenities",
     *PATRONES_AMENITIES.keys(),
     "distancia_centro_km", "tipo_habitacion", "neighbourhood_group_cleansed",
     "host_is_superhost", "es_multianuncio", "licencia_tipo", "number_of_reviews",
     "review_scores_rating", "review_scores_location", "review_scores_cleanliness",
-    "minimum_nights", "availability_365", "antiguedad_host_anios",
+    "minimum_nights", "availability_365", "antiguedad_host_anios", "mes_cotizacion",
 )
-FEATURES_ML_CATEGORICAS: tuple[str, ...] = ("tipo_habitacion", "neighbourhood_group_cleansed", "licencia_tipo")
+FEATURES_ML_CATEGORICAS: tuple[str, ...] = (
+    "tipo_habitacion", "neighbourhood_group_cleansed", "licencia_tipo", "mes_cotizacion")
+# Variables con imputación aprendida dentro del Pipeline (mediana por tipo y capacidad del train).
+FEATURES_ML_IMPUTADAS: tuple[str, ...] = ("bedrooms", "beds")
 
 # Lista negra: segunda barrera contra la fuga del objetivo (precio).
 COLUMNAS_PROHIBIDAS_FUGA: frozenset[str] = frozenset({
-    "price", "log_precio", "precio_por_persona", "ingresos_estimados_anuales",
+    "price", "log_precio", "precio_por_persona", "ingreso_hipotetico_anual",
     "estimated_revenue_l365d", "categoria_precio", "precio_valido",
     "es_outlier_precio", "es_outlier_alto", "es_outlier_bajo",
 })
-PREFIJOS_PROHIBIDOS_FUGA: tuple[str, ...] = ("price_", "precio_", "ingresos_", "es_outlier")
+PREFIJOS_PROHIBIDOS_FUGA: tuple[str, ...] = ("price_", "precio_", "ingreso_", "ingresos_", "es_outlier")
 
-# Columnas que lee el dashboard (subconjunto del Parquet) y las de la tabla.
+# Columnas que lee el dashboard (solo las que usa de verdad) y las de la tabla.
 COLUMNAS_DASHBOARD: tuple[str, ...] = (
-    "id", "name", "host_id", "neighbourhood_cleansed", "neighbourhood_group_cleansed",
-    "tipo_habitacion", "room_type", "price", "precio_valido", "precio_por_persona",
-    "accommodates", "bedrooms", "latitude", "longitude", "coords_validas",
-    "distancia_centro_km", "host_is_superhost", "es_multianuncio", "segmento_host",
-    "calculated_host_listings_count", "ocupacion_estimada", "es_activo_probable",
-    "number_of_reviews", "review_scores_rating", "n_amenities", "minimum_nights",
-    "categoria_precio", *PATRONES_AMENITIES.keys(),
+    "id", "name", "neighbourhood_cleansed", "neighbourhood_group_cleansed",
+    "tipo_habitacion", "price", "precio_valido", "accommodates", "bedrooms",
+    "latitude", "longitude", "coords_validas", "distancia_centro_km", "host_is_superhost",
+    "es_multianuncio", "segmento_host", "no_disponible_365", "es_activo_probable",
+    "number_of_reviews", "review_scores_rating", "minimum_nights", "es_tarifa_mensual",
+    *PATRONES_AMENITIES.keys(),
 )
 COLUMNAS_TABLA: tuple[str, ...] = (
     "id", "name", "neighbourhood_group_cleansed", "neighbourhood_cleansed",
     "tipo_habitacion", "price", "accommodates", "bedrooms", "distancia_centro_km",
     "host_is_superhost", "number_of_reviews", "review_scores_rating", "minimum_nights",
 )
+# Etiquetas legibles en español (tabla y CSV del dashboard, figura 13).
+ETIQUETAS_COLUMNAS: dict[str, str] = {
+    "id": "ID del anuncio", "name": "Nombre del anuncio", "neighbourhood_group_cleansed": "Distrito",
+    "neighbourhood_cleansed": "Barrio", "tipo_habitacion": "Tipo de habitación", "price": "Precio por noche (€)",
+    "accommodates": "Capacidad (personas)", "bedrooms": "Dormitorios", "beds": "Camas", "bathrooms": "Baños",
+    "bano_compartido": "Baño compartido", "n_amenities": "Nº de amenities",
+    "distancia_centro_km": "Distancia al centro (km)", "host_is_superhost": "Superhost",
+    "es_multianuncio": "Anfitrión con varios anuncios", "licencia_tipo": "Tipo de licencia",
+    "number_of_reviews": "Nº de reseñas", "review_scores_rating": "Valoración (1-5)",
+    "review_scores_location": "Valoración de la ubicación", "review_scores_cleanliness": "Valoración de la limpieza",
+    "minimum_nights": "Estancia mínima (noches)", "availability_365": "Días disponibles (próx. 365)",
+    "antiguedad_host_anios": "Antigüedad del anfitrión (años)", "mes_cotizacion": "Mes de la cotización",
+    **NOMBRES_AMENITIES,
+}
 MAX_PUNTOS_MAPA: int = 10_000
+MIN_N_COMPARADOR: int = 30   # por debajo, el comparador del dashboard avisa de muestra pequeña
+PREFIJO_GRAFICOS_DASHBOARD: str = "dashboard_"
+INDICE_GRAFICOS_DASHBOARD: str = "dashboard_graficos.json"

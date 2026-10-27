@@ -127,6 +127,16 @@ def versiones() -> dict[str, str]:
     return v
 
 
+def graficos_dashboard_existentes() -> list[dict[str, str]]:
+    """Gráficos exportados del dashboard (``scripts/exportar_graficos_dashboard.py``) que existen en disco."""
+    indice = config.DIR_FIGURAS / config.INDICE_GRAFICOS_DASHBOARD
+    if not indice.exists():
+        return []
+    with open(indice, encoding="utf-8") as f:
+        entradas = json.load(f)
+    return [e for e in entradas if (config.DIR_FIGURAS / e["archivo"]).exists()]
+
+
 def _ejecutar_script(nombre: str, *args: str) -> None:
     """Ejecuta un script de ``scripts/`` con el mismo intérprete; lanza ErrorVerificacion si falla."""
     ruta = config.RAIZ / "scripts" / nombre
@@ -150,7 +160,7 @@ def ejecutar(args: argparse.Namespace) -> None:
     with etapa("1. Datos originales (descarga o verificación offline)", tiempos):
         manifiesto = carga.asegurar_datos_raw(ciudad, forzar=args.forzar_descarga, sin_descarga=args.sin_descarga)
         extras = [c for c, flag in (("reviews", args.incluir_reviews), ("calendar", args.incluir_calendar)) if flag]
-        manifiesto = carga.asegurar_extras(ciudad, manifiesto, extras)
+        manifiesto = carga.asegurar_extras(ciudad, manifiesto, extras, sin_descarga=args.sin_descarga)
 
     with etapa("2. Lectura y perfil de calidad «antes»", tiempos):
         df_raw = carga.leer_listings()
@@ -196,7 +206,8 @@ def ejecutar(args: argparse.Namespace) -> None:
             raise ErrorPipeline("Figuras inválidas: " + "; ".join(problemas))
         esperadas = set(nombres_fig)
         for sobrante in config.DIR_FIGURAS.glob("*.png"):
-            if sobrante.name not in esperadas:
+            # Los gráficos exportados del dashboard los genera otro script y se conservan.
+            if sobrante.name not in esperadas and not sobrante.name.startswith(config.PREFIJO_GRAFICOS_DASHBOARD):
                 sobrante.unlink()
 
     tiempos_computo = dict(tiempos)
@@ -216,7 +227,9 @@ def ejecutar(args: argparse.Namespace) -> None:
                     "min_nights_larga_estancia": config.MIN_NIGHTS_LARGA_ESTANCIA, "n_shapiro": config.N_SHAPIRO,
                     "tam_muestra_csv": config.TAM_MUESTRA_CSV, "max_puntos_mapa": config.MAX_PUNTOS_MAPA,
                     "umbral_filas": config.UMBRAL_FILAS, "umbral_columnas": config.UMBRAL_COLUMNAS,
-                    "test_size_ml": 0.2, "n_figuras": len(nombres_fig),
+                    "n_folds_ml": config.N_FOLDS_ML, "test_size_aleatorio": config.TEST_SIZE_ALEATORIO,
+                    "min_n_categoria_rara_ml": config.MIN_N_CATEGORIA_RARA_ML, "n_figuras": len(nombres_fig),
+                    "min_n_comparador": config.MIN_N_COMPARADOR,
                 },
                 "versiones": versiones(), "generado_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
             },
@@ -255,10 +268,13 @@ def ejecutar(args: argparse.Namespace) -> None:
                          "n_flags_amenities": len(config.PATRONES_AMENITIES)},
             **hallazgos,
             "figuras": nombres_fig,
+            "dashboard_graficos": graficos_dashboard_existentes(),
             "rendimiento": {"etapas_s": tiempos_computo, "total_computo_s": float(sum(tiempos_computo.values()))},
         }
         findings = a_serializable(findings)
         findings["afirmaciones"] = informe.evaluar_afirmaciones(findings)
+        findings["afirmaciones_invariantes"] = sorted(informe.IDS_INVARIANTES)
+        findings["afirmaciones_no_cumplidas"] = sorted(k for k, v in findings["afirmaciones"].items() if not v)
         escribir_json(findings, config.RUTA_FINDINGS)
 
     with etapa("10. Documentos (README, informe, diccionario)", tiempos):

@@ -2,9 +2,11 @@
 
 Garantías:
 - Solo HTTPS y dominios de Inside Airbnb; las redirecciones se siguen a mano y se validan.
-- Cada fichero se descarga a ``.part``, se valida por completo (tamaño, gzip íntegro,
-  CSV/GeoJSON parseable) y solo entonces se renombra de forma atómica.
-- El manifiesto (URL, bytes, SHA-256, fecha) se escribe cuando todos los ficheros pasan.
+- Cada fichero se descarga a ``.part``, se valida por completo (tamaño, gzip íntegro con tope de
+  bytes descomprimidos, CSV/GeoJSON parseable) y solo entonces se renombra.
+- Los tres ficheros obligatorios se descargan como conjunto en un directorio temporal; solo si
+  todos pasan y sus URLs tienen la misma fecha de snapshot se sustituyen los de ``data/raw``.
+- El manifiesto (URL, fecha efectiva, bytes y SHA-256 por fichero) se escribe al final.
 - Si ``data/raw`` ya está completo y su hash coincide con el manifiesto, no se usa la red.
 """
 
@@ -17,6 +19,7 @@ import json
 import logging
 import os
 import re
+import tempfile
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -205,16 +208,23 @@ def _fecha_de_url(url: str) -> str:
 # --------------------------------------------------------------------------
 # Descarga y validación
 # --------------------------------------------------------------------------
-def validar_contenido(ruta: Path, nombre: str) -> None:
-    """Valida un fichero descargado por completo. Lanza ``_Recuperable`` si está corrupto."""
+def validar_contenido(ruta: Path, nombre: str, max_descomprimido: int = config.MAX_DESCOMPRIMIDO_BYTES) -> None:
+    """Valida un fichero descargado por completo. Lanza ``_Recuperable`` si está corrupto.
+
+    Para los ``.gz`` cuenta los bytes descomprimidos y aborta con ``ErrorDescarga`` (sin reintentar)
+    si superan ``max_descomprimido``, para no gastar CPU con un fichero que se expande sin medida.
+    """
     try:
         if ruta.stat().st_size == 0:
             raise _Recuperable("fichero vacío")
         if nombre.endswith(".gz"):
             with gzip.open(ruta, "rb") as f:
                 cabecera = f.read(1 << 16)
-                while f.read(1 << 20):
-                    pass
+                total = len(cabecera)
+                while trozo := f.read(1 << 20):
+                    total += len(trozo)
+                    if total > max_descomprimido:
+                        raise ErrorDescarga(f"{nombre} supera el tope de {max_descomprimido} bytes descomprimidos.")
             if nombre.endswith(".csv.gz"):
                 pd.read_csv(io.BytesIO(cabecera), nrows=5)
         elif nombre.endswith(".geojson"):
@@ -255,7 +265,7 @@ def _descargar_una_vez(url: str, destino: Path, sesion: requests.Session) -> Non
         if esperado is not None and escritos != int(esperado):
             raise _Recuperable(f"tamaño incompleto ({escritos} de {esperado} bytes)")
         validar_contenido(parte, destino.name)
-    except _Recuperable:
+    except BaseException:
         parte.unlink(missing_ok=True)
         raise
     os.replace(parte, destino)
@@ -322,6 +332,45 @@ def _raw_completo(dir_raw: Path) -> bool:
     return (dir_raw / "MANIFEST.json").exists() and all((dir_raw / n).exists() for n in config.FICHEROS_OBLIGATORIOS)
 
 
+def descargar_snapshot(ciudad: Ciudad, snapshot: UrlsSnapshot, dir_raw: Path,
+                       sesion: requests.Session) -> list[dict[str, Any]]:
+    """Descarga los ficheros obligatorios como un conjunto atómico y devuelve sus entradas de manifiesto.
+
+    1. Los tres ficheros se descargan y validan en un directorio temporal junto a ``dir_raw``.
+    2. Si alguno falla, se reintenta solo ese con la URL directa conocida (fallback).
+    3. Se exige que las fechas de snapshot de TODAS las URLs efectivas coincidan; si no, ``ErrorDescarga``
+       y ``data/raw`` queda intacto (no se mezclan ficheros de dos fechas).
+    4. Solo entonces se sustituyen los ficheros de ``dir_raw`` (``os.replace`` por fichero).
+    """
+    dir_raw.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=dir_raw.parent, prefix=".descarga_") as tmp:
+        tmp_dir = Path(tmp)
+        ficheros: list[dict[str, Any]] = []
+        for nombre in config.FICHEROS_OBLIGATORIOS:
+            url = snapshot.urls[nombre]
+            try:
+                descargar_fichero(url, tmp_dir / nombre, sesion)
+            except (_NoEncontrado, ErrorDescarga) as exc:
+                directa = ciudad.url_directa_conocida.get(nombre)
+                if not directa or directa == url:
+                    raise ErrorDescarga(str(exc)) from exc
+                logger.warning("%s; se reintenta con la URL directa conocida.", exc)
+                url = directa
+                descargar_fichero(url, tmp_dir / nombre, sesion)
+            ruta = tmp_dir / nombre
+            ficheros.append({"archivo": nombre, "url": url, "fecha_snapshot": _fecha_de_url(url),
+                             "bytes": ruta.stat().st_size, "sha256": sha256_fichero(ruta),
+                             "descargado_utc": ahora_utc()})
+        fechas = sorted({f["fecha_snapshot"] for f in ficheros})
+        if len(fechas) != 1:
+            detalle = ", ".join(f"{f['archivo']}={f['fecha_snapshot']}" for f in ficheros)
+            raise ErrorDescarga(f"Los ficheros descargados pertenecen a snapshots distintos ({detalle}); "
+                                "no se mezclan fechas y data/raw no se modifica.")
+        for f in ficheros:
+            os.replace(tmp_dir / f["archivo"], dir_raw / f["archivo"])
+    return ficheros
+
+
 def asegurar_datos_raw(ciudad: Ciudad, *, forzar: bool = False, sin_descarga: bool = False,
                        dir_raw: Path = config.DIR_RAW, sesion: requests.Session | None = None) -> dict[str, Any]:
     """Garantiza que ``data/raw`` contiene los ficheros obligatorios íntegros y devuelve el manifiesto.
@@ -337,22 +386,7 @@ def asegurar_datos_raw(ciudad: Ciudad, *, forzar: bool = False, sin_descarga: bo
     try:
         snapshot = descubrir_urls(ciudad, sesion)
         logger.info("Snapshot %s de %s (origen: %s)", snapshot.fecha, ciudad.nombre, snapshot.origen)
-        dir_raw.mkdir(parents=True, exist_ok=True)
-        ficheros = []
-        for nombre in config.FICHEROS_OBLIGATORIOS:
-            url = snapshot.urls[nombre]
-            try:
-                descargar_fichero(url, dir_raw / nombre, sesion)
-            except (_NoEncontrado, ErrorDescarga) as exc:
-                directa = ciudad.url_directa_conocida.get(nombre)
-                if not directa or directa == url:
-                    raise ErrorDescarga(str(exc)) from exc
-                logger.warning("%s; se reintenta con la URL directa conocida.", exc)
-                url = directa
-                descargar_fichero(url, dir_raw / nombre, sesion)
-            ruta = dir_raw / nombre
-            ficheros.append({"archivo": nombre, "url": url, "bytes": ruta.stat().st_size,
-                             "sha256": sha256_fichero(ruta), "descargado_utc": ahora_utc()})
+        ficheros = descargar_snapshot(ciudad, snapshot, dir_raw, sesion)
     except (ErrorDescarga, _NoEncontrado) as exc:
         if _raw_completo(dir_raw):
             logger.warning("Descarga fallida (%s); se usan los datos válidos ya presentes en data/raw.", exc)
@@ -365,7 +399,7 @@ def asegurar_datos_raw(ciudad: Ciudad, *, forzar: bool = False, sin_descarga: bo
 
     manifiesto = {
         "ciudad": ciudad.nombre,
-        "fecha_snapshot": snapshot.fecha,
+        "fecha_snapshot": ficheros[0]["fecha_snapshot"],
         "origen_urls": snapshot.origen,
         "pagina_fuente": config.URL_PAGINA_DATOS,
         "licencia": snapshot.licencia,
@@ -377,25 +411,37 @@ def asegurar_datos_raw(ciudad: Ciudad, *, forzar: bool = False, sin_descarga: bo
 
 
 def asegurar_extras(ciudad: Ciudad, manifiesto: dict[str, Any], incluir: Sequence[str], *,
-                    dir_extra: Path = config.DIR_EXTRA, dir_raw: Path = config.DIR_RAW,
+                    sin_descarga: bool = False, dir_extra: Path = config.DIR_EXTRA, dir_raw: Path = config.DIR_RAW,
                     sesion: requests.Session | None = None) -> dict[str, Any]:
     """Descarga ficheros extra (reviews/calendar) a ``data/extra`` fijando el snapshot del manifiesto (M2).
 
+    Primero comprueba la caché local contra el manifiesto; solo si falta algo usa la red. En modo
+    offline (``sin_descarga``) nunca hace peticiones: si falta un extra, ``ErrorDescarga`` con el motivo.
     Ningún análisis los usa; quedan disponibles para ampliaciones. Devuelve el manifiesto actualizado.
     """
     if not incluir:
         return manifiesto
     fecha = manifiesto["fecha_snapshot"]
-    sesion = sesion or nueva_sesion()
     registrados = {e["archivo"]: e for e in manifiesto.get("extras", [])}
-    snapshot = descubrir_urls(ciudad, sesion, fecha_fija=fecha)
+    pendientes = []
     for clave in incluir:
         nombre = f"{clave}.csv.gz"
         destino = dir_extra / nombre
         previo = registrados.get(nombre)
         if destino.exists() and previo and sha256_fichero(destino) == previo["sha256"]:
             logger.info("%s ya presente y verificado en data/extra.", nombre)
-            continue
+        else:
+            pendientes.append(nombre)
+    if not pendientes:
+        return manifiesto
+    if sin_descarga:
+        raise ErrorDescarga(f"Modo sin descarga: faltan en data/extra (o no coinciden con el manifiesto) "
+                            f"{', '.join(pendientes)}. Ejecuta sin --sin-descarga o quita --incluir-reviews/"
+                            "--incluir-calendar.")
+    sesion = sesion or nueva_sesion()
+    snapshot = descubrir_urls(ciudad, sesion, fecha_fija=fecha)
+    for nombre in pendientes:
+        destino = dir_extra / nombre
         url = snapshot.extras.get(nombre) or (
             f"https://data.insideairbnb.com/{ciudad.slug_ruta}/{fecha}/{config.FICHEROS_EXTRA[nombre]}/{nombre}")
         logger.warning("Descargando %s (puede pesar más de 100 MB; no se sube a GitHub).", nombre)

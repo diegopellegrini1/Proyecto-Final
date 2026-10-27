@@ -1,5 +1,8 @@
 """Verificador independiente: README/informe ↔ findings.json, enlaces, placeholders, figuras y plantillas.
 
+Alcance: comprueba la TRANSCRIPCIÓN (que los documentos reproducen findings.json y sus cifras
+recalculadas), no que las interpretaciones sean ciertas frente a los datos.
+
 Uso:
     python scripts/verificar_consistencia.py             # todas las comprobaciones (exit 0 si todo bien, 5 si no)
     python scripts/verificar_consistencia.py --autotest  # además altera una cifra en memoria y exige detectarla
@@ -42,6 +45,8 @@ CIFRAS_CLAVE: dict[str, list[str]] = {
         "descriptivo.precio.n", "limpieza.precio.pct_nulo", "estadistica.kruskal_tipo.tamano_efecto.valor",
         "estadistica.mann_whitney_superhost.tamano_efecto.valor", "estadistica.ols.r2_ajustado",
         "estadistica.ols.n_efectivo", "descriptivo.hosts.pct_anuncios_multianuncio", "meta.fecha_snapshot_url",
+        "precio_naturaleza.pct_con_descuento", "estadistica.ml.cv.r2_media", "estadistica.ml.aleatorio.r2",
+        "dataset.tipos_raw.identificador",
     ],
     "reports/informe.md": [
         "dataset.filas_raw", "dataset.columnas_raw", "dataset.filas_procesadas", "dataset.columnas_procesadas",
@@ -55,6 +60,9 @@ CIFRAS_CLAVE: dict[str, list[str]] = {
         "estadistica.chi2_tipo_superhost.tamano_efecto.valor", "estadistica.posthoc_distrito.n_pares_significativos",
         "estadistica.bootstrap.tipo.0.ic_inf", "estadistica.ols.r2_ajustado", "estadistica.ols.diagnostico.breusch_pagan_p",
         "estadistica.ols.vif_max.vif", "estadistica.ols.coef_superhost.pct",
+        "precio_naturaleza.pct_con_descuento", "precio_naturaleza.pct_noches_igual_minimo",
+        "estadistica.ols.f_cluster", "estadistica.ols.vif_completo_distancia", "estadistica.ml.cv.r2_media",
+        "estadistica.ml.cv.r2_std", "estadistica.ml.aleatorio.r2", "estadistica.ols.top_distritos.0.mediana_bruta",
     ],
 }
 

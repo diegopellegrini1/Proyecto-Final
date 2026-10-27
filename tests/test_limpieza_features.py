@@ -10,14 +10,23 @@ from src import config, diccionario, features, limpieza
 from src.errores import ErrorDatos
 
 CIUDAD = config.CIUDADES["madrid"]
+BARRIOS = pd.DataFrame({"neighbourhood_group": ["Centro"], "neighbourhood": ["Sol"]})
 
 
-def test_parse_precio():
-    s = pd.Series(["$1,234.00", "$364.75", "", np.nan, "basura", "$1.2.3"])
-    r = limpieza.parse_precio(s)
+@pytest.mark.parametrize("texto,esperado", [
+    ("$1,234.00", 1234.0), ("$364.75", 364.75), ("1,234.50", 1234.5), ("$-10.00", -10.0), ("-$5", -5.0),
+    ("€80.00", 80.0), ("1234", 1234.0),
+    # No convertibles (política explícita: no se adivina el formato).
+    ("EUR -25,00", np.nan), ("abc123xyz", np.nan), ("$1.2.3", np.nan), ("12,34", np.nan), ("", np.nan),
+    ("basura", np.nan), (np.nan, np.nan),
+])
+def test_parse_precio(texto, esperado):
+    r = limpieza.parse_precio(pd.Series([texto]))
     assert r.dtype == "float64"
-    assert r.iloc[0] == 1234.0 and r.iloc[1] == 364.75
-    assert r.iloc[2:].isna().all()
+    if np.isnan(esperado):
+        assert np.isnan(r.iloc[0])
+    else:
+        assert r.iloc[0] == esperado
 
 
 def test_parse_porcentaje():
@@ -53,16 +62,63 @@ def test_parse_amenities_robusto(valor, esperado):
     assert limpieza.parse_amenities(valor) == esperado
 
 
-def test_flags_amenities():
-    r = limpieza.flags_amenities(pd.Series(['["Wifi", "Free parking on premises", "Pool table"]', np.nan]))
-    assert r.loc[0, "tiene_wifi"] and r.loc[0, "tiene_parking_cualquiera"] and not r.loc[0, "tiene_cocina"]
+# Cadenas reales del snapshot (incluidos los casos ambiguos) y el flag esperado para cada patrón.
+CASOS_AMENITIES = [
+    ("tiene_tv", "TV", True), ("tiene_tv", "32 inch HDTV with Netflix", True), ("tiene_tv", "HDTV", True),
+    ("tiene_tv", "TV with standard cable", True), ("tiene_tv", "Netflix", False),
+    ("tiene_lavadora", "Washer", True), ("tiene_lavadora", "Free washer – in unit", True),
+    ("tiene_lavadora", "Washer –\xa0in building", True), ("tiene_lavadora", "Dishwasher", False),
+    ("tiene_piscina", "Pool", True), ("tiene_piscina", "Shared outdoor pool - available seasonally, open specific hours", True),
+    ("tiene_piscina", "Pool table", False), ("tiene_piscina", "Pool toys", False), ("tiene_piscina", "Pool view", False),
+    ("tiene_piscina", "Whirlpool refrigerator", False),
+    ("tiene_wifi", "Wifi", True), ("tiene_wifi", "Fast wifi – 500 Mbps", True), ("tiene_wifi", "Pocket wifi", False),
+    ("tiene_cocina", "Kitchen", True), ("tiene_cocina", "Kitchenette", True), ("tiene_cocina", "Outdoor kitchen", False),
+    ("tiene_aire_acondicionado", "Central air conditioning", True), ("tiene_aire_acondicionado", "Ceiling fan", False),
+    ("tiene_calefaccion", "Heating - split type ductless system", True), ("tiene_calefaccion", "Hot water", False),
+    ("tiene_ascensor", "Elevator", True), ("tiene_ascensor", "Stairs", False),
+    ("tiene_terraza_balcon", "Private patio or balcony", True), ("tiene_terraza_balcon", "Backyard", False),
+    ("tiene_parking_cualquiera", "Free street parking", True),
+    ("tiene_parking_cualquiera", "Free residential garage on premises – 1 space", True),
+    ("tiene_parking_cualquiera", "EV charger", False),
+    ("tiene_espacio_trabajo", "Dedicated workspace", True), ("tiene_espacio_trabajo", "Desk", False),
+    ("admite_mascotas", "Pets allowed", True), ("admite_mascotas", "Pets live on this property", False),
+    ("llegada_autonoma", "Self check-in", True), ("llegada_autonoma", "Smart lock", False),
+]
+
+
+@pytest.mark.parametrize("columna,cadena,esperado", CASOS_AMENITIES)
+def test_flag_amenity_por_patron(columna, cadena, esperado):
+    r = limpieza.flags_amenities(pd.Series([json.dumps([cadena])]))
+    assert bool(r.loc[0, columna]) is esperado
+
+
+def test_todos_los_patrones_tienen_caso_positivo_y_negativo():
+    for col in config.PATRONES_AMENITIES:
+        valores = {e for c, _, e in CASOS_AMENITIES if c == col}
+        assert valores == {True, False}, col
+
+
+def test_flags_amenities_lista_no_mezcla_elementos():
+    # «Dish» y «washer» en elementos distintos no forman una lavadora; NaN → todo False.
+    r = limpieza.flags_amenities(pd.Series(['["Dishwasher", "Pool table", "HDTV"]', np.nan]))
+    assert not r.loc[0, "tiene_lavadora"] and not r.loc[0, "tiene_piscina"] and r.loc[0, "tiene_tv"]
     assert not r.loc[1].any()
 
 
-def test_vallas_iqr_log():
+def test_comprobar_prevalencias():
+    ok = {c: (lo + hi) / 2 for c, (lo, hi) in config.COTAS_PREVALENCIA_AMENITIES.items()}
+    assert limpieza.comprobar_prevalencias(ok, 10_000) == []
+    fuera = {**ok, "tiene_piscina": 60.0}
+    assert len(limpieza.comprobar_prevalencias(fuera, 10_000)) == 1
+    assert limpieza.comprobar_prevalencias(fuera, 10) == []        # pocas filas: sin cotas
+    assert len(limpieza.comprobar_prevalencias({**ok, "tiene_tv": 0.0}, 10)) == 1  # el cero siempre falla
+
+
+def test_vallas_iqr_log_valores_exactos():
+    # ln = [1, 2, 2, 2, 3, 10] → Q1 = 2, Q3 = 2,75 (cuantiles lineales), IQR = 0,75.
     precio = pd.Series([np.e ** k for k in (1, 2, 2, 2, 3, 10)])
     inf, sup = limpieza.vallas_iqr_log(precio)
-    assert inf < np.e and sup < np.e ** 10
+    assert inf == pytest.approx(np.exp(2 - 1.5 * 0.75)) and sup == pytest.approx(np.exp(2.75 + 1.5 * 0.75))
 
 
 def test_politica_nulos_siempre_resuelve():
@@ -71,12 +127,19 @@ def test_politica_nulos_siempre_resuelve():
     assert limpieza.regla_nulos("columna_nueva_futura")[0] == ".*"
 
 
+def _cotizacion(subtotal: float, descuento: float, mensual: bool) -> str:
+    return json.dumps({"quote": {"nightly_subtotal": str(subtotal), "discount_amount": str(descuento),
+                                 "is_monthly_priced": mensual, "currency": "EUR",
+                                 "raw_price_line_items": [{"item_type": "discount_amount",
+                                                           "description": "Weekly stay discount"}] if descuento else []}})
+
+
 def _listings_sinteticos() -> pd.DataFrame:
     """Entrada de prueba mínima con el formato de Inside Airbnb (no son datos de análisis)."""
     n = 6
     return pd.DataFrame({
         "id": [1, 2, 3, 3, 5, 6], "name": ["A", "B<br/>", "C", "C", "D", "E"], "host_id": [10, 10, 11, 11, 12, 13],
-        "price": ["$100.00", "$0.00", np.nan, "$50.00", "$1,000.00", "$80.00"],
+        "price": ["$100.00", "$0.00", np.nan, "$50.00", "$1,000.00", "$-80.00"],
         "room_type": ["Entire home/apt"] * 3 + ["Private room"] * 3, "accommodates": [2, 4, 0, 1, 2, 3],
         "latitude": [40.42, 40.40, 41.5, 40.41, 40.43, 40.44], "longitude": [-3.70] * n,
         "neighbourhood_cleansed": ["Sol"] * n, "neighbourhood_group_cleansed": ["Centro"] * n,
@@ -91,55 +154,91 @@ def _listings_sinteticos() -> pd.DataFrame:
                                                                           "Spain - National registration number<br />X", np.nan, "VT"],
         "hosts_time_as_host_years": [1, 2, 3, 3, 4, 5], "hosts_time_as_host_months": [6, 0, 0, 0, 0, 0],
         "estimated_occupancy_l365d": [0, 10, 20, 30, 40, 50],
+        "estimated_revenue_l365d": [0, 100, 200, 300, 400, 500],
         "review_scores_rating": [np.nan, 4.5, 4.0, 4.0, 5.0, 4.8],
+        "price_quote_checkin_date": ["2026-09-20", "2026-10-01", None, "2026-09-25", "2026-11-02", "2026-09-21"],
+        "price_quote_checkout_date": ["2026-09-21", "2027-11-05", None, "2026-09-27", "2026-11-04", "2026-09-24"],
+        "price_quote_raw": [_cotizacion(100, 0, False), _cotizacion(0, 0, False), np.nan, _cotizacion(330, 30, True),
+                            _cotizacion(2000, 0, False), "no es json"],
     })
 
 
 def test_limpiar_contabilidad_no_muta_y_reglas():
     raw = _listings_sinteticos()
     copia = raw.copy()
-    barrios = pd.DataFrame({"neighbourhood_group": ["Centro"], "neighbourhood": ["Sol"]})
-    df, reg = limpieza.limpiar(raw, barrios, CIUDAD)
+    df, reg = limpieza.limpiar(raw, BARRIOS, CIUDAD)
     pd.testing.assert_frame_equal(raw, copia)
     assert reg["duplicados"]["eliminados"] == 1 and len(df) == 5
     assert reg["contabilidad_filas"] == {"filas_raw": 6, "duplicados_eliminados": 1, "filas_procesadas": 5}
-    assert reg["precio"]["cero"] == 1 and reg["precio"]["nulo"] == 1
-    assert df["precio_valido"].sum() == 3
+    assert reg["precio"]["cero"] == 1 and reg["precio"]["nulo"] == 1 and reg["precio"]["negativo"] == 1
+    assert df["precio_valido"].sum() == 2  # 100 € y 1.000 €; el negativo y el cero no son válidos
     assert reg["minimum_nights"]["extremo_mayor_365"] == 1
     assert reg["coordenadas"]["fuera_bbox_o_nulas"] == 1
     assert reg["imputados"] == {"bedrooms": 1, "beds": 1}
     assert reg["conversiones"]["amenities"]["malformadas_json"] == 1  # se cuenta antes de quitar duplicados
     assert df["price"].dtype == "float64" and df["host_is_superhost"].dtype == bool
     assert "amenities" not in df and "bathrooms" in df and "bathrooms" not in reg["columnas_eliminadas"]
+    assert "host_location" not in df
+
+
+def test_naturaleza_del_precio_desde_cotizacion():
+    raw = _listings_sinteticos()
+    df, reg = limpieza.limpiar(raw, BARRIOS, CIUDAD)
+    pn = reg["precio_naturaleza"]
+    # Se calcula antes de quitar duplicados. Con precio > 0 y cotización parseable: filas de 100 €, 50 €
+    # (30 € de descuento sobre 330 €, tarifa mensual) y 1.000 €; el cero, el nulo y el negativo no cuentan.
+    assert pn["n_cotizaciones_con_precio"] == 3
+    assert pn["n_con_descuento"] == 1 and pn["pct_con_descuento"] == pytest.approx(100 / 3)
+    assert pn["mediana_pct_descuento"] == pytest.approx(30 / 330 * 100)
+    assert pn["n_tarifa_mensual"] == 1 and pn["partidas_descuento"] == {"Weekly stay discount": 1}
+    assert df.loc[df["id"] == 1, "noches_cotizadas"].iloc[0] == 1.0
+    assert df["es_tarifa_mensual"].dtype == bool
+
+
+def test_limpiar_columna_obligatoria_ausente_da_error_accionable():
+    with pytest.raises(ErrorDatos, match="name"):
+        limpieza.limpiar(_listings_sinteticos().drop(columns="name"), BARRIOS, CIUDAD)
 
 
 def test_features_y_validacion():
-    raw = _listings_sinteticos()
-    barrios = pd.DataFrame({"neighbourhood_group": ["Centro"], "neighbourhood": ["Sol"]})
-    df, _ = limpieza.limpiar(raw, barrios, CIUDAD)
+    df, _ = limpieza.limpiar(_listings_sinteticos(), BARRIOS, CIUDAD)
     df, meta = features.agregar_features(df, CIUDAD, pd.Timestamp("2026-09-20"))
-    assert df["ocupacion_estimada"].between(0, 1).all()
+    assert df["no_disponible_365"].between(0, 1).all()
     assert df.loc[df["accommodates"] == 0, "precio_por_persona"].isna().all()
     assert df.loc[~df["coords_validas"], "distancia_centro_km"].isna().all()
     assert meta["antiguedad_fuente"].startswith("hosts_time_as_host_years")
     assert df.loc[df["id"] == 1, "antiguedad_host_anios"].iloc[0] == pytest.approx(1.5)
-    sin_doc = limpieza.validar_procesado(df, diccionario.documentadas())
-    assert isinstance(sin_doc, list)
+    assert df.loc[df["id"] == 1, "mes_cotizacion"].iloc[0] == "2026-09"
+    assert limpieza.validar_procesado(df, diccionario.documentadas()) == []
+
+
+def test_licencia_tipo_sin_columna_license_es_serie_string():
+    df, _ = limpieza.limpiar(_listings_sinteticos().drop(columns="license"), BARRIOS, CIUDAD)
+    df, meta = features.agregar_features(df, CIUDAD, pd.Timestamp("2026-09-20"))
+    assert str(df["licencia_tipo"].dtype) == "string"
+    assert df["licencia_tipo"].eq("Sin licencia").all() and meta["licencia_tipo_conteo"] == {"Sin licencia": 5}
 
 
 def test_validar_procesado_detecta_violaciones():
-    raw = _listings_sinteticos()
-    barrios = pd.DataFrame({"neighbourhood_group": ["Centro"], "neighbourhood": ["Sol"]})
-    df, _ = limpieza.limpiar(raw, barrios, CIUDAD)
+    df, _ = limpieza.limpiar(_listings_sinteticos(), BARRIOS, CIUDAD)
     df, _ = features.agregar_features(df, CIUDAD, pd.Timestamp("2026-09-20"))
-    roto = df.assign(ocupacion_estimada=df["ocupacion_estimada"] + 5)
+    roto = df.assign(no_disponible_365=df["no_disponible_365"] + 5)
     with pytest.raises(ErrorDatos):
         limpieza.validar_procesado(roto)
 
 
-def test_ocupacion_limites():
-    r = features.ocupacion_estimada(pd.Series([0, 365, 400]))
-    assert r.tolist() == [1.0, 0.0, 0.0]
+def test_columna_sin_documentar_avisa_sin_abortar():
+    df, _ = limpieza.limpiar(_listings_sinteticos(), BARRIOS, CIUDAD)
+    df, _ = features.agregar_features(df, CIUDAD, pd.Timestamp("2026-09-20"))
+    df["columna_nueva_futura"] = 1
+    assert limpieza.validar_procesado(df, diccionario.documentadas()) == ["columna_nueva_futura"]
+    fila = next(f for f in diccionario.tabla(df) if f["columna"] == "columna_nueva_futura")
+    assert fila["tipo_logico"] == "sin documentar"
+
+
+def test_no_disponible_limites():
+    r = features.no_disponible_365(pd.Series([0, 365, 400, 73]))
+    assert r.tolist() == [1.0, 0.0, 0.0, pytest.approx(0.8)]
 
 
 def test_antiguedad_con_host_since():
@@ -159,8 +258,6 @@ def test_licencia_tipo():
 def test_categoria_precio_cuartiles():
     p = pd.Series([10.0, 20, 30, 40, 50, 60, 70, 80, np.nan])
     cat, cortes = features.categoria_precio(p, p.notna())
-    assert len(cortes) == 5 and cat.iloc[0] == "Económico" and cat.iloc[7] == "Alto" and pd.isna(cat.iloc[8])
-
-
-def test_columnas_config_documentadas():
-    assert diccionario.columnas_requeridas_documentadas() == []
+    assert cortes == [10.0, 27.5, 45.0, 62.5, 80.0]
+    assert cat.tolist()[:8] == ["Económico", "Económico", "Medio-bajo", "Medio-bajo", "Medio-alto", "Medio-alto",
+                                "Alto", "Alto"] and pd.isna(cat.iloc[8])

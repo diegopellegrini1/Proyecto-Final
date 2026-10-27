@@ -245,13 +245,19 @@ def fig_ic_bootstrap(hallazgos: dict[str, Any]) -> Figure:
         y = np.arange(len(filas))
         med = np.array([f["mediana"] for f in filas])
         err = np.array([[f["mediana"] - f["ic_inf"] for f in filas], [f["ic_sup"] - f["mediana"] for f in filas]])
-        ax.errorbar(med, y, xerr=err, fmt="o", color=PALETA[0], ecolor=PALETA[1], capsize=4)
+        err_c = np.array([[f["mediana"] - f["ic_inf_cluster"] for f in filas],
+                          [f["ic_sup_cluster"] - f["mediana"] for f in filas]])
+        ax.errorbar(med, y + 0.15, xerr=err_c, fmt="s", color=PALETA[2], ecolor=PALETA[2], capsize=4,
+                    label="Por anfitrión (cluster)")
+        ax.errorbar(med, y - 0.15, xerr=err, fmt="o", color=PALETA[0], ecolor=PALETA[1], capsize=4,
+                    label="Por anuncio")
         ax.set_yticks(y, [f"{f['grupo']} (n = {fmt.n0(f['n'])})" for f in filas])
         ax.invert_yaxis()
         _eje_euros(ax)
         ax.set(title=titulo, xlabel="Mediana del precio e IC 95 %")
-    fig.suptitle(f"Intervalos de confianza bootstrap (percentil) de la mediana del precio ({fmt.n0(b['n_boot'])} remuestreos)",
-                 y=1.02)
+        ax.legend(loc="lower right")
+    fig.suptitle(f"IC bootstrap (percentil) de la mediana del precio ({fmt.n0(b['n_boot'])} remuestreos; "
+                 "remuestreando anuncios o anfitriones)", y=1.02)
     fig.tight_layout()
     return fig
 
@@ -280,7 +286,8 @@ def fig_ols_residuos(artefactos: dict[str, Any]) -> Figure:
 def fig_ols_coeficientes(hallazgos: dict[str, Any]) -> Figure:
     """Cambio porcentual asociado a cada variable (sin distritos) con IC 95 % (cluster por anfitrión)."""
     ols = hallazgos["estadistica"]["ols"]
-    filas = sorted((c for c in ols["coeficientes"] if not c["es_distrito"]), key=lambda c: c["pct"])
+    filas = sorted((c for c in ols["coeficientes"] if not c["es_distrito"] and not c.get("es_mes")),
+                   key=lambda c: c["pct"])
     y = np.arange(len(filas))
     fig, ax = plt.subplots(figsize=(10, 8))
     colores = [PALETA[0] if c["significativo"] else (0.6, 0.6, 0.6) for c in filas]
@@ -292,45 +299,52 @@ def fig_ols_coeficientes(hallazgos: dict[str, Any]) -> Figure:
     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{fmt.n0(v)} %"))
     ax.set(title=f"Regresión OLS: cambio % del precio asociado a cada variable\n"
                  f"(IC 95 % con errores agrupados por anfitrión; gris = no significativo; R² ajustado = "
-                 f"{fmt.n3(ols['r2_ajustado'])}; distritos como control)",
+                 f"{fmt.n3(ols['r2_ajustado'])}; distritos y mes de cotización como control)",
            xlabel="Cambio porcentual en el precio, 100·(e^β − 1)")
     return fig
 
 
 def fig_importancia_variables(hallazgos: dict[str, Any]) -> Figure:
-    """Importancia por permutación (descenso de R² en test) del modelo ML."""
+    """Importancia por permutación (descenso de R² en las particiones de test agrupadas por anfitrión)."""
     ml = hallazgos["estadistica"]["ml"]
+    cv = ml["cv"]
     filas = ml["importancia_permutacion"][::-1]
-    fig, ax = plt.subplots(figsize=(9, 5.5))
-    ax.barh([f["variable"] for f in filas], [f["importancia"] for f in filas],
+    fig, ax = plt.subplots(figsize=(9.5, 5.5))
+    ax.barh([f["nombre"] for f in filas], [f["importancia"] for f in filas],
             xerr=[f["std"] for f in filas], color=PALETA[2])
-    ax.set(title=f"Importancia por permutación (top 10, conjunto de test)\nHistGradientBoosting: R² test = "
-                 f"{fmt.n3(ml['r2_test'])}; importancia predictiva, no causal",
-           xlabel="Descenso medio del R² al permutar la variable")
+    ax.set(title=f"Importancia por permutación (top 10; media de {ml['n_folds']} particiones por anfitrión)\n"
+                 f"HistGradientBoosting: R² = {fmt.n3(cv['r2_media'])} ± {fmt.n3(cv['r2_std'])} (GroupKFold); "
+                 "importancia predictiva, no causal",
+           xlabel="Descenso medio del R² al permutar la variable (barra: desviación entre particiones)")
     return fig
 
 
 def fig_ocupacion_ingresos(df: pd.DataFrame, hallazgos: dict[str, Any]) -> Figure:
-    """Ocupación estimada propia vs Inside Airbnb e ingresos propios vs Inside Airbnb (anuncios activos)."""
+    """Días no disponibles (próximos 365) vs ocupación de Inside Airbnb (últimos 12 meses), e ingresos."""
     a = df[df["precio_valido"] & df["es_activo_probable"]]
     oi = hallazgos["descriptivo"]["ocupacion_ingresos"]
-    fig, (a1, a2) = plt.subplots(1, 2, figsize=(13, 5))
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(13.5, 5))
     bins = np.linspace(0, 100, 41)
-    a1.hist(a["ocupacion_estimada"] * 100, bins=bins, alpha=0.6, color=PALETA[0], label="Propia: (365 − disponibilidad)/365")
-    a1.hist(a["ocupacion_inside_airbnb"] * 100, bins=bins, alpha=0.6, color=PALETA[1], label="Inside Airbnb (12 meses)")
-    a1.set(title="Ocupación estimada (anuncios activos con precio)", xlabel="% del año", ylabel="Anuncios")
+    m_o = a["no_disponible_365"].notna() & a["ocupacion_inside_airbnb"].notna()
+    a1.hist(a.loc[m_o, "no_disponible_365"] * 100, bins=bins, alpha=0.6, color=PALETA[0],
+            label="Propia: % días no disponibles, próximos 365")
+    a1.hist(a.loc[m_o, "ocupacion_inside_airbnb"] * 100, bins=bins, alpha=0.6, color=PALETA[1],
+            label="Inside Airbnb: ocupación, últimos 12 meses")
+    a1.set(title=f"Ventanas temporales distintas (mismos {fmt.n0(oi['n_comparacion_ocupacion'])} anuncios)",
+           xlabel="% del año", ylabel="Anuncios")
     a1.legend()
-    m = a["ingresos_estimados_anuales"].notna() & a["estimated_revenue_l365d"].notna() & (a["estimated_revenue_l365d"] > 0) \
-        & (a["ingresos_estimados_anuales"] > 0)
-    a2.scatter(a.loc[m, "estimated_revenue_l365d"], a.loc[m, "ingresos_estimados_anuales"], s=3, alpha=0.2, color=PALETA[0])
+    m = a["ingreso_hipotetico_anual"].notna() & a["estimated_revenue_l365d"].notna() & (a["estimated_revenue_l365d"] > 0) \
+        & (a["ingreso_hipotetico_anual"] > 0)
+    a2.scatter(a.loc[m, "estimated_revenue_l365d"], a.loc[m, "ingreso_hipotetico_anual"], s=3, alpha=0.2, color=PALETA[0])
     a2.set_xscale("log")
     a2.set_yscale("log")
-    lim = [max(1, a.loc[m, ["estimated_revenue_l365d", "ingresos_estimados_anuales"]].min().min()),
-           a.loc[m, ["estimated_revenue_l365d", "ingresos_estimados_anuales"]].max().max()]
+    lim = [max(1, a.loc[m, ["estimated_revenue_l365d", "ingreso_hipotetico_anual"]].min().min()),
+           a.loc[m, ["estimated_revenue_l365d", "ingreso_hipotetico_anual"]].max().max()]
     a2.plot(lim, lim, color=PALETA[3], label="y = x")
-    a2.set(title=f"Ingresos anuales: estimación propia vs Inside Airbnb (ρ de Spearman = "
+    a2.set(title=f"Ingreso hipotético propio vs Inside Airbnb (ρ de Spearman = "
                  f"{fmt.n2(oi['spearman_propio_vs_inside'])})",
-           xlabel="Inside Airbnb (€/año, log)", ylabel="Propia: precio × días no disponibles (€/año, log)")
+           xlabel="Inside Airbnb, últimos 12 meses (€/año, log)",
+           ylabel="Proxy: precio × días no disponibles futuros (€/año, log)")
     a2.legend()
     fig.tight_layout()
     return fig

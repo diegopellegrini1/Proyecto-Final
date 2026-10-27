@@ -25,6 +25,21 @@ def cargar_geojson(ruta: str, mtime: float) -> dict[str, Any]:
         return json.load(f)
 
 
+def validar_geojson(ruta: Path) -> tuple[dict[str, Any] | None, str | None]:
+    """Devuelve (GeoJSON, None) si es utilizable o (None, mensaje accionable) si falta o está dañado."""
+    if not ruta.exists():
+        return None, (f"No se encuentra {ruta.name} en data/raw: la vista de barrios queda desactivada. "
+                      "Ejecuta python run_pipeline.py para descargarlo.")
+    try:
+        geojson = cargar_geojson(str(ruta), ruta.stat().st_mtime)
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, f"{ruta.name} no se puede leer ({type(exc).__name__}): la vista de barrios queda desactivada."
+    feats = geojson.get("features") or []
+    if not feats or any("neighbourhood" not in (ft.get("properties") or {}) for ft in feats):
+        return None, f"{ruta.name} no tiene barrios con la propiedad «neighbourhood»: la vista de barrios queda desactivada."
+    return geojson, None
+
+
 def columnas_disponibles(ruta: Path) -> set[str]:
     """Columnas del Parquet sin leer los datos."""
     import pyarrow.parquet as pq

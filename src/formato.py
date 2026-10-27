@@ -53,6 +53,11 @@ def n3(x: Any) -> str:
     return numero(x, 3)
 
 
+def n4(x: Any) -> str:
+    """Cuatro decimales (p. ej. un tamaño de efecto cercano a un umbral: 0,0997)."""
+    return numero(x, 4)
+
+
 def pct1(x: Any) -> str:
     """Porcentaje (ya en escala 0-100) con un decimal: 12.34 -> '12,3 %'."""
     if _es_nulo(x):
@@ -124,6 +129,7 @@ FILTROS_JINJA = {
     "n1": n1,
     "n2": n2,
     "n3": n3,
+    "n4": n4,
     "pct1": pct1,
     "pct2": pct2,
     "eur0": eur0,
