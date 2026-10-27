@@ -1,0 +1,293 @@
+{
+  "fuente": "Inside Airbnb",
+  "pagina_fuente": "https://insideairbnb.com/get-the-data/",
+  "licencia": {
+    "nombre": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "verificada_en_pagina": true,
+    "fecha_verificacion": "2026-10-27"
+  },
+  "ciudades": {
+    "barcelona": {
+      "nombre": "Barcelona",
+      "fecha_snapshot": "2026-09-17"
+    },
+    "euskadi": {
+      "nombre": "Euskadi",
+      "fecha_snapshot": "2026-09-25"
+    },
+    "girona": {
+      "nombre": "Girona",
+      "fecha_snapshot": "2026-09-25"
+    },
+    "madrid": {
+      "nombre": "Madrid",
+      "fecha_snapshot": "2026-09-17"
+    },
+    "malaga": {
+      "nombre": "Málaga",
+      "fecha_snapshot": "2026-09-28"
+    },
+    "mallorca": {
+      "nombre": "Mallorca",
+      "fecha_snapshot": "2026-09-19"
+    },
+    "menorca": {
+      "nombre": "Menorca",
+      "fecha_snapshot": "2026-09-28"
+    },
+    "sevilla": {
+      "nombre": "Sevilla",
+      "fecha_snapshot": "2026-09-25"
+    },
+    "valencia": {
+      "nombre": "Valencia",
+      "fecha_snapshot": "2026-09-20"
+    }
+  },
+  "ficheros": [
+    {
+      "archivo": "barcelona/listings.csv.gz",
+      "ciudad": "barcelona",
+      "fecha_snapshot": "2026-09-17",
+      "url": "https://data.insideairbnb.com/spain/catalonia/barcelona/2026-09-17/data/listings.csv.gz",
+      "bytes": 8243604,
+      "sha256": "226f5e6af36cc82286765cda452cbe9abd6fbd70415aaf2b23a07805f6fbf23e",
+      "descargado_utc": "2026-10-27T15:06:57+00:00"
+    },
+    {
+      "archivo": "barcelona/neighbourhoods.csv",
+      "ciudad": "barcelona",
+      "fecha_snapshot": "2026-09-17",
+      "url": "https://data.insideairbnb.com/spain/catalonia/barcelona/2026-09-17/visualisations/neighbourhoods.csv",
+      "bytes": 2291,
+      "sha256": "ccc102565ce5a0c1a02f4c89f7c1117fbbdb9dde17ea04c3fc9b7cf833c6366d",
+      "descargado_utc": "2026-10-27T15:06:57+00:00"
+    },
+    {
+      "archivo": "barcelona/neighbourhoods.geojson",
+      "ciudad": "barcelona",
+      "fecha_snapshot": "2026-09-17",
+      "url": "https://data.insideairbnb.com/spain/catalonia/barcelona/2026-09-17/visualisations/neighbourhoods.geojson",
+      "bytes": 359194,
+      "sha256": "fab8d5b7b227b3f1aae7030b50e1b82321c5bae7e15a4e3111d91b4f2512528c",
+      "descargado_utc": "2026-10-27T15:06:57+00:00"
+    },
+    {
+      "archivo": "euskadi/listings.csv.gz",
+      "ciudad": "euskadi",
+      "fecha_snapshot": "2026-09-25",
+      "url": "https://data.insideairbnb.com/spain/pv/euskadi/2026-09-25/data/listings.csv.gz",
+      "bytes": 3478956,
+      "sha256": "6c2e4adbde2621eaed84e489eeda238661f3516bbbbfc990945c7c95a539cca5",
+      "descargado_utc": "2026-10-27T15:06:57+00:00"
+    },
+    {
+      "archivo": "euskadi/neighbourhoods.csv",
+      "ciudad": "euskadi",
+      "fecha_snapshot": "2026-09-25",
+      "url": "https://data.insideairbnb.com/spain/pv/euskadi/2026-09-25/visualisations/neighbourhoods.csv",
+      "bytes": 5361,
+      "sha256": "8765ef1380db89aaa98f3d973d17a4b88d4ecc2645f46597fe931026495f7192",
+      "descargado_utc": "2026-10-27T15:06:57+00:00"
+    },
+    {
+      "archivo": "euskadi/neighbourhoods.geojson",
+      "ciudad": "euskadi",
+      "fecha_snapshot": "2026-09-25",
+      "url": "https://data.insideairbnb.com/spain/pv/euskadi/2026-09-25/visualisations/neighbourhoods.geojson",
+      "bytes": 407553,
+      "sha256": "7acaba321fe77ff8390540316f6d0adce71db43e6948b2d24f7a1105483120cd",
+      "descargado_utc": "2026-10-27T15:06:57+00:00"
+    },
+    {
+      "archivo": "girona/listings.csv.gz",
+      "ciudad": "girona",
+      "fecha_snapshot": "2026-09-25",
+      "url": "https://data.insideairbnb.com/spain/catalonia/girona/2026-09-25/data/listings.csv.gz",
+      "bytes": 11627492,
+      "sha256": "b398f0721dce91502f44117761bc0c109cec1ab1a3d8e7ec6a4a0836721b9415",
+      "descargado_utc": "2026-10-27T15:06:58+00:00"
+    },
+    {
+      "archivo": "girona/neighbourhoods.csv",
+      "ciudad": "girona",
+      "fecha_snapshot": "2026-09-25",
+      "url": "https://data.insideairbnb.com/spain/catalonia/girona/2026-09-25/visualisations/neighbourhoods.csv",
+      "bytes": 3018,
+      "sha256": "f9d354bb9408e7313bf1b0836798b6531f97658b7f56d3930fd2e8e93f20830d",
+      "descargado_utc": "2026-10-27T15:06:58+00:00"
+    },
+    {
+      "archivo": "girona/neighbourhoods.geojson",
+      "ciudad": "girona",
+      "fecha_snapshot": "2026-09-25",
+      "url": "https://data.insideairbnb.com/spain/catalonia/girona/2026-09-25/visualisations/neighbourhoods.geojson",
+      "bytes": 328897,
+      "sha256": "0bf07cd8520ff6407893a5903978492ec76a7ee8cb5e8aae26bd9b18d3e95ad9",
+      "descargado_utc": "2026-10-27T15:06:58+00:00"
+    },
+    {
+      "archivo": "madrid/listings.csv.gz",
+      "ciudad": "madrid",
+      "fecha_snapshot": "2026-09-17",
+      "url": "https://data.insideairbnb.com/spain/comunidad-de-madrid/madrid/2026-09-17/data/listings.csv.gz",
+      "bytes": 11812658,
+      "sha256": "df7566e731727cd07925e8ad70e17e1f53ec5ac354e9e1ac2ada44c871aa4082",
+      "descargado_utc": "2026-10-27T15:07:00+00:00"
+    },
+    {
+      "archivo": "madrid/neighbourhoods.csv",
+      "ciudad": "madrid",
+      "fecha_snapshot": "2026-09-17",
+      "url": "https://data.insideairbnb.com/spain/comunidad-de-madrid/madrid/2026-09-17/visualisations/neighbourhoods.csv",
+      "bytes": 3004,
+      "sha256": "3c20e32be7600ce9dbdb3ea7d87f8322fdb8e28a43521250edaf40f486fa7587",
+      "descargado_utc": "2026-10-27T15:07:00+00:00"
+    },
+    {
+      "archivo": "madrid/neighbourhoods.geojson",
+      "ciudad": "madrid",
+      "fecha_snapshot": "2026-09-17",
+      "url": "https://data.insideairbnb.com/spain/comunidad-de-madrid/madrid/2026-09-17/visualisations/neighbourhoods.geojson",
+      "bytes": 384155,
+      "sha256": "eba4e3ba50a30adb95ae71b83c1ac0d1ace3e18d06c77db26230bd7195ca8c6d",
+      "descargado_utc": "2026-10-27T15:07:00+00:00"
+    },
+    {
+      "archivo": "malaga/listings.csv.gz",
+      "ciudad": "malaga",
+      "fecha_snapshot": "2026-09-28",
+      "url": "https://data.insideairbnb.com/spain/andaluc%C3%ADa/malaga/2026-09-28/data/listings.csv.gz",
+      "bytes": 5272973,
+      "sha256": "32d3585540e2b8e9fb72ad36fc0971f069dc74bce16fa891f8b9c25d9e6fe217",
+      "descargado_utc": "2026-10-27T15:07:00+00:00"
+    },
+    {
+      "archivo": "malaga/neighbourhoods.csv",
+      "ciudad": "malaga",
+      "fecha_snapshot": "2026-09-28",
+      "url": "https://data.insideairbnb.com/spain/andaluc%C3%ADa/malaga/2026-09-28/visualisations/neighbourhoods.csv",
+      "bytes": 205,
+      "sha256": "21a58d09bc4c8a23312e980a51ae93d2fa342795bf71f679ce6508703a9d54fe",
+      "descargado_utc": "2026-10-27T15:07:00+00:00"
+    },
+    {
+      "archivo": "malaga/neighbourhoods.geojson",
+      "ciudad": "malaga",
+      "fecha_snapshot": "2026-09-28",
+      "url": "https://data.insideairbnb.com/spain/andaluc%C3%ADa/malaga/2026-09-28/visualisations/neighbourhoods.geojson",
+      "bytes": 513962,
+      "sha256": "8b184a6e163fe77c35fa4ec7c3e282da7e152ca7fa892749a3293791788443b9",
+      "descargado_utc": "2026-10-27T15:07:01+00:00"
+    },
+    {
+      "archivo": "mallorca/listings.csv.gz",
+      "ciudad": "mallorca",
+      "fecha_snapshot": "2026-09-19",
+      "url": "https://data.insideairbnb.com/spain/islas-baleares/mallorca/2026-09-19/data/listings.csv.gz",
+      "bytes": 8869757,
+      "sha256": "7ccb3b3badb653904b83ce8f0c39a5618b89ecb573d27c814d7dcf644f1ac8e9",
+      "descargado_utc": "2026-10-27T15:07:02+00:00"
+    },
+    {
+      "archivo": "mallorca/neighbourhoods.csv",
+      "ciudad": "mallorca",
+      "fecha_snapshot": "2026-09-19",
+      "url": "https://data.insideairbnb.com/spain/islas-baleares/mallorca/2026-09-19/visualisations/neighbourhoods.csv",
+      "bytes": 645,
+      "sha256": "3f68fc6eb6c588cb08859a12b457728bee61dfaee75b6bc0af317de8c116ea5e",
+      "descargado_utc": "2026-10-27T15:07:02+00:00"
+    },
+    {
+      "archivo": "mallorca/neighbourhoods.geojson",
+      "ciudad": "mallorca",
+      "fecha_snapshot": "2026-09-19",
+      "url": "https://data.insideairbnb.com/spain/islas-baleares/mallorca/2026-09-19/visualisations/neighbourhoods.geojson",
+      "bytes": 359371,
+      "sha256": "d36bef0f1a51f9f6f432f24c7f974e41c2050b953dd5693542300cb7726e48d0",
+      "descargado_utc": "2026-10-27T15:07:02+00:00"
+    },
+    {
+      "archivo": "menorca/listings.csv.gz",
+      "ciudad": "menorca",
+      "fecha_snapshot": "2026-09-28",
+      "url": "https://data.insideairbnb.com/spain/islas-baleares/menorca/2026-09-28/data/listings.csv.gz",
+      "bytes": 2067407,
+      "sha256": "3ff214a7a0a82075d254f7809528a8236bc40a974d39d8591515c7f994c6eb91",
+      "descargado_utc": "2026-10-27T15:07:03+00:00"
+    },
+    {
+      "archivo": "menorca/neighbourhoods.csv",
+      "ciudad": "menorca",
+      "fecha_snapshot": "2026-09-28",
+      "url": "https://data.insideairbnb.com/spain/islas-baleares/menorca/2026-09-28/visualisations/neighbourhoods.csv",
+      "bytes": 139,
+      "sha256": "7ae0963bd3749dd7783b439988249440d90452ef61a8b34079a43cf4af9c9b3d",
+      "descargado_utc": "2026-10-27T15:07:03+00:00"
+    },
+    {
+      "archivo": "menorca/neighbourhoods.geojson",
+      "ciudad": "menorca",
+      "fecha_snapshot": "2026-09-28",
+      "url": "https://data.insideairbnb.com/spain/islas-baleares/menorca/2026-09-28/visualisations/neighbourhoods.geojson",
+      "bytes": 159532,
+      "sha256": "bda8d4b817309da757052c2a204b63d5fdc33be44a4f4008c62511d3cacd1469",
+      "descargado_utc": "2026-10-27T15:07:03+00:00"
+    },
+    {
+      "archivo": "sevilla/listings.csv.gz",
+      "ciudad": "sevilla",
+      "fecha_snapshot": "2026-09-25",
+      "url": "https://data.insideairbnb.com/spain/andaluc%C3%ADa/sevilla/2026-09-25/data/listings.csv.gz",
+      "bytes": 4602381,
+      "sha256": "8c8772132c3de3ab76d2ba3a7cdaaa2347b6440f4e091ab0dd110af271eeb491",
+      "descargado_utc": "2026-10-27T15:07:04+00:00"
+    },
+    {
+      "archivo": "sevilla/neighbourhoods.csv",
+      "ciudad": "sevilla",
+      "fecha_snapshot": "2026-09-25",
+      "url": "https://data.insideairbnb.com/spain/andaluc%C3%ADa/sevilla/2026-09-25/visualisations/neighbourhoods.csv",
+      "bytes": 3419,
+      "sha256": "d8fe8bb2ebf0c147c016864c5c93962e6520317d2c9825664550892ca7a358cf",
+      "descargado_utc": "2026-10-27T15:07:04+00:00"
+    },
+    {
+      "archivo": "sevilla/neighbourhoods.geojson",
+      "ciudad": "sevilla",
+      "fecha_snapshot": "2026-09-25",
+      "url": "https://data.insideairbnb.com/spain/andaluc%C3%ADa/sevilla/2026-09-25/visualisations/neighbourhoods.geojson",
+      "bytes": 178966,
+      "sha256": "75f0bba23d550b8e270e9b358bb0db434bdae268e304c10fe041edcda8a45606",
+      "descargado_utc": "2026-10-27T15:07:04+00:00"
+    },
+    {
+      "archivo": "valencia/listings.csv.gz",
+      "ciudad": "valencia",
+      "fecha_snapshot": "2026-09-20",
+      "url": "https://data.insideairbnb.com/spain/vc/valencia/2026-09-20/data/listings.csv.gz",
+      "bytes": 4297141,
+      "sha256": "26e03f9731d9644c41e0f669b4631108bc9a954c79545f717e1ef1ea868a014a",
+      "descargado_utc": "2026-10-27T15:07:05+00:00"
+    },
+    {
+      "archivo": "valencia/neighbourhoods.csv",
+      "ciudad": "valencia",
+      "fecha_snapshot": "2026-09-20",
+      "url": "https://data.insideairbnb.com/spain/vc/valencia/2026-09-20/visualisations/neighbourhoods.csv",
+      "bytes": 2188,
+      "sha256": "053c0afb31b2b67c6921247359368b415816bf176626690ba0ccad81039dc7a7",
+      "descargado_utc": "2026-10-27T15:07:06+00:00"
+    },
+    {
+      "archivo": "valencia/neighbourhoods.geojson",
+      "ciudad": "valencia",
+      "fecha_snapshot": "2026-09-20",
+      "url": "https://data.insideairbnb.com/spain/vc/valencia/2026-09-20/visualisations/neighbourhoods.geojson",
+      "bytes": 177844,
+      "sha256": "fd8b538aa5ce06e55fa78c6455fea6db66821c8f2a1664247de8f3ae4c77b263",
+      "descargado_utc": "2026-10-27T15:07:06+00:00"
+    }
+  ]
+}
