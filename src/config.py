@@ -241,3 +241,147 @@ MAX_PUNTOS_MAPA: int = 10_000
 MIN_N_COMPARADOR: int = 30   # por debajo, el comparador del dashboard avisa de muestra pequeña
 PREFIJO_GRAFICOS_DASHBOARD: str = "dashboard_"
 INDICE_GRAFICOS_DASHBOARD: str = "dashboard_graficos.json"
+
+# --------------------------------------------------------------------------
+# Ampliación a España: dos fuentes (Inside Airbnb + INE, Atlas de Distribución de Renta)
+# --------------------------------------------------------------------------
+DIR_RAW_AIRBNB: Path = DIR_RAW / "inside_airbnb"
+DIR_RAW_INE: Path = DIR_RAW / "ine"
+DIR_EXTRA_INE: Path = DIR_EXTRA / "ine"          # cartografía pesada (no se versiona)
+DIR_INTERIM: Path = DIR_DATA / "interim"
+RUTA_ASIGNACION_SECCIONES: Path = DIR_INTERIM / "asignacion_secciones.csv.gz"
+
+# Requisitos del enunciado sobre el conjunto final tras la unión.
+MIN_FILAS_UNION: int = 50_000
+MIN_COLUMNAS_UNION: int = 20
+
+URL_PAGINA_ADRH: str = "https://www.ine.es/dynt3/inebase/es/index.htm?padre=7132"
+URL_TABLA_INE_CSV: str = "https://www.ine.es/jaxiT3/files/t/es/csv_bdsc/{tabla}.csv"
+URL_SECCIONADO_INE: str = "https://www.ine.es/prodyser/cartografia/seccionado_2024.zip"
+URL_AVISO_LEGAL_INE: str = "https://www.ine.es/aviso_legal"
+DOMINIOS_PERMITIDOS_INE: frozenset[str] = frozenset({"www.ine.es", "ine.es"})
+CRS_SECCIONADO: str = "EPSG:25830"   # ETRS89 / UTM 30N (según el .prj del seccionado)
+CRS_LISTINGS: str = "EPSG:4326"      # WGS84 (lat/lon de Inside Airbnb)
+
+# Tablas del ADRH que se descargan por provincia, identificadas por su título exacto en INEbase
+# (los identificadores numéricos cambian entre provincias; se descubren en la página del ADRH).
+TABLAS_ADRH: dict[str, str] = {
+    "renta": "Indicadores de renta media y mediana",
+    "gini": "Índice de Gini y Distribución de la renta P80/P20",
+    "demografia": "Indicadores demográficos",
+    "umbrales": ("Porcentaje de población con ingresos por unidad de consumo por debajo/encima de "
+                 "determinados umbrales relativos por sexo"),
+}
+
+# Indicadores del ADRH que pasan al conjunto unido (texto exacto del INE -> nombre de columna).
+INDICADORES_ADRH: dict[str, str] = {
+    "Renta neta media por persona": "renta_neta_persona",
+    "Renta neta media por hogar": "renta_neta_hogar",
+    "Media de la renta por unidad de consumo": "renta_media_uc",
+    "Mediana de la renta por unidad de consumo": "renta_mediana_uc",
+    "Renta bruta media por persona": "renta_bruta_persona",
+    "Renta bruta media por hogar": "renta_bruta_hogar",
+    "Índice de Gini": "gini",
+    "Distribución de la renta P80/P20": "p80_p20",
+    "Edad media de la población": "edad_media",
+    "Porcentaje de población menor de 18 años": "pct_menores_18",
+    "Porcentaje de población de 65 y más años": "pct_65_mas",
+    "Tamaño medio del hogar": "tamano_medio_hogar",
+    "Porcentaje de hogares unipersonales": "pct_hogares_unipersonales",
+    "Población": "poblacion",
+    "Porcentaje de población española": "pct_poblacion_espanola",
+    "Población con ingresos por unidad de consumo por debajo 60% de la mediana": "pct_bajo_60_mediana",
+}
+
+
+@dataclass(frozen=True)
+class ProvinciaIne:
+    """Provincia del ADRH: código INE de 2 dígitos y parámetro ``capsel`` de su página en INEbase."""
+
+    codigo: str
+    nombre: str
+    capsel: int
+
+
+PROVINCIAS_ADRH: dict[str, ProvinciaIne] = {p.codigo: p for p in (
+    ProvinciaIne("01", "Araba/Álava", 5654),
+    ProvinciaIne("07", "Balears, Illes", 5658),
+    ProvinciaIne("08", "Barcelona", 5659),
+    ProvinciaIne("17", "Girona", 5681),
+    ProvinciaIne("20", "Gipuzkoa", 5680),
+    ProvinciaIne("28", "Madrid", 5690),
+    ProvinciaIne("29", "Málaga", 5691),
+    ProvinciaIne("41", "Sevilla", 5702),
+    ProvinciaIne("46", "Valencia/València", 5707),
+    ProvinciaIne("48", "Bizkaia", 5670),
+)}
+
+
+@dataclass(frozen=True)
+class CiudadEspana:
+    """Ciudad o región de Inside Airbnb en España y provincias INE que cubre."""
+
+    clave: str
+    nombre: str
+    slug_ruta: str          # ruta en data.insideairbnb.com, ya con la tilde correcta (sin codificar)
+    provincias: tuple[str, ...]
+
+
+CIUDADES_ESPANA: dict[str, CiudadEspana] = {c.clave: c for c in (
+    CiudadEspana("madrid", "Madrid", "spain/comunidad-de-madrid/madrid", ("28",)),
+    CiudadEspana("barcelona", "Barcelona", "spain/catalonia/barcelona", ("08",)),
+    CiudadEspana("girona", "Girona", "spain/catalonia/girona", ("17", "08")),
+    CiudadEspana("valencia", "Valencia", "spain/vc/valencia", ("46",)),
+    CiudadEspana("mallorca", "Mallorca", "spain/islas-baleares/mallorca", ("07",)),
+    CiudadEspana("menorca", "Menorca", "spain/islas-baleares/menorca", ("07",)),
+    CiudadEspana("euskadi", "Euskadi", "spain/pv/euskadi", ("01", "20", "48")),
+    CiudadEspana("malaga", "Málaga", "spain/andalucía/malaga", ("29",)),
+    CiudadEspana("sevilla", "Sevilla", "spain/andalucía/sevilla", ("41",)),
+)}
+
+# Validación de la unión (no interviene en ella: la unión es por punto en polígono).
+# 1) Ciudades cuyos distritos municipales coinciden con los distritos censales del INE: distrito de
+#    Inside Airbnb (neighbourhood_group_cleansed) -> código CUDIS según la numeración oficial municipal.
+#    Málaga no figura: sus distritos censales no coinciden con los municipales.
+DISTRITOS_OFICIALES: dict[str, dict[str, str]] = {
+    "madrid": {n: f"28079{i:02d}" for i, n in enumerate((
+        "Centro", "Arganzuela", "Retiro", "Salamanca", "Chamartín", "Tetuán", "Chamberí",
+        "Fuencarral - El Pardo", "Moncloa - Aravaca", "Latina", "Carabanchel", "Usera", "Puente de Vallecas",
+        "Moratalaz", "Ciudad Lineal", "Hortaleza", "Villaverde", "Villa de Vallecas", "Vicálvaro",
+        "San Blas - Canillejas", "Barajas"), start=1)},
+    "barcelona": {n: f"08019{i:02d}" for i, n in enumerate((
+        "Ciutat Vella", "Eixample", "Sants-Montjuïc", "Les Corts", "Sarrià-Sant Gervasi", "Gràcia",
+        "Horta-Guinardó", "Nou Barris", "Sant Andreu", "Sant Martí"), start=1)},
+    "valencia": {n: f"46250{i:02d}" for i, n in enumerate((
+        "CIUTAT VELLA", "L'EIXAMPLE", "EXTRAMURS", "CAMPANAR", "LA SAIDIA", "EL PLA DEL REAL", "L'OLIVERETA",
+        "PATRAIX", "JESUS", "QUATRE CARRERES", "POBLATS MARITIMS", "CAMINS AL GRAU", "ALGIROS", "BENIMACLET",
+        "RASCANYA", "BENICALAP", "POBLATS DEL NORD", "POBLATS DE L'OEST", "POBLATS DEL SUD"), start=1)},
+    "sevilla": {n: f"41091{i:02d}" for i, n in enumerate((
+        "Casco Antiguo", "Macarena", "Nervión", "Cerro - Amate", "Sur", "Triana", "Macarena - Norte",
+        "San Pablo - Santa Justa", "Este - Alcosa - Torreblanca", "Palmera - Bellavista", "Los Remedios"),
+        start=1)},
+}
+# 2) Regiones donde neighbourhood_cleansed es el municipio: nombre de Inside Airbnb -> nombre del INE cuando
+#    difieren más allá de tildes, mayúsculas, signos o el artículo pospuesto (revisado uno a uno).
+ALIAS_MUNICIPIOS_INE: dict[str, str] = {
+    "Palma de Mallorca": "Palma",
+    "Deyá": "Deià",
+    "Vilafranc de Bonany": "Vilafranca de Bonany",
+    "Mahón": "Maó",
+    "Castell-Platja d'Aro": "Castell d'Aro, Platja d'Aro i s'Agaró",
+    "Calonge": "Calonge i Sant Antoni",
+    "Saus": "Saus, Camallera i Llampaies",
+    "Boadella d'Empordà": "Boadella i les Escaules",
+    "Brunyola": "Brunyola i Sant Martí Sapresa",
+    "Masarac": "Masarac i Vilarnadal",
+    "Sopelana": "Sopela",
+    "Mungai": "Mungia",
+    "Legutiano": "Legutio",
+    "Arrankudiaga": "Arrankudiaga-Zollo",
+    "Bidegoian": "Bidania-Goiatz",
+    "Oyón": "Oyón-Oion",
+    "Etxebarri, Anteiglesia de San Esteban-Etxebarri Doneztebeko Elizatea": "Etxebarri",
+    "Garay": "Garai",
+    "Arrazua-Ubarrundia": "Arratzua-Ubarrundia",
+}
+CIUDADES_VALIDACION_MUNICIPIO: tuple[str, ...] = ("girona", "mallorca", "menorca", "euskadi", "malaga")
