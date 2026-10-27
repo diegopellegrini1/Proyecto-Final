@@ -8,12 +8,11 @@ Origen: *original* (columna de Inside Airbnb sin cambios), *convertida* (tipo co
 | `id` | identificador | `int64` | original | 0,0 % | Identificador único del anuncio |
 | `last_scraped` | fecha | `datetime64[us]` | convertida | 0,0 % | Fecha en que se scrapeó el anuncio |
 | `name` | texto | `str` | original | 0,0 % | Título del anuncio |
-| `host_id` | identificador | `int64` | original | 0,0 % | Identificador anonimizado del anfitrión |
+| `host_id` | identificador | `int64` | original | 0,0 % | Identificador numérico público del anfitrión en Airbnb; se conserva solo para agrupar anuncios por anfitrión (no se cruza con otras fuentes) |
 | `hosts_time_as_user_years` | numerico | `int64` | original | 0,0 % | Años como usuario de Airbnb (parte entera) |
 | `hosts_time_as_user_months` | numerico | `int64` | original | 0,0 % | Meses adicionales como usuario (resto, 0-11) |
 | `hosts_time_as_host_years` | numerico | `int64` | original | 0,0 % | Años como anfitrión (parte entera) |
 | `hosts_time_as_host_months` | numerico | `int64` | original | 0,0 % | Meses adicionales como anfitrión (resto, 0-11) |
-| `host_location` | texto | `str` | original | 34,0 % | Ubicación declarada por el anfitrión |
 | `host_is_superhost` | booleano | `bool` | convertida | 0,0 % | El anfitrión es superhost |
 | `host_listings_count` | numerico | `int64` | original | 0,0 % | Nº de anuncios del anfitrión según Airbnb |
 | `host_has_profile_pic` | booleano | `bool` | convertida | 0,0 % | El anfitrión tiene foto de perfil |
@@ -88,6 +87,8 @@ Origen: *original* (columna de Inside Airbnb sin cambios), *convertida* (tipo co
 | `descripcion_longitud` | numerico | `int64` | derivada | 0,0 % | Longitud de la descripción sin HTML (caracteres) |
 | `descripcion_palabras` | numerico | `int64` | derivada | 0,0 % | Palabras de la descripción sin HTML |
 | `host_tiene_descripcion` | booleano | `bool` | derivada | 0,0 % | El anfitrión tiene texto «sobre mí» |
+| `noches_cotizadas` | numerico | `float64` | derivada | 15,4 % | Noches de la estancia cotizada (salida − entrada de la cotización) |
+| `es_tarifa_mensual` | booleano | `bool` | derivada | 0,0 % | La cotización usa tarifa mensual (is_monthly_priced en price_quote_raw) |
 | `precio_valido` | booleano | `bool` | derivada | 0,0 % | Precio publicado y mayor que 0 |
 | `es_outlier_bajo` | booleano | `bool` | derivada | 0,0 % | Precio por debajo de la valla inferior (IQR en log) |
 | `es_outlier_alto` | booleano | `bool` | derivada | 0,0 % | Precio por encima de la valla superior (IQR en log) |
@@ -102,10 +103,12 @@ Origen: *original* (columna de Inside Airbnb sin cambios), *convertida* (tipo co
 | `log_precio` | numerico | `float64` | derivada | 18,7 % | Logaritmo natural del precio |
 | `precio_por_persona` | numerico | `float64` | derivada | 18,7 % | Precio dividido por la capacidad (€) |
 | `antiguedad_host_anios` | numerico | `float64` | derivada | 0,0 % | Antigüedad del anfitrión en años |
-| `ocupacion_estimada` | numerico | `float64` | derivada | 0,0 % | (365 − availability_365) / 365; no es ocupación real |
-| `ocupacion_inside_airbnb` | numerico | `float64` | derivada | 0,0 % | estimated_occupancy_l365d / 365 (referencia externa) |
+| `no_disponible_365` | numerico | `float64` | derivada | 0,0 % | Fracción de días NO disponibles en los próximos 365: (365 − availability_365) / 365. Mezcla reservas y bloqueos; no es ocupación real |
+| `ocupacion_inside_airbnb` | numerico | `float64` | derivada | 0,0 % | estimated_occupancy_l365d / 365 (estimación de Inside Airbnb, últimos 12 meses) |
 | `es_activo_probable` | booleano | `bool` | derivada | 0,0 % | No (availability_365 = 0 y sin reseñas en 12 meses) |
-| `ingresos_estimados_anuales` | numerico | `float64` | derivada | 18,7 % | price × (365 − availability_365), cota muy incierta (€) |
+| `ingreso_hipotetico_anual` | numerico | `float64` | derivada | 18,7 % | Proxy hipotético: price de una cotización × días no disponibles futuros (€). No es un ingreso observado ni una cota |
+| `mes_cotizacion` | categorico | `string` | derivada | 15,4 % | Mes (AAAA-MM) de la fecha de entrada de la cotización de precio |
+| `mes_cotizacion_agrupado` | categorico | `string` | derivada | 15,4 % | Mes de la cotización con meses raros (< 200 con precio) agrupados |
 | `distancia_centro_km` | numerico | `float64` | derivada | 0,0 % | Distancia haversine a la Puerta del Sol (km) |
 | `categoria_precio` | categorico | `category` | derivada | 18,7 % | Cuartil de precio (Económico … Alto) |
 | `categoria_capacidad` | categorico | `category` | derivada | 0,0 % | Tramo de capacidad (1-2, 3-4, 5-6, 7 o más) |

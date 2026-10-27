@@ -29,8 +29,11 @@
       "max_puntos_mapa": 10000,
       "umbral_filas": 1000,
       "umbral_columnas": 20,
-      "test_size_ml": 0.2,
-      "n_figuras": 17
+      "n_folds_ml": 5,
+      "test_size_aleatorio": 0.2,
+      "min_n_categoria_rara_ml": 30,
+      "n_figuras": 17,
+      "min_n_comparador": 30
     },
     "versiones": {
       "python": "3.13.2",
@@ -46,13 +49,13 @@
       "plotly": "7.1.0",
       "pyarrow": "26.0.0"
     },
-    "generado_utc": "2026-10-26T15:45:24+00:00"
+    "generado_utc": "2026-10-27T10:58:29+00:00"
   },
   "dataset": {
     "filas_raw": 23109,
     "columnas_raw": 90,
     "filas_procesadas": 23109,
-    "columnas_procesadas": 109,
+    "columnas_procesadas": 112,
     "tipos_raw": {
       "booleano": 4,
       "categorico": 4,
@@ -97,7 +100,7 @@
     "n_distritos": 21,
     "n_barrios": 128,
     "n_hosts": 8704,
-    "bytes_parquet": 2754595,
+    "bytes_parquet": 2777913,
     "filas_muestra_csv": 500,
     "columnas_sin_documentar": []
   },
@@ -109,10 +112,28 @@
     "monedas_distintas": 1
   },
   "precio_naturaleza": {
+    "checkin_min": "2026-09-19T00:00:00",
+    "checkin_max": "2027-09-18T00:00:00",
     "n_ambos": 18173,
     "pct_precio_igual_cotizacion": 100.0,
-    "checkin_min": "2026-09-19T00:00:00",
-    "checkin_max": "2027-09-18T00:00:00"
+    "n_cotizaciones_con_precio": 18785,
+    "n_con_descuento": 3812,
+    "pct_con_descuento": 20.292786797977108,
+    "mediana_pct_descuento": 9.868854455324975,
+    "n_tarifa_mensual": 2646,
+    "pct_tarifa_mensual": 14.085706680862389,
+    "n_min30": 2325,
+    "pct_mensual_entre_min30": 88.86021505376344,
+    "n_noches_comparables": 17284,
+    "pct_noches_igual_minimo": 74.95950011571395,
+    "partidas_descuento": {
+      "Last-minute discount": 1202,
+      "Monthly stay discount": 1119,
+      "Special offer": 551,
+      "Weekly stay discount": 501,
+      "Long stay discount": 325,
+      "Early booking discount": 127
+    }
   },
   "calidad": {
     "antes": {
@@ -222,21 +243,21 @@
     },
     "despues": {
       "filas": 23109,
-      "columnas": 109,
-      "nulos_total": 114173,
-      "pct_nulos_total": 4.53268733219235,
-      "columnas_con_nulos": 31,
+      "columnas": 112,
+      "nulos_total": 117013,
+      "pct_nulos_total": 4.521004494229212,
+      "columnas_con_nulos": 33,
       "dtypes": {
-        "bool": 30,
+        "bool": 31,
         "boolean": 1,
         "category": 3,
         "datetime64[us]": 6,
-        "float64": 33,
+        "float64": 34,
         "int64": 26,
-        "str": 7,
-        "string": 3
+        "str": 6,
+        "string": 5
       },
-      "memoria_mb": 19.702084
+      "memoria_mb": 20.169015
     },
     "n_columnas_100_nulas": 13
   },
@@ -317,6 +338,7 @@
       "source": "identificador técnico del scrape",
       "host_profile_id": "identificador técnico del scrape",
       "host_name": "dato personal innecesario (privacidad)",
+      "host_location": "dato personal innecesario (privacidad)",
       "description": "texto largo sustituido por métricas de longitud",
       "host_about": "texto largo sustituido por métricas de longitud",
       "price_quote_raw": "texto crudo ya convertido en columnas derivadas",
@@ -328,6 +350,7 @@
     },
     "reglas": {
       "precio_nulo_o_no_positivo (precio_valido=False)": 4324,
+      "precio negativo (precio_valido=False)": 0,
       "outlier_precio (flag, no se borra)": 609,
       "minimum_nights > 365 (flag)": 8,
       "minimum_nights >= 30 (flag larga estancia)": 3151,
@@ -341,8 +364,8 @@
       "duplicados_eliminados": 0,
       "filas_procesadas": 23109
     },
-    "n_columnas_eliminadas": 26,
-    "n_columnas_derivadas": 45,
+    "n_columnas_eliminadas": 27,
+    "n_columnas_derivadas": 49,
     "amenities_malformadas": 0
   },
   "features": {
@@ -361,6 +384,34 @@
       }
     },
     "antiguedad_fuente": "hosts_time_as_host_years + hosts_time_as_host_months / 12 (host_since 100 % nulo)",
+    "agrupacion_mes": {
+      "min_n_con_precio": 200,
+      "agrupadas": [
+        "2027-03",
+        "2027-04",
+        "2027-05",
+        "2027-06",
+        "2027-07",
+        "2027-08",
+        "2027-09"
+      ],
+      "etiqueta": "Otros meses",
+      "n_con_precio_por_categoria": {
+        "2026-09": 9623,
+        "2026-10": 4800,
+        "2026-11": 1813,
+        "2026-12": 972,
+        "2027-01": 588,
+        "2027-02": 208,
+        "2027-03": 103,
+        "2027-04": 83,
+        "2027-05": 180,
+        "2027-06": 165,
+        "2027-07": 139,
+        "2027-08": 87,
+        "2027-09": 24
+      }
+    },
     "cortes_categoria_precio": [
       9.13,
       95.45,
@@ -376,16 +427,16 @@
       "Sin licencia": 10913
     },
     "prevalencia_amenities": {
-      "tiene_wifi": 96.78912977627763,
+      "tiene_wifi": 96.75018391103033,
       "tiene_aire_acondicionado": 68.05140854212645,
       "tiene_cocina": 88.71435371500282,
       "tiene_calefaccion": 81.95940975377557,
-      "tiene_lavadora": 83.41771604136916,
+      "tiene_lavadora": 81.17616513046865,
       "tiene_ascensor": 45.9691029469038,
       "tiene_terraza_balcon": 17.668440867194597,
-      "tiene_parking_cualquiera": 37.556796053485655,
-      "tiene_piscina": 4.933142931325458,
-      "tiene_tv": 78.14271495953957,
+      "tiene_parking_cualquiera": 37.62170582889783,
+      "tiene_piscina": 4.721104331645679,
+      "tiene_tv": 86.65455017525639,
       "tiene_espacio_trabajo": 47.35817214072439,
       "admite_mascotas": 13.657016746722055,
       "llegada_autonoma": 31.818771907049204
@@ -811,6 +862,9 @@
         "q3": 109.685
       }
     ],
+    "distritos_n_min": 30,
+    "distritos_excluidos_ranking": {},
+    "n_distritos_excluidos_ranking": 0,
     "distrito_mas_barato": {
       "grupo": "Moratalaz",
       "n": 103,
@@ -1249,15 +1303,21 @@
     },
     "ocupacion_ingresos": {
       "n_activos_con_precio": 18757,
-      "ocupacion_estimada_media": 48.62964767126209,
-      "ocupacion_estimada_mediana": 39.726027397260275,
+      "n_comparacion_ocupacion": 18757,
+      "no_disponible_media": 48.62964767126209,
+      "no_disponible_mediana": 39.726027397260275,
       "ocupacion_inside_airbnb_media": 31.563755923815833,
       "ocupacion_inside_airbnb_mediana": 26.301369863013697,
-      "ingresos_propios_mediana": 19503.44,
+      "spearman_ocupacion": 0.319832255755396,
+      "spearman_ocupacion_p": 0.0,
+      "n_comparacion_ingresos": 18757,
+      "ingreso_hipotetico_mediana": 19503.44,
       "ingresos_inside_airbnb_mediana": 12432.0,
       "cociente_medianas": 1.5688095238095237,
       "spearman_propio_vs_inside": 0.466695356794416,
-      "spearman_p": 0.0
+      "spearman_p": 0.0,
+      "ventana_propia": "próximos 365 días (availability_365, calendario futuro)",
+      "ventana_inside_airbnb": "últimos 12 meses (estimated_*_l365d, modelo basado en reseñas)"
     },
     "pct_activos_probables": 89.31585096715565,
     "n_no_activos": 2469,
@@ -1265,10 +1325,10 @@
       {
         "amenity": "tiene_wifi",
         "nombre": "Wifi",
-        "prevalencia_pct": 96.78912977627763,
+        "prevalencia_pct": 96.75018391103033,
         "mediana_con": 151.5,
-        "mediana_sin": 133.72,
-        "prima_pct": 13.29644032306312
+        "mediana_sin": 133.0,
+        "prima_pct": 13.909774436090228
       },
       {
         "amenity": "tiene_cocina",
@@ -1279,12 +1339,12 @@
         "prima_pct": 25.70211038961039
       },
       {
-        "amenity": "tiene_lavadora",
-        "nombre": "Lavadora",
-        "prevalencia_pct": 83.41771604136916,
-        "mediana_con": 155.385,
-        "mediana_sin": 132.58,
-        "prima_pct": 17.2009352843566
+        "amenity": "tiene_tv",
+        "nombre": "TV",
+        "prevalencia_pct": 86.65455017525639,
+        "mediana_con": 158.9,
+        "mediana_sin": 76.0,
+        "prima_pct": 109.07894736842105
       },
       {
         "amenity": "tiene_calefaccion",
@@ -1295,12 +1355,12 @@
         "prima_pct": 31.500000000000018
       },
       {
-        "amenity": "tiene_tv",
-        "nombre": "TV",
-        "prevalencia_pct": 78.14271495953957,
-        "mediana_con": 158.0,
-        "mediana_sin": 115.0,
-        "prima_pct": 37.39130434782609
+        "amenity": "tiene_lavadora",
+        "nombre": "Lavadora",
+        "prevalencia_pct": 81.17616513046865,
+        "mediana_con": 155.6,
+        "mediana_sin": 135.0,
+        "prima_pct": 15.259259259259261
       },
       {
         "amenity": "tiene_aire_acondicionado",
@@ -1329,10 +1389,10 @@
       {
         "amenity": "tiene_parking_cualquiera",
         "nombre": "Parking (cualquiera)",
-        "prevalencia_pct": 37.556796053485655,
+        "prevalencia_pct": 37.62170582889783,
         "mediana_con": 148.0,
-        "mediana_sin": 153.0,
-        "prima_pct": -3.26797385620915
+        "mediana_sin": 152.99,
+        "prima_pct": -3.2616510883064276
       },
       {
         "amenity": "llegada_autonoma",
@@ -1361,10 +1421,10 @@
       {
         "amenity": "tiene_piscina",
         "nombre": "Piscina",
-        "prevalencia_pct": 4.933142931325458,
-        "mediana_con": 151.0,
+        "prevalencia_pct": 4.721104331645679,
+        "mediana_con": 150.99,
         "mediana_sin": 151.0,
-        "prima_pct": 0.0
+        "prima_pct": -0.006622516556287206
       }
     ],
     "correlaciones": {
@@ -2122,6 +2182,190 @@
           "pearson": 0.05116241958835063
         }
       }
+    },
+    "mes_cotizacion": {
+      "meses": [
+        {
+          "grupo": "2026-09",
+          "n": 9623,
+          "mediana": 159.0,
+          "media": 227.13031694897643,
+          "q1": 107.0,
+          "q3": 234.75
+        },
+        {
+          "grupo": "2026-10",
+          "n": 4800,
+          "mediana": 174.0,
+          "media": 232.22081666666665,
+          "q1": 114.8275,
+          "q3": 256.6875
+        },
+        {
+          "grupo": "2026-11",
+          "n": 1813,
+          "mediana": 128.5,
+          "media": 156.58139547710977,
+          "q1": 83.08,
+          "q3": 182.5
+        },
+        {
+          "grupo": "2026-12",
+          "n": 972,
+          "mediana": 87.535,
+          "media": 115.340329218107,
+          "q1": 39.269999999999996,
+          "q3": 138.16750000000002
+        },
+        {
+          "grupo": "2027-01",
+          "n": 588,
+          "mediana": 94.00999999999999,
+          "media": 118.80229591836735,
+          "q1": 50.9925,
+          "q3": 149.29749999999999
+        },
+        {
+          "grupo": "2027-02",
+          "n": 208,
+          "mediana": 94.89,
+          "media": 116.16966346153846,
+          "q1": 53.582499999999996,
+          "q3": 153.22500000000002
+        },
+        {
+          "grupo": "2027-03",
+          "n": 103,
+          "mediana": 103.3,
+          "media": 126.62504854368932,
+          "q1": 60.57,
+          "q3": 163.015
+        },
+        {
+          "grupo": "2027-04",
+          "n": 83,
+          "mediana": 108.27,
+          "media": 148.9120481927711,
+          "q1": 59.635000000000005,
+          "q3": 171.35500000000002
+        },
+        {
+          "grupo": "2027-05",
+          "n": 180,
+          "mediana": 98.91,
+          "media": 138.27622222222223,
+          "q1": 29.07,
+          "q3": 189.9775
+        },
+        {
+          "grupo": "2027-06",
+          "n": 165,
+          "mediana": 140.5,
+          "media": 167.20133333333334,
+          "q1": 53.0,
+          "q3": 202.31
+        },
+        {
+          "grupo": "2027-07",
+          "n": 139,
+          "mediana": 133.84,
+          "media": 224.85633093525178,
+          "q1": 72.83500000000001,
+          "q3": 196.125
+        },
+        {
+          "grupo": "2027-08",
+          "n": 87,
+          "mediana": 74.5,
+          "media": 98.0693103448276,
+          "q1": 27.064999999999998,
+          "q3": 126.595
+        },
+        {
+          "grupo": "2027-09",
+          "n": 24,
+          "mediana": 168.0,
+          "media": 464.5016666666667,
+          "q1": 86.0,
+          "q3": 253.4525
+        }
+      ],
+      "n_meses": 13,
+      "n_con_mes": 18785,
+      "mes_mediana_min": {
+        "grupo": "2027-08",
+        "n": 87,
+        "mediana": 74.5,
+        "media": 98.0693103448276,
+        "q1": 27.064999999999998,
+        "q3": 126.595
+      },
+      "mes_mediana_max": {
+        "grupo": "2026-10",
+        "n": 4800,
+        "mediana": 174.0,
+        "media": 232.22081666666665,
+        "q1": 114.8275,
+        "q3": 256.6875
+      },
+      "pct_primeros_dos_meses": 76.77934522225179
+    },
+    "sin_mensuales": {
+      "n": 15880,
+      "n_excluidos": 2905,
+      "pct_excluidos": 15.464466329518235,
+      "precio": {
+        "n": 15880,
+        "media": 225.2100516372796,
+        "mediana": 161.775,
+        "std": 585.0297840679564,
+        "q1": 107.6375,
+        "q3": 238.05,
+        "iqr": 130.41250000000002,
+        "min": 9.13,
+        "max": 36883.0,
+        "p5": 46.0,
+        "p95": 500.0,
+        "asimetria": 29.704236597877873,
+        "curtosis_exceso": 1290.788103161273,
+        "cv": 2.597707250696775
+      },
+      "top_distritos": [
+        {
+          "grupo": "Salamanca",
+          "n": 957,
+          "mediana": 203.67,
+          "media": 256.1312748171369,
+          "q1": 146.5,
+          "q3": 301.75
+        },
+        {
+          "grupo": "Centro",
+          "n": 6900,
+          "mediana": 190.95,
+          "media": 283.2466376811594,
+          "q1": 139.01500000000001,
+          "q3": 278.4625
+        },
+        {
+          "grupo": "Chamberí",
+          "n": 809,
+          "mediana": 171.5,
+          "media": 205.4759456118665,
+          "q1": 112.86,
+          "q3": 255.77
+        }
+      ],
+      "distrito_mas_barato": {
+        "grupo": "Moratalaz",
+        "n": 98,
+        "mediana": 55.5,
+        "media": 89.12540816326532,
+        "q1": 32.625,
+        "q3": 112.75
+      },
+      "mismo_top2": true,
+      "mismo_mas_barato": true
     }
   },
   "estadistica": {
@@ -3112,7 +3356,7 @@
     },
     "bootstrap": {
       "n_boot": 2000,
-      "metodo": "percentil, IC 95 %",
+      "metodo": "percentil, IC 95 %; por anuncio y por anfitrión (cluster)",
       "tipo": [
         {
           "grupo": "Alojamiento entero",
@@ -3120,15 +3364,21 @@
           "mediana": 173.63,
           "ic_inf": 172.0,
           "ic_sup": 175.36,
-          "n_boot": 2000
+          "n_boot": 2000,
+          "n_anfitriones": 4561,
+          "ic_inf_cluster": 167.0,
+          "ic_sup_cluster": 180.0
         },
         {
           "grupo": "Habitación privada",
           "n": 5059,
           "mediana": 74.0,
-          "ic_inf": 71.1,
-          "ic_sup": 75.6,
-          "n_boot": 2000
+          "ic_inf": 71.32425,
+          "ic_sup": 75.60174999999998,
+          "n_boot": 2000,
+          "n_anfitriones": 2228,
+          "ic_inf_cluster": 66.0,
+          "ic_sup_cluster": 81.67224999999999
         },
         {
           "grupo": "Otras (compartida + hotel)",
@@ -3136,7 +3386,10 @@
           "mediana": 29.0,
           "ic_inf": 27.0,
           "ic_sup": 35.0,
-          "n_boot": 2000
+          "n_boot": 2000,
+          "n_anfitriones": 46,
+          "ic_inf_cluster": 24.0,
+          "ic_sup_cluster": 64.0
         }
       ],
       "distritos": [
@@ -3144,86 +3397,173 @@
           "grupo": "Salamanca",
           "n": 1314,
           "mediana": 188.34,
-          "ic_inf": 180.16,
+          "ic_inf": 180.23,
           "ic_sup": 194.25,
-          "n_boot": 2000
+          "n_boot": 2000,
+          "n_anfitriones": 528,
+          "ic_inf_cluster": 176.0,
+          "ic_sup_cluster": 202.0
         },
         {
           "grupo": "Centro",
           "n": 7866,
           "mediana": 180.0,
-          "ic_inf": 177.3,
-          "ic_sup": 182.3505,
-          "n_boot": 2000
+          "ic_inf": 177.5,
+          "ic_sup": 182.2,
+          "n_boot": 2000,
+          "n_anfitriones": 2760,
+          "ic_inf_cluster": 173.0,
+          "ic_sup_cluster": 187.70224999999996
         },
         {
           "grupo": "Chamberí",
           "n": 1159,
           "mediana": 155.4,
-          "ic_inf": 148.6,
-          "ic_sup": 161.85,
-          "n_boot": 2000
+          "ic_inf": 149.23,
+          "ic_sup": 162.0,
+          "n_boot": 2000,
+          "n_anfitriones": 441,
+          "ic_inf_cluster": 136.5,
+          "ic_sup_cluster": 170.20274999999998
         },
         {
           "grupo": "Chamartín",
           "n": 699,
           "mediana": 150.7,
-          "ic_inf": 144.68,
-          "ic_sup": 157.0,
-          "n_boot": 2000
+          "ic_inf": 144.76,
+          "ic_sup": 157.5,
+          "n_boot": 2000,
+          "n_anfitriones": 266,
+          "ic_inf_cluster": 139.0,
+          "ic_sup_cluster": 164.8
         },
         {
           "grupo": "Arganzuela",
           "n": 918,
           "mediana": 146.57,
-          "ic_inf": 138.0,
-          "ic_sup": 151.00624999999997,
-          "n_boot": 2000
+          "ic_inf": 138.615,
+          "ic_sup": 151.25,
+          "n_boot": 2000,
+          "n_anfitriones": 480,
+          "ic_inf_cluster": 132.8,
+          "ic_sup_cluster": 155.45
         },
         {
           "grupo": "Retiro",
           "n": 656,
           "mediana": 145.475,
-          "ic_inf": 137.6,
-          "ic_sup": 156.075,
-          "n_boot": 2000
+          "ic_inf": 137.76,
+          "ic_sup": 156.01162499999998,
+          "n_boot": 2000,
+          "n_anfitriones": 294,
+          "ic_inf_cluster": 126.0,
+          "ic_sup_cluster": 163.39124999999976
         },
         {
           "grupo": "Ciudad Lineal",
           "n": 631,
           "mediana": 128.0,
-          "ic_inf": 121.3,
-          "ic_sup": 133.6,
-          "n_boot": 2000
+          "ic_inf": 120.5,
+          "ic_sup": 133.5,
+          "n_boot": 2000,
+          "n_anfitriones": 349,
+          "ic_inf_cluster": 114.97750000000003,
+          "ic_sup_cluster": 137.33
         },
         {
           "grupo": "Tetuán",
           "n": 1379,
           "mediana": 127.0,
-          "ic_inf": 121.51,
-          "ic_sup": 131.0,
-          "n_boot": 2000
+          "ic_inf": 121.42,
+          "ic_sup": 131.33,
+          "n_boot": 2000,
+          "n_anfitriones": 483,
+          "ic_inf_cluster": 113.97,
+          "ic_sup_cluster": 137.39
         },
         {
           "grupo": "Carabanchel",
           "n": 612,
           "mediana": 107.5,
-          "ic_inf": 101.5,
-          "ic_sup": 115.5,
-          "n_boot": 2000
+          "ic_inf": 101.64387500000001,
+          "ic_sup": 116.14500000000001,
+          "n_boot": 2000,
+          "n_anfitriones": 330,
+          "ic_inf_cluster": 96.35,
+          "ic_sup_cluster": 122.62
         },
         {
           "grupo": "Puente de Vallecas",
           "n": 563,
           "mediana": 107.0,
-          "ic_inf": 101.0,
-          "ic_sup": 114.0,
-          "n_boot": 2000
+          "ic_inf": 101.5,
+          "ic_sup": 114.15,
+          "n_boot": 2000,
+          "n_anfitriones": 276,
+          "ic_inf_cluster": 91.15750000000008,
+          "ic_sup_cluster": 120.0
         }
-      ]
+      ],
+      "barrios_extremos": [
+        {
+          "grupo": "Recoletos",
+          "n": 263,
+          "mediana": 240.0,
+          "ic_inf": 219.6,
+          "ic_sup": 266.86,
+          "n_boot": 2000,
+          "n_anfitriones": 108,
+          "ic_inf_cluster": 204.0,
+          "ic_sup_cluster": 287.41
+        },
+        {
+          "grupo": "Jerónimos",
+          "n": 68,
+          "mediana": 224.97,
+          "ic_inf": 173.735,
+          "ic_sup": 262.955,
+          "n_boot": 2000,
+          "n_anfitriones": 48,
+          "ic_inf_cluster": 167.64,
+          "ic_sup_cluster": 272.67
+        },
+        {
+          "grupo": "Portazgo",
+          "n": 33,
+          "mediana": 57.71,
+          "ic_inf": 47.0,
+          "ic_sup": 80.0,
+          "n_boot": 2000,
+          "n_anfitriones": 25,
+          "ic_inf_cluster": 44.0,
+          "ic_sup_cluster": 80.9
+        },
+        {
+          "grupo": "Fontarrón",
+          "n": 35,
+          "mediana": 59.0,
+          "ic_inf": 33.0,
+          "ic_sup": 119.0,
+          "n_boot": 2000,
+          "n_anfitriones": 17,
+          "ic_inf_cluster": 26.0,
+          "ic_sup_cluster": 139.59
+        }
+      ],
+      "barrio_top_distinguible": false,
+      "barrio_bottom_distinguible": false
+    },
+    "top_distritos_empate": {
+      "a": "Salamanca",
+      "b": "Centro",
+      "en_posthoc": true,
+      "p_ajustado": 1.0,
+      "ic_solapan": true,
+      "empate": true
     },
     "sensibilidad_un_anuncio_por_host": {
       "n": 6546,
+      "n_todos": 8704,
       "mann_whitney_superhost": {
         "nombre": "Mann-Whitney U: superhosts vs no superhosts",
         "h0": "El precio de los anuncios de superhosts y de no superhosts tiene la misma distribución (P(X_superhost > X_no) = 0,5).",
@@ -3234,22 +3574,22 @@
           "independencia": "parcial: un anfitrión puede tener varios anuncios (ver análisis de sensibilidad)",
           "nota": "compara dominancia estocástica, no solo medianas, si las formas difieren"
         },
-        "estadistico": 5192854.5,
-        "p_valor": 2.261171553384282e-07,
+        "estadistico": 5201095.0,
+        "p_valor": 1.2222830641812855e-07,
         "n": {
           "superhosts": 2235,
           "no superhosts": 4311
         },
         "tamano_efecto": {
           "nombre": "correlación rank-biserial",
-          "valor": 0.07790528054500823,
-          "cles": 0.5389526402725041,
+          "valor": 0.07961579996440094,
+          "cles": 0.5398078999822005,
           "interpretacion": "despreciable"
         },
-        "conclusion": "Se rechaza H0 (p < α): resultado estadísticamente significativo pero con efecto despreciable, sin relevancia práctica. Los anuncios de superhosts tienden a tener precios más altos (mediana de superhosts: 150,00 €; de no superhosts: 137,06 €). Es una asociación bruta, sin controlar por ubicación ni tipo.",
+        "conclusion": "Se rechaza H0 (p < α): resultado estadísticamente significativo pero con efecto despreciable, sin relevancia práctica. Los anuncios de superhosts tienden a tener precios más altos (mediana de superhosts: 150,50 €; de no superhosts: 137,00 €). Es una asociación bruta, sin controlar por ubicación ni tipo.",
         "extra": {
-          "mediana_a": 150.0,
-          "mediana_b": 137.06,
+          "mediana_a": 150.5,
+          "mediana_b": 137.0,
           "etiqueta_a": "superhosts",
           "etiqueta_b": "no superhosts",
           "grupo_mas_caro": "superhosts"
@@ -3266,533 +3606,1067 @@
           "min_n_por_grupo": 30,
           "n_grupos": 2
         },
-        "estadistico": 1795.2874139904297,
+        "estadistico": 1809.330843293756,
         "p_valor": 0.0,
         "n": {
-          "Alojamiento entero": 4419,
-          "Habitación privada": 2106
+          "Alojamiento entero": 4426,
+          "Habitación privada": 2098
         },
         "tamano_efecto": {
           "nombre": "épsilon cuadrado",
-          "valor": 0.2751820070494221,
+          "valor": 0.2773771030651167,
           "interpretacion": "grande"
         },
         "conclusion": "Se rechaza H0 (p < α) con un efecto grande. El precio difiere entre tipos de habitación: la mediana más alta es la de Alojamiento entero y la más baja la de Habitación privada.",
         "extra": {
           "medianas": {
-            "Alojamiento entero": 171.0,
-            "Habitación privada": 70.0
+            "Alojamiento entero": 171.665,
+            "Habitación privada": 71.0
           },
           "grupo_mas_caro": "Alojamiento entero",
           "grupo_mas_barato": "Habitación privada",
           "grupos_excluidos": {
-            "Otras (compartida + hotel)": 21
+            "Otras (compartida + hotel)": 22
           },
-          "n_total": 6525
+          "n_total": 6524
+        },
+        "significativo": true
+      },
+      "kruskal_distrito": {
+        "nombre": "Kruskal-Wallis: precio por distritos",
+        "h0": "La distribución del precio es la misma en todos los distritos (n ≥ 30).",
+        "h1": "Al menos un distrito tiene una distribución de precio distinta.",
+        "alfa": 0.05,
+        "supuestos": {
+          "independencia": "parcial (anfitriones con varios anuncios)",
+          "min_n_por_grupo": 30,
+          "n_grupos": 21
+        },
+        "estadistico": 963.8661974314457,
+        "p_valor": 1.9697086001426225e-191,
+        "n": {
+          "Arganzuela": 375,
+          "Barajas": 79,
+          "Carabanchel": 271,
+          "Centro": 2539,
+          "Chamartín": 197,
+          "Chamberí": 317,
+          "Ciudad Lineal": 293,
+          "Fuencarral - El Pardo": 120,
+          "Hortaleza": 202,
+          "Latina": 226,
+          "Moncloa - Aravaca": 155,
+          "Moratalaz": 52,
+          "Puente de Vallecas": 232,
+          "Retiro": 208,
+          "Salamanca": 391,
+          "San Blas - Canillejas": 207,
+          "Tetuán": 371,
+          "Usera": 154,
+          "Vicálvaro": 32,
+          "Villa de Vallecas": 39,
+          "Villaverde": 86
+        },
+        "tamano_efecto": {
+          "nombre": "épsilon cuadrado",
+          "valor": 0.1472675626327648,
+          "interpretacion": "grande"
+        },
+        "conclusion": "Se rechaza H0 (p < α) con un efecto grande. El precio difiere entre distritos: la mediana más alta es la de Salamanca y la más baja la de Moratalaz.",
+        "extra": {
+          "medianas": {
+            "Arganzuela": 133.33,
+            "Barajas": 143.0,
+            "Carabanchel": 89.63,
+            "Centro": 172.0,
+            "Chamartín": 150.5,
+            "Chamberí": 158.0,
+            "Ciudad Lineal": 117.0,
+            "Fuencarral - El Pardo": 100.775,
+            "Hortaleza": 124.0,
+            "Latina": 75.0,
+            "Moncloa - Aravaca": 143.3,
+            "Moratalaz": 59.0,
+            "Puente de Vallecas": 77.5,
+            "Retiro": 165.8,
+            "Salamanca": 179.6,
+            "San Blas - Canillejas": 113.0,
+            "Tetuán": 127.0,
+            "Usera": 81.0,
+            "Vicálvaro": 68.25,
+            "Villa de Vallecas": 93.67,
+            "Villaverde": 88.15
+          },
+          "grupo_mas_caro": "Salamanca",
+          "grupo_mas_barato": "Moratalaz",
+          "grupos_excluidos": {},
+          "n_total": 6546
+        },
+        "significativo": true
+      },
+      "posthoc_distrito": {
+        "metodo": "Dunn con corrección de Bonferroni (scikit-posthocs)",
+        "n_pares": 45,
+        "n_pares_significativos": 27
+      },
+      "chi2_tipo_superhost": {
+        "nombre": "Chi-cuadrado: tipo de habitación y ser superhost",
+        "h0": "El tipo de habitación y ser superhost son independientes.",
+        "h1": "Existe asociación entre tipo de habitación y ser superhost.",
+        "alfa": 0.05,
+        "supuestos": {
+          "min_esperada": 8.665441176470589,
+          "pct_celdas_esperada_menor_5": 0.0,
+          "cumple_esperadas": true,
+          "correccion_yates": false
+        },
+        "estadistico": 105.94358706598865,
+        "p_valor": 9.877393872357717e-24,
+        "n": 8704,
+        "tamano_efecto": {
+          "nombre": "V de Cramér",
+          "valor": 0.11032600581065594,
+          "v_corregida": 0.10928583656972639,
+          "df_star": 1,
+          "interpretacion": "pequeño"
+        },
+        "conclusion": "Se rechaza H0 (p < α) con un efecto pequeño. Hay asociación entre tipo de habitación y ser superhost (V de Cramér = 0,110).",
+        "extra": {
+          "grados_libertad": 2,
+          "dimensiones": [
+            3,
+            2
+          ],
+          "residuos_extremos": [
+            {
+              "fila": "Habitación privada",
+              "columna": "True",
+              "residuo": -6.834012801670982
+            },
+            {
+              "fila": "Alojamiento entero",
+              "columna": "True",
+              "residuo": 5.181390639691899
+            },
+            {
+              "fila": "Habitación privada",
+              "columna": "False",
+              "residuo": 4.164581160005377
+            },
+            {
+              "fila": "Alojamiento entero",
+              "columna": "False",
+              "residuo": -3.157489233179809
+            },
+            {
+              "fila": "Otras (compartida + hotel)",
+              "columna": "True",
+              "residuo": -1.9245907557139805
+            }
+          ]
+        },
+        "significativo": true
+      },
+      "chi2_distrito_tipo": {
+        "nombre": "Chi-cuadrado: distrito y tipo de habitación",
+        "h0": "El distrito y el tipo de habitación son independientes.",
+        "h1": "Existe asociación entre distrito y tipo de habitación.",
+        "alfa": 0.05,
+        "supuestos": {
+          "min_esperada": 0.8676470588235294,
+          "pct_celdas_esperada_menor_5": 31.11111111111111,
+          "cumple_esperadas": false,
+          "correccion_yates": false
+        },
+        "estadistico": 759.221067198021,
+        "p_valor": 7.752620576477829e-142,
+        "n": 8704,
+        "tamano_efecto": {
+          "nombre": "V de Cramér",
+          "valor": 0.20883807735907114,
+          "v_corregida": 0.20497403981952791,
+          "df_star": 2,
+          "interpretacion": "pequeño"
+        },
+        "conclusion": "Se rechaza H0 (p < α) con un efecto pequeño. Hay asociación entre distrito y tipo de habitación (V de Cramér = 0,209).",
+        "extra": {
+          "grados_libertad": 28,
+          "dimensiones": [
+            15,
+            3
+          ],
+          "residuos_extremos": [
+            {
+              "fila": "Centro",
+              "columna": "Habitación privada",
+              "residuo": -13.387534052685211
+            },
+            {
+              "fila": "Otros distritos",
+              "columna": "Habitación privada",
+              "residuo": 10.606687843810112
+            },
+            {
+              "fila": "Centro",
+              "columna": "Alojamiento entero",
+              "residuo": 9.82857650643814
+            },
+            {
+              "fila": "Otros distritos",
+              "columna": "Alojamiento entero",
+              "residuo": -7.830017988359612
+            },
+            {
+              "fila": "Latina",
+              "columna": "Habitación privada",
+              "residuo": 7.1962131036165555
+            }
+          ],
+          "agrupacion": {
+            "min_n_con_precio": 200,
+            "agrupadas": [
+              "Barajas",
+              "Fuencarral - El Pardo",
+              "Moratalaz",
+              "Usera",
+              "Vicálvaro",
+              "Villa de Vallecas",
+              "Villaverde"
+            ],
+            "etiqueta": "Otros distritos",
+            "n_con_precio_por_categoria": {
+              "Arganzuela": 521,
+              "Barajas": 96,
+              "Carabanchel": 373,
+              "Centro": 3340,
+              "Chamartín": 267,
+              "Chamberí": 456,
+              "Ciudad Lineal": 373,
+              "Fuencarral - El Pardo": 166,
+              "Hortaleza": 237,
+              "Latina": 300,
+              "Moncloa - Aravaca": 236,
+              "Moratalaz": 69,
+              "Puente de Vallecas": 300,
+              "Retiro": 284,
+              "Salamanca": 528,
+              "San Blas - Canillejas": 269,
+              "Tetuán": 485,
+              "Usera": 191,
+              "Vicálvaro": 40,
+              "Villa de Vallecas": 53,
+              "Villaverde": 120
+            }
+          }
+        },
+        "significativo": true
+      },
+      "chi2_multi_tipo": {
+        "nombre": "Chi-cuadrado: ser multi-anuncio y tipo de habitación",
+        "h0": "Ser anfitrión multi-anuncio y el tipo de habitación son independientes.",
+        "h1": "Existe asociación entre ser multi-anuncio y el tipo de habitación.",
+        "alfa": 0.05,
+        "supuestos": {
+          "min_esperada": 9.503676470588236,
+          "pct_celdas_esperada_menor_5": 0.0,
+          "cumple_esperadas": true,
+          "correccion_yates": false
+        },
+        "estadistico": 31.796407755004502,
+        "p_valor": 1.245941879306731e-07,
+        "n": 8704,
+        "tamano_efecto": {
+          "nombre": "V de Cramér",
+          "valor": 0.060440714217221435,
+          "v_corregida": 0.058512114218770346,
+          "df_star": 1,
+          "interpretacion": "despreciable"
+        },
+        "conclusion": "Se rechaza H0 (p < α): resultado estadísticamente significativo pero con efecto despreciable, sin relevancia práctica. Hay asociación entre ser multi-anuncio y tipo de habitación (V de Cramér = 0,060).",
+        "extra": {
+          "grados_libertad": 2,
+          "dimensiones": [
+            2,
+            3
+          ],
+          "residuos_extremos": [
+            {
+              "fila": "True",
+              "columna": "Otras (compartida + hotel)",
+              "residuo": 4.702318604868321
+            },
+            {
+              "fila": "False",
+              "columna": "Otras (compartida + hotel)",
+              "residuo": -3.056343048205946
+            },
+            {
+              "fila": "True",
+              "columna": "Alojamiento entero",
+              "residuo": -0.46710203544521667
+            },
+            {
+              "fila": "False",
+              "columna": "Alojamiento entero",
+              "residuo": 0.3036000277305392
+            },
+            {
+              "fila": "True",
+              "columna": "Habitación privada",
+              "residuo": 0.152353370801698
+            }
+          ]
         },
         "significativo": true
       },
       "mismo_signo_superhost": true,
       "misma_decision_superhost": true,
-      "misma_decision_tipo": true
+      "misma_decision_tipo": true,
+      "decisiones": {
+        "superhost": true,
+        "tipo": true,
+        "distrito": true,
+        "chi2_tipo_superhost": true,
+        "chi2_distrito_tipo": true,
+        "chi2_multi_tipo": true
+      },
+      "todas_mismas_decisiones": true
     },
     "ols": {
-      "formula": "log_precio ~ C(tipo, Treatment('Alojamiento entero')) + accommodates + bedrooms + bathrooms + bano_compartido + n_amenities + distancia_centro_km + host_is_superhost + es_multianuncio + alquiler_larga_estancia + tiene_aire_acondicionado + tiene_ascensor + tiene_terraza_balcon + tiene_parking_cualquiera + tiene_wifi + log1p_resenas + C(licencia, Treatment('Sin licencia')) + C(distrito, Treatment('Centro'))",
+      "formula": "log_precio ~ C(tipo, Treatment('Alojamiento entero')) + accommodates + bedrooms + bathrooms + bano_compartido + n_amenities + distancia_centro_km + host_is_superhost + es_multianuncio + alquiler_larga_estancia + tiene_aire_acondicionado + tiene_ascensor + tiene_terraza_balcon + tiene_parking_cualquiera + tiene_wifi + log1p_resenas + C(licencia, Treatment('Sin licencia')) + C(distrito, Treatment('Centro')) + C(mes, Treatment('2026-09'))",
       "n_inicial": 18176,
       "n_efectivo": 18159,
       "perdidas_por_nulos": 17,
       "incluye_outliers": false,
+      "con_distrito": true,
+      "con_mes": true,
+      "excluidos": [],
       "referencias": {
         "tipo": "Alojamiento entero",
         "distrito": "Centro",
-        "licencia": "Sin licencia"
+        "licencia": "Sin licencia",
+        "mes": "2026-09"
       },
-      "r2": 0.5715429333507269,
-      "r2_ajustado": 0.57059700760473,
-      "aic": 20950.369850080926,
-      "f": 604.2154320986529,
-      "f_p": 0.0,
-      "n_parametros": 41,
+      "r2": 0.6019500838331846,
+      "r2_ajustado": 0.6009391355036973,
+      "aic": 19625.629139069824,
+      "f_cluster": 189.11646474673765,
+      "f_cluster_p": 0.0,
+      "f_cluster_gl": [
+        46,
+        6409
+      ],
+      "f_no_robusto": 595.4311078771726,
+      "f_no_robusto_p": 0.0,
+      "n_parametros": 47,
+      "n_coeficientes": 46,
+      "n_significativos": 27,
+      "n_significativos_holm": 24,
       "coeficientes": [
         {
           "termino": "C(tipo, Treatment('Alojamiento entero'))[T.Habitación privada]",
           "nombre": "Tipo: Habitación privada",
-          "beta": -0.25900882074591003,
-          "pct": -22.81837849810443,
-          "ic_inf_pct": -28.307318404418915,
-          "ic_sup_pct": -16.909194005807148,
-          "p_cluster": 5.9331774341829146e-12,
-          "p_hc3": 2.86605638549726e-90,
+          "beta": -0.2766329430315609,
+          "pct": -24.166720263097062,
+          "ic_inf_pct": -28.73550949699335,
+          "ic_sup_pct": -19.305024493050272,
+          "p_cluster": 2.6515191763469962e-18,
+          "p_hc3": 1.9409093275490603e-107,
+          "p_holm": 1.0871228623022685e-16,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "C(tipo, Treatment('Alojamiento entero'))[T.Otras (compartida + hotel)]",
           "nombre": "Tipo: Otras (compartida + hotel)",
-          "beta": -0.573714009767518,
-          "pct": -43.6571032736008,
-          "ic_inf_pct": -57.13609004321594,
-          "ic_sup_pct": -25.93951380724999,
-          "p_cluster": 3.91431466344935e-05,
-          "p_hc3": 5.732186508147598e-13,
+          "beta": -0.6207224015001639,
+          "pct": -46.244403394094455,
+          "ic_inf_pct": -58.963388389674364,
+          "ic_sup_pct": -29.58326594075458,
+          "p_cluster": 6.600408889869719e-06,
+          "p_hc3": 3.3849027519559867e-15,
+          "p_holm": 0.00016501022224674298,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "C(licencia, Treatment('Sin licencia'))[T.Con nº de registro]",
           "nombre": "Licencia: Con nº de registro",
-          "beta": 0.016068409925348005,
-          "pct": 1.6198201071361051,
-          "ic_inf_pct": -2.590471319701626,
-          "ic_sup_pct": 6.012091204125847,
-          "p_cluster": 0.4567124688926465,
-          "p_hc3": 0.07609299268348695,
+          "beta": 0.006860146221652532,
+          "pct": 0.6883730925403508,
+          "ic_inf_pct": -3.1774984906652537,
+          "ic_sup_pct": 4.708598910194217,
+          "p_cluster": 0.731274185860352,
+          "p_hc3": 0.43468694856557166,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": false
+          "significativo_holm": false,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "C(licencia, Treatment('Sin licencia'))[T.Exenta]",
           "nombre": "Licencia: Exenta",
-          "beta": -0.002768967187139678,
-          "pct": -0.27651371334111996,
-          "ic_inf_pct": -4.71025130952436,
-          "ic_sup_pct": 4.363521300370876,
-          "p_cluster": 0.9050127156822473,
-          "p_hc3": 0.7131133781449577,
+          "beta": -0.00298491940441508,
+          "pct": -0.29804689616618196,
+          "ic_inf_pct": -4.19342950288244,
+          "ic_sup_pct": 3.755717391200708,
+          "p_cluster": 0.8832944882032119,
+          "p_hc3": 0.6816693022406891,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": false
+          "significativo_holm": false,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "C(licencia, Treatment('Sin licencia'))[T.Otro / en proceso]",
           "nombre": "Licencia: Otro / en proceso",
-          "beta": 0.11915578329242758,
-          "pct": 12.654540157104211,
-          "ic_inf_pct": -0.5974641079494081,
-          "ic_sup_pct": 27.673256060497884,
-          "p_cluster": 0.062025454462116526,
-          "p_hc3": 0.002390963011464603,
+          "beta": 0.11259938572089437,
+          "pct": 11.918348224277997,
+          "ic_inf_pct": -0.3079648685235914,
+          "ic_sup_pct": 25.64410639958865,
+          "p_cluster": 0.05642912799157548,
+          "p_hc3": 0.001774484960003226,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": false
+          "significativo_holm": false,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Arganzuela]",
           "nombre": "Distrito: Arganzuela",
-          "beta": -0.09880384151794432,
-          "pct": -9.407960543492122,
-          "ic_inf_pct": -13.628800620199721,
-          "ic_sup_pct": -4.980853897823256,
-          "p_cluster": 4.933331584557353e-05,
-          "p_hc3": 7.819081477033129e-10,
+          "beta": -0.10410009026040344,
+          "pct": -9.886490193938224,
+          "ic_inf_pct": -13.840053193479562,
+          "ic_sup_pct": -5.751512732449249,
+          "p_cluster": 5.422778459080746e-06,
+          "p_hc3": 7.69738079549289e-12,
+          "p_holm": 0.00014099223993609938,
           "significativo": true,
-          "es_distrito": true
+          "significativo_holm": true,
+          "es_distrito": true,
+          "es_mes": false
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Barajas]",
           "nombre": "Distrito: Barajas",
-          "beta": 0.3885405626043554,
-          "pct": 47.482680506763984,
-          "ic_inf_pct": 21.545232836066,
-          "ic_sup_pct": 78.95511442062934,
-          "p_cluster": 8.248144201098184e-05,
-          "p_hc3": 2.9041459564089512e-09,
+          "beta": 0.396197629957426,
+          "pct": 48.61629988605145,
+          "ic_inf_pct": 23.150628257387716,
+          "ic_sup_pct": 79.34788400477204,
+          "p_cluster": 3.6058694884411994e-05,
+          "p_hc3": 4.841677078716818e-10,
+          "p_holm": 0.0008654086772258878,
           "significativo": true,
-          "es_distrito": true
+          "significativo_holm": true,
+          "es_distrito": true,
+          "es_mes": false,
+          "mediana_bruta": 122.0,
+          "distancia_media_km": 11.642330454368109,
+          "efecto_distancia_pct": -44.824873526696784
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Carabanchel]",
           "nombre": "Distrito: Carabanchel",
-          "beta": -0.24882943915596908,
-          "pct": -22.028704945702373,
-          "ic_inf_pct": -27.001529591031172,
-          "ic_sup_pct": -16.717119983689578,
-          "p_cluster": 1.3587328832686833e-13,
-          "p_hc3": 5.816336545468447e-33,
+          "beta": -0.25254279033699856,
+          "pct": -22.317702838862672,
+          "ic_inf_pct": -27.464506520205433,
+          "ic_sup_pct": -16.80570431478181,
+          "p_cluster": 5.179969267544531e-13,
+          "p_hc3": 6.158772309494667e-34,
+          "p_holm": 1.7611895509651404e-11,
           "significativo": true,
-          "es_distrito": true
+          "significativo_holm": true,
+          "es_distrito": true,
+          "es_mes": false
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Chamartín]",
           "nombre": "Distrito: Chamartín",
-          "beta": 0.06132372978314502,
-          "pct": 6.32430619246207,
-          "ic_inf_pct": -1.4130894600098975,
-          "ic_sup_pct": 14.668955801417539,
-          "p_cluster": 0.11165832994857718,
-          "p_hc3": 0.008889971444173816,
+          "beta": 0.06401149466535828,
+          "pct": 6.610465320730019,
+          "ic_inf_pct": -0.8809156359656622,
+          "ic_sup_pct": 14.668041869308169,
+          "p_cluster": 0.08507982856314383,
+          "p_hc3": 0.0050546162587014175,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": true
+          "significativo_holm": false,
+          "es_distrito": true,
+          "es_mes": false
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Chamberí]",
           "nombre": "Distrito: Chamberí",
-          "beta": 0.025779309184881985,
-          "pct": 2.6114469444774357,
-          "ic_inf_pct": -2.867183683395047,
-          "ic_sup_pct": 8.399091504972112,
-          "p_cluster": 0.3571355785175414,
-          "p_hc3": 0.10703310490924683,
+          "beta": 0.04417191121653384,
+          "pct": 4.516201451863933,
+          "ic_inf_pct": -0.8293465611761475,
+          "ic_sup_pct": 10.149887967261929,
+          "p_cluster": 0.09913622975378211,
+          "p_hc3": 0.0036725037639704513,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": true
+          "significativo_holm": false,
+          "es_distrito": true,
+          "es_mes": false
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Ciudad Lineal]",
           "nombre": "Distrito: Ciudad Lineal",
-          "beta": -0.058562714764056986,
-          "pct": -5.688090894635566,
-          "ic_inf_pct": -12.26490000116982,
-          "ic_sup_pct": 1.381729766275086,
-          "p_cluster": 0.11231274809612603,
-          "p_hc3": 0.02484662699543447,
+          "beta": -0.06498088094661698,
+          "pct": -6.291462060847275,
+          "ic_inf_pct": -12.64670696517669,
+          "ic_sup_pct": 0.5261482150761498,
+          "p_cluster": 0.06975325776669085,
+          "p_hc3": 0.010983608319613234,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": true
+          "significativo_holm": false,
+          "es_distrito": true,
+          "es_mes": false
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Fuencarral - El Pardo]",
           "nombre": "Distrito: Fuencarral - El Pardo",
-          "beta": 0.04869343548717532,
-          "pct": 4.989843979560193,
-          "ic_inf_pct": -6.929074240557897,
-          "ic_sup_pct": 18.43513158279848,
-          "p_cluster": 0.428360807265327,
-          "p_hc3": 0.27742379069040046,
+          "beta": 0.05511769205540498,
+          "pct": 5.66649684296352,
+          "ic_inf_pct": -6.039505814204082,
+          "ic_sup_pct": 18.830883679535848,
+          "p_cluster": 0.3575357781703219,
+          "p_hc3": 0.20130932863032758,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": true
+          "significativo_holm": false,
+          "es_distrito": true,
+          "es_mes": false
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Hortaleza]",
           "nombre": "Distrito: Hortaleza",
-          "beta": 0.09712409251397798,
-          "pct": 10.199711472892448,
-          "ic_inf_pct": -1.7207007114643402,
-          "ic_sup_pct": 23.565964517670746,
-          "p_cluster": 0.09635081795206961,
-          "p_hc3": 0.009783215553163268,
+          "beta": 0.08861213443223166,
+          "pct": 9.26567701876806,
+          "ic_inf_pct": -2.1045406151493307,
+          "ic_sup_pct": 21.956505944108162,
+          "p_cluster": 0.11397605880687472,
+          "p_hc3": 0.01662353044275762,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": true
+          "significativo_holm": false,
+          "es_distrito": true,
+          "es_mes": false
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Latina]",
           "nombre": "Distrito: Latina",
-          "beta": -0.27246124399134425,
-          "pct": -23.84970585820978,
-          "ic_inf_pct": -28.709431735837498,
-          "ic_sup_pct": -18.658702839990703,
-          "p_cluster": 5.592315674359227e-16,
-          "p_hc3": 1.4982414370424388e-26,
+          "beta": -0.27010399944844493,
+          "pct": -23.66998925813426,
+          "ic_inf_pct": -28.25563043835605,
+          "ic_sup_pct": -18.791250443042628,
+          "p_cluster": 1.2901884211172706e-17,
+          "p_hc3": 1.0187928264349282e-27,
+          "p_holm": 5.160753684469082e-16,
           "significativo": true,
-          "es_distrito": true
+          "significativo_holm": true,
+          "es_distrito": true,
+          "es_mes": false,
+          "mediana_bruta": 90.0,
+          "distancia_media_km": 3.8976660059369803,
+          "efecto_distancia_pct": -18.051727974331023
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Moncloa - Aravaca]",
           "nombre": "Distrito: Moncloa - Aravaca",
-          "beta": 0.004390498982631305,
-          "pct": 0.44001513443476803,
-          "ic_inf_pct": -7.698635317918956,
-          "ic_sup_pct": 9.296289117206967,
-          "p_cluster": 0.918887800700409,
-          "p_hc3": 0.8683575915530322,
+          "beta": 0.005782921230092605,
+          "pct": 0.5799674597969151,
+          "ic_inf_pct": -7.026010933752191,
+          "ic_sup_pct": 8.808172649293411,
+          "p_cluster": 0.8853888383919937,
+          "p_hc3": 0.8191485481657373,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": true
+          "significativo_holm": false,
+          "es_distrito": true,
+          "es_mes": false
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Moratalaz]",
           "nombre": "Distrito: Moratalaz",
-          "beta": -0.376018154917489,
-          "pct": -31.34101320532514,
-          "ic_inf_pct": -40.12564892743611,
-          "ic_sup_pct": -21.26751466653557,
-          "p_cluster": 7.316890045986813e-08,
-          "p_hc3": 1.3371797636081991e-15,
+          "beta": -0.34477249103742885,
+          "pct": -29.16185017240618,
+          "ic_inf_pct": -37.59658189757137,
+          "ic_sup_pct": -19.587041486092303,
+          "p_cluster": 9.814102761104886e-08,
+          "p_hc3": 1.1569175569700347e-13,
+          "p_holm": 2.846089800720417e-06,
           "significativo": true,
-          "es_distrito": true
+          "significativo_holm": true,
+          "es_distrito": true,
+          "es_mes": false,
+          "mediana_bruta": 66.25,
+          "distancia_media_km": 4.975023984535912,
+          "efecto_distancia_pct": -22.439384782169125
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Puente de Vallecas]",
           "nombre": "Distrito: Puente de Vallecas",
-          "beta": -0.25114379000166287,
-          "pct": -22.208949223650254,
-          "ic_inf_pct": -27.394803774002728,
-          "ic_sup_pct": -16.65269298284986,
-          "p_cluster": 9.689101461052102e-13,
-          "p_hc3": 6.761526331918162e-31,
+          "beta": -0.2672563012333523,
+          "pct": -23.452314634068028,
+          "ic_inf_pct": -28.29467222845278,
+          "ic_sup_pct": -18.28294609362635,
+          "p_cluster": 1.095649648640475e-15,
+          "p_hc3": 3.6033946997581164e-36,
+          "p_holm": 3.9443387351057097e-14,
           "significativo": true,
-          "es_distrito": true
+          "significativo_holm": true,
+          "es_distrito": true,
+          "es_mes": false,
+          "mediana_bruta": 108.0,
+          "distancia_media_km": 4.448296671349289,
+          "efecto_distancia_pct": -20.32438872216753
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Retiro]",
           "nombre": "Distrito: Retiro",
-          "beta": -0.02747896304000797,
-          "pct": -2.7104850905495748,
-          "ic_inf_pct": -8.718087782728901,
-          "ic_sup_pct": 3.692500314704117,
-          "p_cluster": 0.3981223376203804,
-          "p_hc3": 0.1663341395939889,
+          "beta": -0.018201122094380587,
+          "pct": -1.8036482062623427,
+          "ic_inf_pct": -7.084529919022609,
+          "ic_sup_pct": 3.7773741788731607,
+          "p_cluster": 0.518708595371855,
+          "p_hc3": 0.3350183623406128,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": true
+          "significativo_holm": false,
+          "es_distrito": true,
+          "es_mes": false
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Salamanca]",
           "nombre": "Distrito: Salamanca",
-          "beta": 0.1390692596052397,
-          "pct": 14.9203690641319,
-          "ic_inf_pct": 8.812559278746912,
-          "ic_sup_pct": 21.371019240568412,
-          "p_cluster": 6.007411617412293e-07,
-          "p_hc3": 1.293336165816764e-17,
+          "beta": 0.14918753206774082,
+          "pct": 16.08906730254329,
+          "ic_inf_pct": 10.215184554977984,
+          "ic_sup_pct": 22.27599673847065,
+          "p_cluster": 1.786970637745713e-08,
+          "p_hc3": 1.4697696941594598e-21,
+          "p_holm": 5.539608977011711e-07,
           "significativo": true,
-          "es_distrito": true
+          "significativo_holm": true,
+          "es_distrito": true,
+          "es_mes": false
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.San Blas - Canillejas]",
           "nombre": "Distrito: San Blas - Canillejas",
-          "beta": 0.013714834209190615,
-          "pct": 1.3809313978575544,
-          "ic_inf_pct": -9.099918064257395,
-          "ic_sup_pct": 13.070230875729006,
-          "p_cluster": 0.8054265247090512,
-          "p_hc3": 0.7420437278860801,
+          "beta": -0.0017842189367911117,
+          "pct": -0.1782628164419986,
+          "ic_inf_pct": -10.280673341152923,
+          "ic_sup_pct": 11.061680748366998,
+          "p_cluster": 0.9738546114259758,
+          "p_hc3": 0.9652425173397088,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": true
+          "significativo_holm": false,
+          "es_distrito": true,
+          "es_mes": false
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Tetuán]",
           "nombre": "Distrito: Tetuán",
-          "beta": -0.05425489022650073,
-          "pct": -5.280935390816543,
-          "ic_inf_pct": -11.431697701901655,
-          "ic_sup_pct": 1.2969760924423035,
-          "p_cluster": 0.11324162330045369,
-          "p_hc3": 0.007966063424345996,
+          "beta": -0.054855398662632275,
+          "pct": -5.337797913255871,
+          "ic_inf_pct": -11.31315553860105,
+          "ic_sup_pct": 1.0401549218705286,
+          "p_cluster": 0.09916495020074641,
+          "p_hc3": 0.006107855508350015,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": true
+          "significativo_holm": false,
+          "es_distrito": true,
+          "es_mes": false
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Usera]",
           "nombre": "Distrito: Usera",
-          "beta": -0.3441890530530682,
-          "pct": -29.12050844606091,
-          "ic_inf_pct": -35.532632969833976,
-          "ic_sup_pct": -22.070614104743836,
-          "p_cluster": 1.124291686711293e-12,
-          "p_hc3": 3.526429460078942e-45,
+          "beta": -0.35129090340246477,
+          "pct": -29.622100762930526,
+          "ic_inf_pct": -35.26350599829121,
+          "ic_sup_pct": -23.489080194976854,
+          "p_cluster": 1.7167765534853064e-16,
+          "p_hc3": 1.3460587462297759e-49,
+          "p_holm": 6.523750903244165e-15,
           "significativo": true,
-          "es_distrito": true
+          "significativo_holm": true,
+          "es_distrito": true,
+          "es_mes": false,
+          "mediana_bruta": 107.275,
+          "distancia_media_km": 3.9119683409832953,
+          "efecto_distancia_pct": -18.11157125963847
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Vicálvaro]",
           "nombre": "Distrito: Vicálvaro",
-          "beta": -0.08283513709775313,
-          "pct": -7.949710851050174,
-          "ic_inf_pct": -19.430346098580877,
-          "ic_sup_pct": 5.166837911116118,
-          "p_cluster": 0.2229374558351198,
-          "p_hc3": 0.12842478872824295,
+          "beta": -0.05858215422061747,
+          "pct": -5.689924249075995,
+          "ic_inf_pct": -18.402201015907636,
+          "ic_sup_pct": 9.002822366311625,
+          "p_cluster": 0.4277624596030827,
+          "p_hc3": 0.30438041308071795,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": true
+          "significativo_holm": false,
+          "es_distrito": true,
+          "es_mes": false
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Villa de Vallecas]",
           "nombre": "Distrito: Villa de Vallecas",
-          "beta": -0.128969651236028,
-          "pct": -12.099935827620644,
-          "ic_inf_pct": -22.754981639125017,
-          "ic_sup_pct": 0.024848792344678294,
-          "p_cluster": 0.05044213794168804,
-          "p_hc3": 0.015015531327359744,
+          "beta": -0.12211205918134142,
+          "pct": -11.495081494160143,
+          "ic_inf_pct": -22.282303673228434,
+          "ic_sup_pct": 0.7894079462963166,
+          "p_cluster": 0.06556407933458828,
+          "p_hc3": 0.02000328845845696,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": true
+          "significativo_holm": false,
+          "es_distrito": true,
+          "es_mes": false
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Villaverde]",
           "nombre": "Distrito: Villaverde",
-          "beta": -0.12407877750135797,
-          "pct": -11.668974683285471,
-          "ic_inf_pct": -22.145083698178404,
-          "ic_sup_pct": 0.21679303146986406,
-          "p_cluster": 0.05406156595687021,
-          "p_hc3": 0.005059041271734663,
+          "beta": -0.1330357193532435,
+          "pct": -12.456617837962213,
+          "ic_inf_pct": -22.717097238647142,
+          "ic_sup_pct": -0.8339039226528233,
+          "p_cluster": 0.036472320516629735,
+          "p_hc3": 0.0026360893513133784,
+          "p_holm": 0.7294464103325947,
+          "significativo": true,
+          "significativo_holm": false,
+          "es_distrito": true,
+          "es_mes": false
+        },
+        {
+          "termino": "C(mes, Treatment('2026-09'))[T.2026-10]",
+          "nombre": "Mes de cotización: 2026-10",
+          "beta": -0.011047411356608007,
+          "pct": -1.0986612802609708,
+          "ic_inf_pct": -3.8514006677316193,
+          "ic_sup_pct": 1.732889178696495,
+          "p_cluster": 0.44304461612585466,
+          "p_hc3": 0.13926213965821282,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": true
+          "significativo_holm": false,
+          "es_distrito": false,
+          "es_mes": true
+        },
+        {
+          "termino": "C(mes, Treatment('2026-09'))[T.2026-11]",
+          "nombre": "Mes de cotización: 2026-11",
+          "beta": -0.26847774056013834,
+          "pct": -23.545755909307065,
+          "ic_inf_pct": -25.940175741440463,
+          "ic_sup_pct": -21.073922359413576,
+          "p_cluster": 1.9744557882805533e-61,
+          "p_hc3": 1.1159477914209127e-163,
+          "p_holm": 9.082496626090545e-60,
+          "significativo": true,
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": true
+        },
+        {
+          "termino": "C(mes, Treatment('2026-09'))[T.2026-12]",
+          "nombre": "Mes de cotización: 2026-12",
+          "beta": -0.3891818129548318,
+          "pct": -32.23889396553544,
+          "ic_inf_pct": -41.22380806765392,
+          "ic_sup_pct": -21.880486978485436,
+          "p_cluster": 8.221012532640241e-08,
+          "p_hc3": 6.763403507615441e-124,
+          "p_holm": 2.466303759792072e-06,
+          "significativo": true,
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": true
+        },
+        {
+          "termino": "C(mes, Treatment('2026-09'))[T.2027-01]",
+          "nombre": "Mes de cotización: 2027-01",
+          "beta": -0.33580872382431914,
+          "pct": -28.52401907355694,
+          "ic_inf_pct": -33.2215163225562,
+          "ic_sup_pct": -23.496078855667555,
+          "p_cluster": 3.603637320310488e-22,
+          "p_hc3": 4.42253604408108e-56,
+          "p_holm": 1.54956404773351e-20,
+          "significativo": true,
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": true
+        },
+        {
+          "termino": "C(mes, Treatment('2026-09'))[T.2027-02]",
+          "nombre": "Mes de cotización: 2027-02",
+          "beta": -0.30531117043763273,
+          "pct": -26.31059609283346,
+          "ic_inf_pct": -31.074573817588025,
+          "ic_sup_pct": -21.21734243873036,
+          "p_cluster": 3.4430204934715546e-19,
+          "p_hc3": 3.2049970410257197e-23,
+          "p_holm": 1.446068607258053e-17,
+          "significativo": true,
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": true
+        },
+        {
+          "termino": "C(mes, Treatment('2026-09'))[T.Otros meses]",
+          "nombre": "Mes de cotización: Otros meses",
+          "beta": -0.22746523422313158,
+          "pct": -20.344988630036397,
+          "ic_inf_pct": -27.256461374422948,
+          "ic_sup_pct": -12.77684649069133,
+          "p_cluster": 9.021974193720632e-07,
+          "p_hc3": 3.989503716074918e-29,
+          "p_holm": 2.526152774241777e-05,
+          "significativo": true,
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": true
         },
         {
           "termino": "accommodates",
           "nombre": "Capacidad (+1 persona)",
-          "beta": 0.11310790847136944,
-          "pct": 11.975275723783184,
-          "ic_inf_pct": 10.39477636746664,
-          "ic_sup_pct": 13.57840276500939,
-          "p_cluster": 7.870795839854414e-55,
-          "p_hc3": 1.6465653608188572e-84,
+          "beta": 0.10396256916046026,
+          "pct": 10.955892241630426,
+          "ic_inf_pct": 9.400352057911853,
+          "ic_sup_pct": 12.53355031818617,
+          "p_cluster": 3.2464332110160697e-47,
+          "p_hc3": 2.5397487665582384e-55,
+          "p_holm": 1.4608949449572313e-45,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "bedrooms",
           "nombre": "Dormitorios (+1)",
-          "beta": 0.04462172202743324,
-          "pct": 4.563224544145905,
-          "ic_inf_pct": 1.5937474581186661,
-          "ic_sup_pct": 7.619496284224847,
-          "p_cluster": 0.002400137128962836,
-          "p_hc3": 0.006130466201850937,
+          "beta": 0.05287151925520887,
+          "pct": 5.429417991574259,
+          "ic_inf_pct": 2.0704052271246276,
+          "ic_sup_pct": 8.898971776475694,
+          "p_cluster": 0.0013722378754971968,
+          "p_hc3": 0.005743899096418497,
+          "p_holm": 0.03156147113643552,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "bathrooms",
           "nombre": "Baños (+1)",
-          "beta": -0.002872835184889674,
-          "pct": -0.286871254272536,
-          "ic_inf_pct": -4.448846528294215,
-          "ic_sup_pct": 4.056389515027825,
-          "p_cluster": 0.8949332153162004,
-          "p_hc3": 0.7084582199724978,
+          "beta": 0.0030680908652549305,
+          "pct": 0.3072802273143882,
+          "ic_inf_pct": -3.6343532116806854,
+          "ic_sup_pct": 4.410137864820096,
+          "p_cluster": 0.8807631861193119,
+          "p_hc3": 0.7091895877935692,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": false
+          "significativo_holm": false,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "bano_compartido",
           "nombre": "Baño compartido",
-          "beta": -0.3071921359438887,
-          "pct": -26.449073043747383,
-          "ic_inf_pct": -32.81291038794264,
-          "ic_sup_pct": -19.482464750889005,
-          "p_cluster": 2.8697589561668534e-11,
-          "p_hc3": 1.175025992036292e-86,
+          "beta": -0.306920428639671,
+          "pct": -26.42908600447207,
+          "ic_inf_pct": -31.655414058632147,
+          "ic_sup_pct": -20.80309930064027,
+          "p_cluster": 3.2524074999544867e-16,
+          "p_hc3": 2.9467783017627487e-93,
+          "p_holm": 1.20339077498316e-14,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "n_amenities",
           "nombre": "Amenities (+1)",
-          "beta": 0.0032557501567895813,
-          "pct": 0.32610558677919066,
-          "ic_inf_pct": 0.18201653795173467,
-          "ic_sup_pct": 0.47040187493669894,
-          "p_cluster": 9.001395405765083e-06,
-          "p_hc3": 6.3201048926598295e-21,
+          "beta": 0.0033062276015787856,
+          "pct": 0.3311699200510887,
+          "ic_inf_pct": 0.18986851407205574,
+          "ic_sup_pct": 0.47267060852871357,
+          "p_cluster": 4.266686072361143e-06,
+          "p_hc3": 2.111370585519514e-22,
+          "p_holm": 0.00011520052395375086,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "distancia_centro_km",
           "nombre": "Distancia al centro (+1 km)",
-          "beta": -0.048533062842466945,
-          "pct": -4.73741577330059,
-          "ic_inf_pct": -5.887632431999346,
-          "ic_sup_pct": -3.5731414684482266,
-          "p_cluster": 4.856657953721444e-15,
-          "p_hc3": 8.364291122592755e-34,
+          "beta": -0.05107722581466794,
+          "pct": -4.979471267849089,
+          "ic_inf_pct": -6.1104895344171855,
+          "ic_sup_pct": -3.8348284513928688,
+          "p_cluster": 6.252055083620419e-17,
+          "p_hc3": 1.3097457208619184e-38,
+          "p_holm": 2.4383014826119634e-15,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "host_is_superhost",
           "nombre": "Superhost",
-          "beta": 0.024973823285313595,
-          "pct": 2.5288281494335596,
-          "ic_inf_pct": -0.5361137175226016,
-          "ic_sup_pct": 5.688215035571265,
-          "p_cluster": 0.10678575050760578,
-          "p_hc3": 0.0003783899868493336,
-          "significativo": false,
-          "es_distrito": false
+          "beta": 0.03383274601433772,
+          "pct": 3.441158279901191,
+          "ic_inf_pct": 0.4529487187374004,
+          "ic_sup_pct": 6.518259172731455,
+          "p_cluster": 0.023689272674458618,
+          "p_hc3": 5.619881497937081e-07,
+          "p_holm": 0.497474726163631,
+          "significativo": true,
+          "significativo_holm": false,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "es_multianuncio",
           "nombre": "Anfitrión multi-anuncio",
-          "beta": -0.00022525536372405939,
-          "pct": -0.022522999563945323,
-          "ic_inf_pct": -2.7692856155327017,
-          "ic_sup_pct": 2.8018355172088727,
-          "p_cluster": 0.9873558145978041,
-          "p_hc3": 0.9788784660782011,
+          "beta": -0.012988217491383305,
+          "pct": -1.290423458386869,
+          "ic_inf_pct": -3.802541731529918,
+          "ic_sup_pct": 1.2872967374249367,
+          "p_cluster": 0.3234043512221668,
+          "p_hc3": 0.11750572455517175,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": false
+          "significativo_holm": false,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "alquiler_larga_estancia",
           "nombre": "Estancia mínima ≥ 30 noches",
-          "beta": -0.5985144866514724,
-          "pct": -45.037249104975494,
-          "ic_inf_pct": -49.49908071163901,
-          "ic_sup_pct": -40.18120801526185,
-          "p_cluster": 1.1778357126585475e-43,
+          "beta": -0.47251636042971534,
+          "pct": -37.65684855734205,
+          "ic_inf_pct": -42.833766582366465,
+          "ic_sup_pct": -32.011113913912325,
+          "p_cluster": 1.2223713147801279e-26,
           "p_hc3": 0.0,
+          "p_holm": 5.378433785032563e-25,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "tiene_aire_acondicionado",
           "nombre": "Aire acondicionado",
-          "beta": 0.14007739209355444,
-          "pct": 15.036282439957382,
-          "ic_inf_pct": 9.82941230210641,
-          "ic_sup_pct": 20.490003544814073,
-          "p_cluster": 3.0800582430726474e-09,
-          "p_hc3": 1.7952303916818854e-68,
+          "beta": 0.120148457131146,
+          "pct": 12.766424895269669,
+          "ic_inf_pct": 8.85655849217304,
+          "ic_sup_pct": 16.816724318680485,
+          "p_cluster": 2.5002371484356066e-11,
+          "p_hc3": 6.454736693778222e-55,
+          "p_holm": 8.000758874993941e-10,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "tiene_ascensor",
           "nombre": "Ascensor",
-          "beta": 0.08818402357864197,
-          "pct": 9.218909208129467,
-          "ic_inf_pct": 5.853771535814345,
-          "ic_sup_pct": 12.691026078156064,
-          "p_cluster": 3.337443640232121e-08,
-          "p_hc3": 4.082487615669143e-36,
+          "beta": 0.09629302604195765,
+          "pct": 10.108166232819826,
+          "ic_inf_pct": 7.0671767877235725,
+          "ic_sup_pct": 13.23552777702841,
+          "p_cluster": 1.5974131287958445e-11,
+          "p_hc3": 2.7711060650173318e-45,
+          "p_holm": 5.271463325026287e-10,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "tiene_terraza_balcon",
           "nombre": "Terraza/balcón",
-          "beta": 0.0217413970507226,
-          "pct": 2.1979463391472054,
-          "ic_inf_pct": -0.28107941582403706,
-          "ic_sup_pct": 4.7386010072455464,
-          "p_cluster": 0.08268717717724831,
-          "p_hc3": 0.011244675673612186,
-          "significativo": false,
-          "es_distrito": false
+          "beta": 0.033075773060942185,
+          "pct": 3.362885749647182,
+          "ic_inf_pct": 0.9076187361098054,
+          "ic_sup_pct": 5.877893902488696,
+          "p_cluster": 0.0070054514773189025,
+          "p_hc3": 7.733081255308977e-05,
+          "p_holm": 0.15411993250101585,
+          "significativo": true,
+          "significativo_holm": false,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "tiene_parking_cualquiera",
-          "nombre": "Parking",
-          "beta": -0.010591017903081578,
-          "pct": -1.0535130548307015,
-          "ic_inf_pct": -4.138163638569592,
-          "ic_sup_pct": 2.1303956861156825,
-          "p_cluster": 0.5121960763105846,
-          "p_hc3": 0.17313768717967037,
+          "nombre": "Parking (cualquiera)",
+          "beta": -0.006312420484765793,
+          "pct": -0.6292539013975307,
+          "ic_inf_pct": -3.5992875320526974,
+          "ic_sup_pct": 2.432284237278326,
+          "p_cluster": 0.6834746423556908,
+          "p_hc3": 0.4025514498511181,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": false
+          "significativo_holm": false,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "tiene_wifi",
           "nombre": "Wifi",
-          "beta": -0.038686458968046664,
-          "pct": -3.794769526498043,
-          "ic_inf_pct": -11.086475077522994,
-          "ic_sup_pct": 4.094921200451562,
-          "p_cluster": 0.3360512225405847,
-          "p_hc3": 0.0993294989622122,
+          "beta": -0.03662042506464368,
+          "pct": -3.595800791353587,
+          "ic_inf_pct": -11.34932446348963,
+          "ic_sup_pct": 4.835857920031139,
+          "p_cluster": 0.3919816458323091,
+          "p_hc3": 0.11970174298776201,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": false
+          "significativo_holm": false,
+          "es_distrito": false,
+          "es_mes": false
         },
         {
           "termino": "log1p_resenas",
           "nombre": "ln(1 + nº reseñas)",
-          "beta": -0.03450508029715518,
-          "pct": -3.3916568316885054,
-          "ic_inf_pct": -4.55010946938269,
-          "ic_sup_pct": -2.219144329637013,
-          "p_cluster": 2.070957054059647e-08,
-          "p_hc3": 2.5471480181582625e-41,
+          "beta": -0.04058055257809814,
+          "pct": -3.9768187752055706,
+          "ic_inf_pct": -4.986968019001248,
+          "ic_sup_pct": -2.955929936288404,
+          "p_cluster": 5.445562147736369e-14,
+          "p_hc3": 6.037340337749453e-60,
+          "p_holm": 1.905946751707729e-12,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         }
       ],
       "errores": "agrupados por anfitrión (cluster); HC3 como comparación",
@@ -3800,436 +4674,863 @@
       "h1": "β ≠ 0.",
       "alfa": 0.05,
       "diagnostico": {
-        "breusch_pagan_lm": 1601.8730193838976,
-        "breusch_pagan_p": 1.78392146342804e-310,
+        "breusch_pagan_lm": 1707.6245301878946,
+        "breusch_pagan_p": 0.0,
         "heterocedasticidad": true,
-        "jarque_bera": 3173.596066297615,
+        "jarque_bera": 3455.9229993747344,
         "jarque_bera_p": 0.0,
-        "asimetria_residuos": 0.49062623972103964,
-        "curtosis_residuos": 4.797652459361072,
-        "n_cook_mayor_4_n": 963
+        "asimetria_residuos": 0.5594643873790263,
+        "curtosis_residuos": 4.820864913232252,
+        "n_cook_mayor_4_n": 999,
+        "pct_cook_mayor_4_n": 5.501404262349249
       },
       "vif": [
         {
           "termino": "accommodates",
           "nombre": "Capacidad (+1 persona)",
-          "vif": 2.2021299409450603
+          "vif": 2.202247080962736
         },
         {
           "termino": "C(tipo, Treatment('Alojamiento entero'))[T.Habitación privada]",
           "nombre": "Tipo: Habitación privada",
-          "vif": 2.152511013061618
+          "vif": 2.15248040121229
         },
         {
           "termino": "bano_compartido",
           "nombre": "Baño compartido",
-          "vif": 1.8184445082176748
+          "vif": 1.8184696343296198
         },
         {
           "termino": "bedrooms",
           "nombre": "Dormitorios (+1)",
-          "vif": 1.8070397520568435
+          "vif": 1.8069996842807252
         },
         {
           "termino": "n_amenities",
           "nombre": "Amenities (+1)",
-          "vif": 1.7732539961617582
+          "vif": 1.7752299191316232
         },
         {
           "termino": "log1p_resenas",
           "nombre": "ln(1 + nº reseñas)",
-          "vif": 1.5490487931066352
+          "vif": 1.5490491253431515
         },
         {
           "termino": "tiene_parking_cualquiera",
-          "nombre": "Parking",
-          "vif": 1.3287215892245616
+          "nombre": "Parking (cualquiera)",
+          "vif": 1.332703917228191
         },
         {
           "termino": "bathrooms",
           "nombre": "Baños (+1)",
-          "vif": 1.3177941116852938
+          "vif": 1.3177577766633481
         },
         {
           "termino": "alquiler_larga_estancia",
           "nombre": "Estancia mínima ≥ 30 noches",
-          "vif": 1.2625216928216003
+          "vif": 1.2624595613064946
         },
         {
           "termino": "C(licencia, Treatment('Sin licencia'))[T.Exenta]",
           "nombre": "Licencia: Exenta",
-          "vif": 1.2486234508931993
+          "vif": 1.2485895042301038
         },
         {
           "termino": "C(licencia, Treatment('Sin licencia'))[T.Con nº de registro]",
           "nombre": "Licencia: Con nº de registro",
-          "vif": 1.2204891976378023
+          "vif": 1.2204160835615565
         },
         {
           "termino": "tiene_terraza_balcon",
           "nombre": "Terraza/balcón",
-          "vif": 1.1744373067801692
+          "vif": 1.1744393895532754
         },
         {
           "termino": "host_is_superhost",
           "nombre": "Superhost",
-          "vif": 1.174289146061569
+          "vif": 1.1744075801649707
         },
         {
           "termino": "tiene_aire_acondicionado",
           "nombre": "Aire acondicionado",
-          "vif": 1.1455782996617443
+          "vif": 1.1456437331964069
         },
         {
           "termino": "tiene_ascensor",
           "nombre": "Ascensor",
-          "vif": 1.1427650662075468
+          "vif": 1.1428077546897772
         },
         {
           "termino": "distancia_centro_km",
           "nombre": "Distancia al centro (+1 km)",
-          "vif": 1.1264843136588116
+          "vif": 1.1273852003999543
         },
         {
           "termino": "C(tipo, Treatment('Alojamiento entero'))[T.Otras (compartida + hotel)]",
           "nombre": "Tipo: Otras (compartida + hotel)",
-          "vif": 1.0958323973795518
+          "vif": 1.095840899540176
         },
         {
           "termino": "es_multianuncio",
           "nombre": "Anfitrión multi-anuncio",
-          "vif": 1.0631407181059898
+          "vif": 1.0632397547014487
         },
         {
           "termino": "tiene_wifi",
           "nombre": "Wifi",
-          "vif": 1.040239911664412
+          "vif": 1.0397851499269772
         },
         {
           "termino": "C(licencia, Treatment('Sin licencia'))[T.Otro / en proceso]",
           "nombre": "Licencia: Otro / en proceso",
-          "vif": 1.0155149823175817
+          "vif": 1.015506957720541
         }
       ],
       "vif_max": {
         "termino": "accommodates",
         "nombre": "Capacidad (+1 persona)",
-        "vif": 2.2021299409450603
+        "vif": 2.202247080962736
       },
       "n_vif_mayor_5": 0,
       "n_vif_mayor_10": 0,
+      "vif_completo_distancia": 8.981846580804222,
+      "gvif": [
+        {
+          "termino": "distancia_centro_km",
+          "nombre": "Distancia al centro (+1 km)",
+          "gl": 1,
+          "gvif": 8.981846580804286,
+          "gvif_ajustado": 2.9969729029145866
+        },
+        {
+          "termino": "accommodates",
+          "nombre": "Capacidad (+1 persona)",
+          "gl": 1,
+          "gvif": 2.2588044297264958,
+          "gvif_ajustado": 1.5029319444760285
+        },
+        {
+          "termino": "bano_compartido",
+          "nombre": "Baño compartido",
+          "gl": 1,
+          "gvif": 1.8448931013679717,
+          "gvif_ajustado": 1.3582684202203819
+        },
+        {
+          "termino": "bedrooms",
+          "nombre": "Dormitorios (+1)",
+          "gl": 1,
+          "gvif": 1.8248623496868284,
+          "gvif_ajustado": 1.3508746609833306
+        },
+        {
+          "termino": "n_amenities",
+          "nombre": "Amenities (+1)",
+          "gl": 1,
+          "gvif": 1.780598829088581,
+          "gvif_ajustado": 1.3343908082299507
+        },
+        {
+          "termino": "log1p_resenas",
+          "nombre": "ln(1 + nº reseñas)",
+          "gl": 1,
+          "gvif": 1.594524457684415,
+          "gvif_ajustado": 1.2627448109908885
+        },
+        {
+          "termino": "C(tipo, Treatment('Alojamiento entero'))",
+          "nombre": "C(tipo, Treatment('Alojamiento entero'))",
+          "gl": 2,
+          "gvif": 2.344603348568835,
+          "gvif_ajustado": 1.2374206101205238
+        },
+        {
+          "termino": "alquiler_larga_estancia",
+          "nombre": "Estancia mínima ≥ 30 noches",
+          "gl": 1,
+          "gvif": 1.443466397456358,
+          "gvif_ajustado": 1.2014434641115486
+        },
+        {
+          "termino": "tiene_parking_cualquiera",
+          "nombre": "Parking (cualquiera)",
+          "gl": 1,
+          "gvif": 1.3605146056038897,
+          "gvif_ajustado": 1.1664109934340852
+        },
+        {
+          "termino": "bathrooms",
+          "nombre": "Baños (+1)",
+          "gl": 1,
+          "gvif": 1.334806959948982,
+          "gvif_ajustado": 1.1553384612090873
+        },
+        {
+          "termino": "tiene_terraza_balcon",
+          "nombre": "Terraza/balcón",
+          "gl": 1,
+          "gvif": 1.1833036896324414,
+          "gvif_ajustado": 1.0877976326653966
+        },
+        {
+          "termino": "host_is_superhost",
+          "nombre": "Superhost",
+          "gl": 1,
+          "gvif": 1.1829303034368093,
+          "gvif_ajustado": 1.0876259942814943
+        },
+        {
+          "termino": "tiene_ascensor",
+          "nombre": "Ascensor",
+          "gl": 1,
+          "gvif": 1.1741097341192397,
+          "gvif_ajustado": 1.0835634425908063
+        },
+        {
+          "termino": "tiene_aire_acondicionado",
+          "nombre": "Aire acondicionado",
+          "gl": 1,
+          "gvif": 1.1606094311388404,
+          "gvif_ajustado": 1.0773158455805059
+        },
+        {
+          "termino": "C(distrito, Treatment('Centro'))",
+          "nombre": "C(distrito, Treatment('Centro'))",
+          "gl": 20,
+          "gvif": 11.111323963340968,
+          "gvif_ajustado": 1.062047999565361
+        },
+        {
+          "termino": "es_multianuncio",
+          "nombre": "Anfitrión multi-anuncio",
+          "gl": 1,
+          "gvif": 1.074576265479862,
+          "gvif_ajustado": 1.0366177045950267
+        },
+        {
+          "termino": "C(mes, Treatment('2026-09'))",
+          "nombre": "C(mes, Treatment('2026-09'))",
+          "gl": 6,
+          "gvif": 1.407488759034244,
+          "gvif_ajustado": 1.028893470769455
+        },
+        {
+          "termino": "tiene_wifi",
+          "nombre": "Wifi",
+          "gl": 1,
+          "gvif": 1.0446575203560011,
+          "gvif_ajustado": 1.0220848890165637
+        },
+        {
+          "termino": "C(licencia, Treatment('Sin licencia'))",
+          "nombre": "C(licencia, Treatment('Sin licencia'))",
+          "gl": 3,
+          "gvif": 1.116533538881035,
+          "gvif_ajustado": 1.0185412655401238
+        }
+      ],
+      "gvif_max": {
+        "termino": "distancia_centro_km",
+        "nombre": "Distancia al centro (+1 km)",
+        "gl": 1,
+        "gvif": 8.981846580804286,
+        "gvif_ajustado": 2.9969729029145866
+      },
+      "sensibilidad_sin_influyentes": {
+        "n_efectivo": 17160,
+        "n_excluidas": 999,
+        "r2_ajustado": 0.689812039316645,
+        "coeficientes": {
+          "accommodates": {
+            "pct": 9.462851652717742,
+            "significativo": true,
+            "pct_principal": 10.955892241630426
+          },
+          "distancia_centro_km": {
+            "pct": -5.5863378833895805,
+            "significativo": true,
+            "pct_principal": -4.979471267849089
+          },
+          "host_is_superhost": {
+            "pct": 3.527889260374395,
+            "significativo": true,
+            "pct_principal": 3.441158279901191
+          },
+          "tiene_aire_acondicionado": {
+            "pct": 13.40300005380426,
+            "significativo": true,
+            "pct_principal": 12.766424895269669
+          },
+          "bano_compartido": {
+            "pct": -31.993548410556205,
+            "significativo": true,
+            "pct_principal": -26.42908600447207
+          },
+          "alquiler_larga_estancia": {
+            "pct": -37.160512183255435,
+            "significativo": true,
+            "pct_principal": -37.65684855734205
+          }
+        },
+        "n_significativos": 27,
+        "n_signos_coinciden": 27,
+        "signos_coinciden": true
+      },
       "sensibilidad_con_outliers": {
-        "n_significativos": 19,
-        "n_signos_coinciden": 19,
+        "n_significativos": 27,
+        "n_signos_coinciden": 27,
         "signos_coinciden": true,
-        "r2_ajustado": 0.5330316884020256,
+        "r2_ajustado": 0.5634337728398026,
         "n_efectivo": 18768
+      },
+      "sensibilidad_sin_mes": {
+        "r2_ajustado": 0.5705717688403871,
+        "n_efectivo": 18159,
+        "coeficientes": {
+          "accommodates": {
+            "nombre": "Capacidad (+1 persona)",
+            "pct_principal": 10.955892241630426,
+            "pct_alternativo": 11.976958037508002,
+            "ic_inf_alternativo": 10.39700228977014,
+            "ic_sup_alternativo": 13.57952545144181,
+            "p_alternativo": 6.975234239790591e-55,
+            "significativo_alternativo": true,
+            "mismo_signo": true
+          },
+          "bano_compartido": {
+            "nombre": "Baño compartido",
+            "pct_principal": -26.42908600447207,
+            "pct_alternativo": -26.446806313214555,
+            "ic_inf_alternativo": -32.81238874244612,
+            "ic_sup_alternativo": -19.478126990003364,
+            "p_alternativo": 2.9161917717191655e-11,
+            "significativo_alternativo": true,
+            "mismo_signo": true
+          },
+          "distancia_centro_km": {
+            "nombre": "Distancia al centro (+1 km)",
+            "pct_principal": -4.979471267849089,
+            "pct_alternativo": -4.7370400634205945,
+            "ic_inf_alternativo": -5.88720170591227,
+            "ic_sup_alternativo": -3.5728221838619345,
+            "p_alternativo": 4.865491162676165e-15,
+            "significativo_alternativo": true,
+            "mismo_signo": true
+          },
+          "host_is_superhost": {
+            "nombre": "Superhost",
+            "pct_principal": 3.441158279901191,
+            "pct_alternativo": 2.5296011172505795,
+            "ic_inf_alternativo": -0.5349651298529934,
+            "ic_sup_alternativo": 5.6885881454371345,
+            "p_alternativo": 0.10663371220687894,
+            "significativo_alternativo": false,
+            "mismo_signo": true
+          },
+          "alquiler_larga_estancia": {
+            "nombre": "Estancia mínima ≥ 30 noches",
+            "pct_principal": -37.65684855734205,
+            "pct_alternativo": -45.02845382399645,
+            "ic_inf_alternativo": -49.49574575706613,
+            "ic_sup_alternativo": -40.16601305615188,
+            "p_alternativo": 1.5356857188547705e-43,
+            "significativo_alternativo": true,
+            "mismo_signo": true
+          },
+          "tiene_aire_acondicionado": {
+            "nombre": "Aire acondicionado",
+            "pct_principal": 12.766424895269669,
+            "pct_alternativo": 15.032984570853692,
+            "ic_inf_alternativo": 9.824676249992903,
+            "ic_sup_alternativo": 20.488290893360283,
+            "p_alternativo": 3.1379905540887955e-09,
+            "significativo_alternativo": true,
+            "mismo_signo": true
+          }
+        }
+      },
+      "sin_distritos": {
+        "r2_ajustado": 0.5734227509448031,
+        "n_efectivo": 18159,
+        "coef_distancia": {
+          "termino": "distancia_centro_km",
+          "nombre": "Distancia al centro (+1 km)",
+          "beta": -0.05051184300168352,
+          "pct": -4.925733104137642,
+          "ic_inf_pct": -5.435203682409173,
+          "ic_sup_pct": -4.413517738374018,
+          "p_cluster": 8.205009902257367e-76,
+          "p_hc3": 2.5485955532629033e-267,
+          "p_holm": 2.1333025745869156e-74,
+          "significativo": true,
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
+        }
+      },
+      "sensibilidad_sin_mensuales": {
+        "r2_ajustado": 0.5804294887365773,
+        "n_efectivo": 15438,
+        "coeficientes": {
+          "accommodates": {
+            "nombre": "Capacidad (+1 persona)",
+            "pct_principal": 10.955892241630426,
+            "pct_alternativo": 10.120912161386176,
+            "ic_inf_alternativo": 8.60506746269738,
+            "ic_sup_alternativo": 11.657914115479562,
+            "p_alternativo": 2.5687063991184522e-42,
+            "significativo_alternativo": true,
+            "mismo_signo": true
+          },
+          "bano_compartido": {
+            "nombre": "Baño compartido",
+            "pct_principal": -26.42908600447207,
+            "pct_alternativo": -29.13555741564221,
+            "ic_inf_alternativo": -33.46992335728066,
+            "ic_sup_alternativo": -24.51881199897438,
+            "p_alternativo": 1.0736525178427188e-26,
+            "significativo_alternativo": true,
+            "mismo_signo": true
+          },
+          "distancia_centro_km": {
+            "nombre": "Distancia al centro (+1 km)",
+            "pct_principal": -4.979471267849089,
+            "pct_alternativo": -5.199775947084917,
+            "ic_inf_alternativo": -6.3375207983677795,
+            "ic_sup_alternativo": -4.04821058456154,
+            "p_alternativo": 4.39560482996156e-18,
+            "significativo_alternativo": true,
+            "mismo_signo": true
+          },
+          "host_is_superhost": {
+            "nombre": "Superhost",
+            "pct_principal": 3.441158279901191,
+            "pct_alternativo": 3.470805473260752,
+            "ic_inf_alternativo": 0.40531975149109556,
+            "ic_sup_alternativo": 6.629883872526299,
+            "p_alternativo": 0.02617672541456825,
+            "significativo_alternativo": true,
+            "mismo_signo": true
+          },
+          "tiene_aire_acondicionado": {
+            "nombre": "Aire acondicionado",
+            "pct_principal": 12.766424895269669,
+            "pct_alternativo": 10.541713582641709,
+            "ic_inf_alternativo": 6.945415689233303,
+            "ic_sup_alternativo": 14.258945678369894,
+            "p_alternativo": 2.865398650734649e-09,
+            "significativo_alternativo": true,
+            "mismo_signo": true
+          }
+        }
       },
       "coef_superhost": {
         "termino": "host_is_superhost",
         "nombre": "Superhost",
-        "beta": 0.024973823285313595,
-        "pct": 2.5288281494335596,
-        "ic_inf_pct": -0.5361137175226016,
-        "ic_sup_pct": 5.688215035571265,
-        "p_cluster": 0.10678575050760578,
-        "p_hc3": 0.0003783899868493336,
-        "significativo": false,
-        "es_distrito": false
+        "beta": 0.03383274601433772,
+        "pct": 3.441158279901191,
+        "ic_inf_pct": 0.4529487187374004,
+        "ic_sup_pct": 6.518259172731455,
+        "p_cluster": 0.023689272674458618,
+        "p_hc3": 5.619881497937081e-07,
+        "p_holm": 0.497474726163631,
+        "significativo": true,
+        "significativo_holm": false,
+        "es_distrito": false,
+        "es_mes": false
       },
       "coef_distancia": {
         "termino": "distancia_centro_km",
         "nombre": "Distancia al centro (+1 km)",
-        "beta": -0.048533062842466945,
-        "pct": -4.73741577330059,
-        "ic_inf_pct": -5.887632431999346,
-        "ic_sup_pct": -3.5731414684482266,
-        "p_cluster": 4.856657953721444e-15,
-        "p_hc3": 8.364291122592755e-34,
+        "beta": -0.05107722581466794,
+        "pct": -4.979471267849089,
+        "ic_inf_pct": -6.1104895344171855,
+        "ic_sup_pct": -3.8348284513928688,
+        "p_cluster": 6.252055083620419e-17,
+        "p_hc3": 1.3097457208619184e-38,
+        "p_holm": 2.4383014826119634e-15,
         "significativo": true,
-        "es_distrito": false
+        "significativo_holm": true,
+        "es_distrito": false,
+        "es_mes": false
       },
       "coef_privada": {
         "termino": "C(tipo, Treatment('Alojamiento entero'))[T.Habitación privada]",
         "nombre": "Tipo: Habitación privada",
-        "beta": -0.25900882074591003,
-        "pct": -22.81837849810443,
-        "ic_inf_pct": -28.307318404418915,
-        "ic_sup_pct": -16.909194005807148,
-        "p_cluster": 5.9331774341829146e-12,
-        "p_hc3": 2.86605638549726e-90,
+        "beta": -0.2766329430315609,
+        "pct": -24.166720263097062,
+        "ic_inf_pct": -28.73550949699335,
+        "ic_sup_pct": -19.305024493050272,
+        "p_cluster": 2.6515191763469962e-18,
+        "p_hc3": 1.9409093275490603e-107,
+        "p_holm": 1.0871228623022685e-16,
         "significativo": true,
-        "es_distrito": false
+        "significativo_holm": true,
+        "es_distrito": false,
+        "es_mes": false
       },
       "coef_accommodates": {
         "termino": "accommodates",
         "nombre": "Capacidad (+1 persona)",
-        "beta": 0.11310790847136944,
-        "pct": 11.975275723783184,
-        "ic_inf_pct": 10.39477636746664,
-        "ic_sup_pct": 13.57840276500939,
-        "p_cluster": 7.870795839854414e-55,
-        "p_hc3": 1.6465653608188572e-84,
+        "beta": 0.10396256916046026,
+        "pct": 10.955892241630426,
+        "ic_inf_pct": 9.400352057911853,
+        "ic_sup_pct": 12.53355031818617,
+        "p_cluster": 3.2464332110160697e-47,
+        "p_hc3": 2.5397487665582384e-55,
+        "p_holm": 1.4608949449572313e-45,
         "significativo": true,
-        "es_distrito": false
+        "significativo_holm": true,
+        "es_distrito": false,
+        "es_mes": false
       },
       "coef_por_termino": {
         "accommodates": {
           "termino": "accommodates",
           "nombre": "Capacidad (+1 persona)",
-          "beta": 0.11310790847136944,
-          "pct": 11.975275723783184,
-          "ic_inf_pct": 10.39477636746664,
-          "ic_sup_pct": 13.57840276500939,
-          "p_cluster": 7.870795839854414e-55,
-          "p_hc3": 1.6465653608188572e-84,
+          "beta": 0.10396256916046026,
+          "pct": 10.955892241630426,
+          "ic_inf_pct": 9.400352057911853,
+          "ic_sup_pct": 12.53355031818617,
+          "p_cluster": 3.2464332110160697e-47,
+          "p_hc3": 2.5397487665582384e-55,
+          "p_holm": 1.4608949449572313e-45,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         "bedrooms": {
           "termino": "bedrooms",
           "nombre": "Dormitorios (+1)",
-          "beta": 0.04462172202743324,
-          "pct": 4.563224544145905,
-          "ic_inf_pct": 1.5937474581186661,
-          "ic_sup_pct": 7.619496284224847,
-          "p_cluster": 0.002400137128962836,
-          "p_hc3": 0.006130466201850937,
+          "beta": 0.05287151925520887,
+          "pct": 5.429417991574259,
+          "ic_inf_pct": 2.0704052271246276,
+          "ic_sup_pct": 8.898971776475694,
+          "p_cluster": 0.0013722378754971968,
+          "p_hc3": 0.005743899096418497,
+          "p_holm": 0.03156147113643552,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         "bathrooms": {
           "termino": "bathrooms",
           "nombre": "Baños (+1)",
-          "beta": -0.002872835184889674,
-          "pct": -0.286871254272536,
-          "ic_inf_pct": -4.448846528294215,
-          "ic_sup_pct": 4.056389515027825,
-          "p_cluster": 0.8949332153162004,
-          "p_hc3": 0.7084582199724978,
+          "beta": 0.0030680908652549305,
+          "pct": 0.3072802273143882,
+          "ic_inf_pct": -3.6343532116806854,
+          "ic_sup_pct": 4.410137864820096,
+          "p_cluster": 0.8807631861193119,
+          "p_hc3": 0.7091895877935692,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": false
+          "significativo_holm": false,
+          "es_distrito": false,
+          "es_mes": false
         },
         "bano_compartido": {
           "termino": "bano_compartido",
           "nombre": "Baño compartido",
-          "beta": -0.3071921359438887,
-          "pct": -26.449073043747383,
-          "ic_inf_pct": -32.81291038794264,
-          "ic_sup_pct": -19.482464750889005,
-          "p_cluster": 2.8697589561668534e-11,
-          "p_hc3": 1.175025992036292e-86,
+          "beta": -0.306920428639671,
+          "pct": -26.42908600447207,
+          "ic_inf_pct": -31.655414058632147,
+          "ic_sup_pct": -20.80309930064027,
+          "p_cluster": 3.2524074999544867e-16,
+          "p_hc3": 2.9467783017627487e-93,
+          "p_holm": 1.20339077498316e-14,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         "n_amenities": {
           "termino": "n_amenities",
           "nombre": "Amenities (+1)",
-          "beta": 0.0032557501567895813,
-          "pct": 0.32610558677919066,
-          "ic_inf_pct": 0.18201653795173467,
-          "ic_sup_pct": 0.47040187493669894,
-          "p_cluster": 9.001395405765083e-06,
-          "p_hc3": 6.3201048926598295e-21,
+          "beta": 0.0033062276015787856,
+          "pct": 0.3311699200510887,
+          "ic_inf_pct": 0.18986851407205574,
+          "ic_sup_pct": 0.47267060852871357,
+          "p_cluster": 4.266686072361143e-06,
+          "p_hc3": 2.111370585519514e-22,
+          "p_holm": 0.00011520052395375086,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         "distancia_centro_km": {
           "termino": "distancia_centro_km",
           "nombre": "Distancia al centro (+1 km)",
-          "beta": -0.048533062842466945,
-          "pct": -4.73741577330059,
-          "ic_inf_pct": -5.887632431999346,
-          "ic_sup_pct": -3.5731414684482266,
-          "p_cluster": 4.856657953721444e-15,
-          "p_hc3": 8.364291122592755e-34,
+          "beta": -0.05107722581466794,
+          "pct": -4.979471267849089,
+          "ic_inf_pct": -6.1104895344171855,
+          "ic_sup_pct": -3.8348284513928688,
+          "p_cluster": 6.252055083620419e-17,
+          "p_hc3": 1.3097457208619184e-38,
+          "p_holm": 2.4383014826119634e-15,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         "host_is_superhost": {
           "termino": "host_is_superhost",
           "nombre": "Superhost",
-          "beta": 0.024973823285313595,
-          "pct": 2.5288281494335596,
-          "ic_inf_pct": -0.5361137175226016,
-          "ic_sup_pct": 5.688215035571265,
-          "p_cluster": 0.10678575050760578,
-          "p_hc3": 0.0003783899868493336,
-          "significativo": false,
-          "es_distrito": false
+          "beta": 0.03383274601433772,
+          "pct": 3.441158279901191,
+          "ic_inf_pct": 0.4529487187374004,
+          "ic_sup_pct": 6.518259172731455,
+          "p_cluster": 0.023689272674458618,
+          "p_hc3": 5.619881497937081e-07,
+          "p_holm": 0.497474726163631,
+          "significativo": true,
+          "significativo_holm": false,
+          "es_distrito": false,
+          "es_mes": false
         },
         "es_multianuncio": {
           "termino": "es_multianuncio",
           "nombre": "Anfitrión multi-anuncio",
-          "beta": -0.00022525536372405939,
-          "pct": -0.022522999563945323,
-          "ic_inf_pct": -2.7692856155327017,
-          "ic_sup_pct": 2.8018355172088727,
-          "p_cluster": 0.9873558145978041,
-          "p_hc3": 0.9788784660782011,
+          "beta": -0.012988217491383305,
+          "pct": -1.290423458386869,
+          "ic_inf_pct": -3.802541731529918,
+          "ic_sup_pct": 1.2872967374249367,
+          "p_cluster": 0.3234043512221668,
+          "p_hc3": 0.11750572455517175,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": false
+          "significativo_holm": false,
+          "es_distrito": false,
+          "es_mes": false
         },
         "alquiler_larga_estancia": {
           "termino": "alquiler_larga_estancia",
           "nombre": "Estancia mínima ≥ 30 noches",
-          "beta": -0.5985144866514724,
-          "pct": -45.037249104975494,
-          "ic_inf_pct": -49.49908071163901,
-          "ic_sup_pct": -40.18120801526185,
-          "p_cluster": 1.1778357126585475e-43,
+          "beta": -0.47251636042971534,
+          "pct": -37.65684855734205,
+          "ic_inf_pct": -42.833766582366465,
+          "ic_sup_pct": -32.011113913912325,
+          "p_cluster": 1.2223713147801279e-26,
           "p_hc3": 0.0,
+          "p_holm": 5.378433785032563e-25,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         "tiene_aire_acondicionado": {
           "termino": "tiene_aire_acondicionado",
           "nombre": "Aire acondicionado",
-          "beta": 0.14007739209355444,
-          "pct": 15.036282439957382,
-          "ic_inf_pct": 9.82941230210641,
-          "ic_sup_pct": 20.490003544814073,
-          "p_cluster": 3.0800582430726474e-09,
-          "p_hc3": 1.7952303916818854e-68,
+          "beta": 0.120148457131146,
+          "pct": 12.766424895269669,
+          "ic_inf_pct": 8.85655849217304,
+          "ic_sup_pct": 16.816724318680485,
+          "p_cluster": 2.5002371484356066e-11,
+          "p_hc3": 6.454736693778222e-55,
+          "p_holm": 8.000758874993941e-10,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         "tiene_ascensor": {
           "termino": "tiene_ascensor",
           "nombre": "Ascensor",
-          "beta": 0.08818402357864197,
-          "pct": 9.218909208129467,
-          "ic_inf_pct": 5.853771535814345,
-          "ic_sup_pct": 12.691026078156064,
-          "p_cluster": 3.337443640232121e-08,
-          "p_hc3": 4.082487615669143e-36,
+          "beta": 0.09629302604195765,
+          "pct": 10.108166232819826,
+          "ic_inf_pct": 7.0671767877235725,
+          "ic_sup_pct": 13.23552777702841,
+          "p_cluster": 1.5974131287958445e-11,
+          "p_hc3": 2.7711060650173318e-45,
+          "p_holm": 5.271463325026287e-10,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         },
         "tiene_terraza_balcon": {
           "termino": "tiene_terraza_balcon",
           "nombre": "Terraza/balcón",
-          "beta": 0.0217413970507226,
-          "pct": 2.1979463391472054,
-          "ic_inf_pct": -0.28107941582403706,
-          "ic_sup_pct": 4.7386010072455464,
-          "p_cluster": 0.08268717717724831,
-          "p_hc3": 0.011244675673612186,
-          "significativo": false,
-          "es_distrito": false
+          "beta": 0.033075773060942185,
+          "pct": 3.362885749647182,
+          "ic_inf_pct": 0.9076187361098054,
+          "ic_sup_pct": 5.877893902488696,
+          "p_cluster": 0.0070054514773189025,
+          "p_hc3": 7.733081255308977e-05,
+          "p_holm": 0.15411993250101585,
+          "significativo": true,
+          "significativo_holm": false,
+          "es_distrito": false,
+          "es_mes": false
         },
         "tiene_parking_cualquiera": {
           "termino": "tiene_parking_cualquiera",
-          "nombre": "Parking",
-          "beta": -0.010591017903081578,
-          "pct": -1.0535130548307015,
-          "ic_inf_pct": -4.138163638569592,
-          "ic_sup_pct": 2.1303956861156825,
-          "p_cluster": 0.5121960763105846,
-          "p_hc3": 0.17313768717967037,
+          "nombre": "Parking (cualquiera)",
+          "beta": -0.006312420484765793,
+          "pct": -0.6292539013975307,
+          "ic_inf_pct": -3.5992875320526974,
+          "ic_sup_pct": 2.432284237278326,
+          "p_cluster": 0.6834746423556908,
+          "p_hc3": 0.4025514498511181,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": false
+          "significativo_holm": false,
+          "es_distrito": false,
+          "es_mes": false
         },
         "tiene_wifi": {
           "termino": "tiene_wifi",
           "nombre": "Wifi",
-          "beta": -0.038686458968046664,
-          "pct": -3.794769526498043,
-          "ic_inf_pct": -11.086475077522994,
-          "ic_sup_pct": 4.094921200451562,
-          "p_cluster": 0.3360512225405847,
-          "p_hc3": 0.0993294989622122,
+          "beta": -0.03662042506464368,
+          "pct": -3.595800791353587,
+          "ic_inf_pct": -11.34932446348963,
+          "ic_sup_pct": 4.835857920031139,
+          "p_cluster": 0.3919816458323091,
+          "p_hc3": 0.11970174298776201,
+          "p_holm": 1.0,
           "significativo": false,
-          "es_distrito": false
+          "significativo_holm": false,
+          "es_distrito": false,
+          "es_mes": false
         },
         "log1p_resenas": {
           "termino": "log1p_resenas",
           "nombre": "ln(1 + nº reseñas)",
-          "beta": -0.03450508029715518,
-          "pct": -3.3916568316885054,
-          "ic_inf_pct": -4.55010946938269,
-          "ic_sup_pct": -2.219144329637013,
-          "p_cluster": 2.070957054059647e-08,
-          "p_hc3": 2.5471480181582625e-41,
+          "beta": -0.04058055257809814,
+          "pct": -3.9768187752055706,
+          "ic_inf_pct": -4.986968019001248,
+          "ic_sup_pct": -2.955929936288404,
+          "p_cluster": 5.445562147736369e-14,
+          "p_hc3": 6.037340337749453e-60,
+          "p_holm": 1.905946751707729e-12,
           "significativo": true,
-          "es_distrito": false
+          "significativo_holm": true,
+          "es_distrito": false,
+          "es_mes": false
         }
       },
       "top_distritos": [
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Barajas]",
           "nombre": "Distrito: Barajas",
-          "beta": 0.3885405626043554,
-          "pct": 47.482680506763984,
-          "ic_inf_pct": 21.545232836066,
-          "ic_sup_pct": 78.95511442062934,
-          "p_cluster": 8.248144201098184e-05,
-          "p_hc3": 2.9041459564089512e-09,
+          "beta": 0.396197629957426,
+          "pct": 48.61629988605145,
+          "ic_inf_pct": 23.150628257387716,
+          "ic_sup_pct": 79.34788400477204,
+          "p_cluster": 3.6058694884411994e-05,
+          "p_hc3": 4.841677078716818e-10,
+          "p_holm": 0.0008654086772258878,
           "significativo": true,
-          "es_distrito": true
-        },
-        {
-          "termino": "C(distrito, Treatment('Centro'))[T.Moratalaz]",
-          "nombre": "Distrito: Moratalaz",
-          "beta": -0.376018154917489,
-          "pct": -31.34101320532514,
-          "ic_inf_pct": -40.12564892743611,
-          "ic_sup_pct": -21.26751466653557,
-          "p_cluster": 7.316890045986813e-08,
-          "p_hc3": 1.3371797636081991e-15,
-          "significativo": true,
-          "es_distrito": true
+          "significativo_holm": true,
+          "es_distrito": true,
+          "es_mes": false,
+          "mediana_bruta": 122.0,
+          "distancia_media_km": 11.642330454368109,
+          "efecto_distancia_pct": -44.824873526696784
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Usera]",
           "nombre": "Distrito: Usera",
-          "beta": -0.3441890530530682,
-          "pct": -29.12050844606091,
-          "ic_inf_pct": -35.532632969833976,
-          "ic_sup_pct": -22.070614104743836,
-          "p_cluster": 1.124291686711293e-12,
-          "p_hc3": 3.526429460078942e-45,
+          "beta": -0.35129090340246477,
+          "pct": -29.622100762930526,
+          "ic_inf_pct": -35.26350599829121,
+          "ic_sup_pct": -23.489080194976854,
+          "p_cluster": 1.7167765534853064e-16,
+          "p_hc3": 1.3460587462297759e-49,
+          "p_holm": 6.523750903244165e-15,
           "significativo": true,
-          "es_distrito": true
+          "significativo_holm": true,
+          "es_distrito": true,
+          "es_mes": false,
+          "mediana_bruta": 107.275,
+          "distancia_media_km": 3.9119683409832953,
+          "efecto_distancia_pct": -18.11157125963847
+        },
+        {
+          "termino": "C(distrito, Treatment('Centro'))[T.Moratalaz]",
+          "nombre": "Distrito: Moratalaz",
+          "beta": -0.34477249103742885,
+          "pct": -29.16185017240618,
+          "ic_inf_pct": -37.59658189757137,
+          "ic_sup_pct": -19.587041486092303,
+          "p_cluster": 9.814102761104886e-08,
+          "p_hc3": 1.1569175569700347e-13,
+          "p_holm": 2.846089800720417e-06,
+          "significativo": true,
+          "significativo_holm": true,
+          "es_distrito": true,
+          "es_mes": false,
+          "mediana_bruta": 66.25,
+          "distancia_media_km": 4.975023984535912,
+          "efecto_distancia_pct": -22.439384782169125
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Latina]",
           "nombre": "Distrito: Latina",
-          "beta": -0.27246124399134425,
-          "pct": -23.84970585820978,
-          "ic_inf_pct": -28.709431735837498,
-          "ic_sup_pct": -18.658702839990703,
-          "p_cluster": 5.592315674359227e-16,
-          "p_hc3": 1.4982414370424388e-26,
+          "beta": -0.27010399944844493,
+          "pct": -23.66998925813426,
+          "ic_inf_pct": -28.25563043835605,
+          "ic_sup_pct": -18.791250443042628,
+          "p_cluster": 1.2901884211172706e-17,
+          "p_hc3": 1.0187928264349282e-27,
+          "p_holm": 5.160753684469082e-16,
           "significativo": true,
-          "es_distrito": true
+          "significativo_holm": true,
+          "es_distrito": true,
+          "es_mes": false,
+          "mediana_bruta": 90.0,
+          "distancia_media_km": 3.8976660059369803,
+          "efecto_distancia_pct": -18.051727974331023
         },
         {
           "termino": "C(distrito, Treatment('Centro'))[T.Puente de Vallecas]",
           "nombre": "Distrito: Puente de Vallecas",
-          "beta": -0.25114379000166287,
-          "pct": -22.208949223650254,
-          "ic_inf_pct": -27.394803774002728,
-          "ic_sup_pct": -16.65269298284986,
-          "p_cluster": 9.689101461052102e-13,
-          "p_hc3": 6.761526331918162e-31,
+          "beta": -0.2672563012333523,
+          "pct": -23.452314634068028,
+          "ic_inf_pct": -28.29467222845278,
+          "ic_sup_pct": -18.28294609362635,
+          "p_cluster": 1.095649648640475e-15,
+          "p_hc3": 3.6033946997581164e-36,
+          "p_holm": 3.9443387351057097e-14,
           "significativo": true,
-          "es_distrito": true
+          "significativo_holm": true,
+          "es_distrito": true,
+          "es_mes": false,
+          "mediana_bruta": 108.0,
+          "distancia_media_km": 4.448296671349289,
+          "efecto_distancia_pct": -20.32438872216753
         }
       ],
-      "r2_ajustado_pct": 57.059700760473,
-      "n_coef_significativos": 11,
-      "n_coef_no_distrito": 20
+      "referencia_distrito": {
+        "mediana_bruta": 178.34,
+        "distancia_media_km": 0.7031100003304196
+      },
+      "r2_ajustado_pct": 60.09391355036973,
+      "n_coef_significativos": 13,
+      "n_coef_variables": 20,
+      "n_coef_distrito": 20,
+      "n_coef_mes": 6
+    },
+    "multiplicidad": {
+      "n_contrastes_principales": 6,
+      "n_principales_p_menor_0001": 6,
+      "n_pares_posthoc": 48,
+      "n_coeficientes_ols": 46,
+      "n_significativos_ols": 27,
+      "n_significativos_ols_holm": 24,
+      "n_hipotesis_total": 100
     },
     "ml": {
       "ejecutado": true,
       "modelo": "HistGradientBoostingRegressor (max_iter=300, early_stopping)",
       "objetivo": "ln(precio)",
-      "n_train": 15028,
-      "n_test": 3757,
-      "test_size": 0.2,
+      "n": 18785,
+      "n_anfitriones": 6546,
+      "n_folds": 5,
       "semilla": 42,
-      "n_features": 32,
+      "n_features": 33,
       "features": [
         "accommodates",
         "bedrooms",
@@ -4262,68 +5563,297 @@
         "review_scores_cleanliness",
         "minimum_nights",
         "availability_365",
-        "antiguedad_host_anios"
+        "antiguedad_host_anios",
+        "mes_cotizacion"
       ],
-      "r2_test": 0.7398276626122312,
-      "mae_log_test": 0.27445637833912984,
-      "rmse_log_test": 0.3746015969254643,
-      "mae_eur_test": 60.32875638066946,
-      "mae_eur_base": 102.77553633217993,
-      "r2_base": -0.004667704020732799,
-      "mae_log_base": 0.5578423481227738,
+      "validacion": "GroupKFold por host_id (barajado con semilla); imputación y agrupación de categorías raras aprendidas dentro del Pipeline solo con el train de cada partición",
+      "cv": {
+        "r2_media": 0.6692186808784151,
+        "r2_std": 0.07148265938806027,
+        "r2_folds": [
+          0.5693400707003573,
+          0.6356097954484616,
+          0.755434057211004,
+          0.7126457823690555,
+          0.6730636986631964
+        ],
+        "mae_log_media": 0.29986530139982526,
+        "mae_log_std": 0.01580839839330177,
+        "mae_log_folds": [
+          0.3247178755506795,
+          0.29483684371635765,
+          0.2859329405744616,
+          0.30544054263696757,
+          0.28839830452065973
+        ],
+        "mae_eur_media": 78.15710343382622,
+        "mae_eur_std": 18.92264666598305,
+        "mae_eur_folds": [
+          102.96983016881059,
+          67.77835751510015,
+          64.04136740775932,
+          93.95999546488035,
+          62.03596661258065
+        ],
+        "medae_eur_media": 30.048496545315714,
+        "medae_eur_std": 2.110113943743711,
+        "medae_eur_folds": [
+          30.113608520214196,
+          33.41553516888271,
+          29.531453340914968,
+          29.579091502529515,
+          27.602794194037187
+        ]
+      },
+      "cv_base": {
+        "r2_media": -0.0066030853781133825,
+        "r2_std": 0.0049874192736742,
+        "r2_folds": [
+          -0.011961834706936347,
+          -0.005637127958495469,
+          -0.0038557942796892952,
+          -0.01130060177340253,
+          -0.0002600681720432707
+        ],
+        "mae_log_media": 0.5635043305276676,
+        "mae_log_std": 0.04616656302520317,
+        "mae_log_folds": [
+          0.5623108242534895,
+          0.498250465061085,
+          0.6019839118561359,
+          0.6120869101105042,
+          0.542889541357123
+        ],
+        "mae_eur_media": 116.45828580261835,
+        "mae_eur_std": 18.800699638095637,
+        "mae_eur_folds": [
+          135.05464842507158,
+          101.20406046581304,
+          107.75453841901603,
+          138.4422056802565,
+          99.83597602293459
+        ],
+        "medae_eur_media": 62.31300001678809,
+        "medae_eur_std": 5.786595041652176,
+        "medae_eur_folds": [
+          59.72,
+          54.59500008394045,
+          69.16499999999998,
+          66.75499999999994,
+          61.3300000000001
+        ]
+      },
+      "aleatorio": {
+        "r2": 0.7553626906713737,
+        "mae_log": 0.2641703361897637,
+        "mae_eur": 58.05700711373831,
+        "medae_eur": 26.504822384601965,
+        "n_train": 15028,
+        "n_test": 3757,
+        "pct_test_con_anfitrion_en_train": 74.52754857599149
+      },
+      "caida_r2_aleatorio_a_grupos": 0.08614400979295866,
+      "comparacion_misma_muestra": {
+        "n": 18159,
+        "variables_ols": [
+          "accommodates",
+          "bedrooms",
+          "bathrooms",
+          "bano_compartido",
+          "n_amenities",
+          "distancia_centro_km",
+          "host_is_superhost",
+          "es_multianuncio",
+          "alquiler_larga_estancia",
+          "tiene_aire_acondicionado",
+          "tiene_ascensor",
+          "tiene_terraza_balcon",
+          "tiene_parking_cualquiera",
+          "tiene_wifi",
+          "log1p_resenas",
+          "tipo_habitacion",
+          "licencia_tipo",
+          "neighbourhood_group_cleansed",
+          "mes_cotizacion"
+        ],
+        "lineal_vars_ols": {
+          "r2_media": 0.580573846170396,
+          "r2_std": 0.04911564142606392,
+          "r2_folds": [
+            0.5217732414930085,
+            0.6077749127412373,
+            0.5526710579731164,
+            0.6484245289438952,
+            0.5722254897007228
+          ],
+          "mae_log_media": 0.32017239574037887,
+          "mae_log_std": 0.010659989565844552,
+          "mae_log_folds": [
+            0.32569414156287974,
+            0.3017366362694553,
+            0.32838510657471737,
+            0.32083857947864763,
+            0.32420751481619436
+          ],
+          "mae_eur_media": 57.33504866926086,
+          "mae_eur_std": 1.0674698565495062,
+          "mae_eur_folds": [
+            58.488893751359335,
+            55.81031089668188,
+            57.673012069728934,
+            57.978818025244514,
+            56.72420860328959
+          ],
+          "medae_eur_media": 34.27849678050412,
+          "medae_eur_std": 1.3064530024634602,
+          "medae_eur_folds": [
+            33.67517052444171,
+            32.46760714949332,
+            35.84073256744331,
+            35.14062801420364,
+            34.26834564693864
+          ]
+        },
+        "hgb_vars_ols": {
+          "r2_media": 0.6369470607580598,
+          "r2_std": 0.04541609745368556,
+          "r2_folds": [
+            0.6023739289463288,
+            0.6616499675826426,
+            0.5948597044313118,
+            0.7036923320839692,
+            0.6221593707460469
+          ],
+          "mae_log_media": 0.29715752457921385,
+          "mae_log_std": 0.012733842449626716,
+          "mae_log_folds": [
+            0.29729688445661884,
+            0.27991687845346896,
+            0.3143442193479829,
+            0.2918253236635246,
+            0.30240431697447384
+          ],
+          "mae_eur_media": 52.82347026117005,
+          "mae_eur_std": 2.268825995603521,
+          "mae_eur_folds": [
+            53.04393726932781,
+            50.42740620433437,
+            56.03555747242795,
+            53.70984198632056,
+            50.90060837343956
+          ],
+          "medae_eur_media": 31.888624210457046,
+          "medae_eur_std": 1.7384106479204862,
+          "medae_eur_folds": [
+            31.421128551404458,
+            29.972765833186145,
+            34.73337774423572,
+            31.666682148325027,
+            31.649166775133892
+          ]
+        },
+        "hgb_todas": {
+          "r2_media": 0.6973318660425335,
+          "r2_std": 0.04447423627948342,
+          "r2_folds": [
+            0.6597688440995819,
+            0.7135063381793263,
+            0.670018207590231,
+            0.7680901254471548,
+            0.6752758148963738
+          ],
+          "mae_log_media": 0.2726736353887753,
+          "mae_log_std": 0.01075619900436797,
+          "mae_log_folds": [
+            0.27714124184660605,
+            0.262099070979717,
+            0.28159599686460557,
+            0.2601431964324569,
+            0.282388670820491
+          ],
+          "mae_eur_media": 49.07750950193268,
+          "mae_eur_std": 1.2827589233045111,
+          "mae_eur_folds": [
+            49.46880190038612,
+            47.719013799359026,
+            51.01679905430517,
+            49.00976154949108,
+            48.17317120612201
+          ],
+          "medae_eur_media": 29.47099416641323,
+          "medae_eur_std": 1.1702854552188438,
+          "medae_eur_folds": [
+            30.345364342034244,
+            27.691044575827974,
+            30.538067202163205,
+            28.94648870576944,
+            29.834006006271295
+          ]
+        }
+      },
       "importancia_permutacion": [
         {
           "variable": "minimum_nights",
-          "importancia": 0.23965140376078437,
-          "std": 0.004833378176987229
+          "nombre": "Estancia mínima (noches)",
+          "importancia": 0.1755045266880631,
+          "std": 0.05784996689395449
         },
         {
           "variable": "accommodates",
-          "importancia": 0.20129461599976411,
-          "std": 0.007500731120765642
-        },
-        {
-          "variable": "availability_365",
-          "importancia": 0.0966337509797556,
-          "std": 0.006307243826464765
+          "nombre": "Capacidad (personas)",
+          "importancia": 0.15864124756134562,
+          "std": 0.016480886138480002
         },
         {
           "variable": "tipo_habitacion",
-          "importancia": 0.09296053899629131,
-          "std": 0.0019897003357842408
+          "nombre": "Tipo de habitación",
+          "importancia": 0.1260324379144598,
+          "std": 0.0162004285320073
+        },
+        {
+          "variable": "availability_365",
+          "nombre": "Días disponibles (próx. 365)",
+          "importancia": 0.08274287606259187,
+          "std": 0.02639330485930669
         },
         {
           "variable": "neighbourhood_group_cleansed",
-          "importancia": 0.06750224975323404,
-          "std": 0.004234244641504849
+          "nombre": "Distrito",
+          "importancia": 0.05279287533765087,
+          "std": 0.009632838709230191
         },
         {
-          "variable": "distancia_centro_km",
-          "importancia": 0.03627624904258011,
-          "std": 0.0019975787711191046
-        },
-        {
-          "variable": "bedrooms",
-          "importancia": 0.035834178369963124,
-          "std": 0.0009138679362981402
-        },
-        {
-          "variable": "antiguedad_host_anios",
-          "importancia": 0.02853331610386487,
-          "std": 0.0019424332755455902
+          "variable": "mes_cotizacion",
+          "nombre": "Mes de la cotización",
+          "importancia": 0.044920418424514004,
+          "std": 0.0031744247382274344
         },
         {
           "variable": "bathrooms",
-          "importancia": 0.027341880563510924,
-          "std": 0.0014007814553665264
+          "nombre": "Baños",
+          "importancia": 0.02472309279842848,
+          "std": 0.008607744294119337
         },
         {
-          "variable": "number_of_reviews",
-          "importancia": 0.023053280623917382,
-          "std": 0.0013773250899588153
+          "variable": "bedrooms",
+          "nombre": "Dormitorios",
+          "importancia": 0.023191313465442048,
+          "std": 0.005762056865443068
+        },
+        {
+          "variable": "distancia_centro_km",
+          "nombre": "Distancia al centro (km)",
+          "importancia": 0.022981027091396596,
+          "std": 0.00571752577980238
+        },
+        {
+          "variable": "bano_compartido",
+          "nombre": "Baño compartido",
+          "importancia": 0.020306168883142354,
+          "std": 0.004397606241224499
         }
       ],
-      "nota": "Importancia predictiva, no causal. El MAE en € tras exp() tiene sesgo de retransformación."
+      "nota": "Importancia predictiva (media de las particiones), no causal. El MAE en € tras exp() tiene sesgo de retransformación y lo dominan pocos anuncios extremos; la mediana del error absoluto es robusta."
     },
     "hipotesis": {
       "normalidad": {
@@ -4362,6 +5892,24 @@
         "h0": "Cada coeficiente β es 0 (la variable no se asocia con ln(precio) controlando por el resto).",
         "h1": "β ≠ 0."
       }
+    },
+    "umbrales_efecto": {
+      "rank_biserial": [
+        0.1,
+        0.3,
+        0.5
+      ],
+      "epsilon2": [
+        0.01,
+        0.06,
+        0.14
+      ],
+      "etiquetas": [
+        "despreciable",
+        "pequeño",
+        "mediano",
+        "grande"
+      ]
     }
   },
   "figuras": [
@@ -4383,37 +5931,63 @@
     "16_calidad_nulos.png",
     "17_amenities.png"
   ],
+  "dashboard_graficos": [
+    {
+      "archivo": "dashboard_01_histograma_precio.png",
+      "titulo": "Dashboard, pestaña Resumen: distribución del precio"
+    },
+    {
+      "archivo": "dashboard_02_mediana_distrito.png",
+      "titulo": "Dashboard, pestaña Resumen: mediana del precio por distrito"
+    },
+    {
+      "archivo": "dashboard_03_precio_tipo.png",
+      "titulo": "Dashboard, pestaña Precios: precio por tipo de habitación"
+    },
+    {
+      "archivo": "dashboard_04_precio_distancia.png",
+      "titulo": "Dashboard, pestaña Precios: precio frente a distancia al centro"
+    },
+    {
+      "archivo": "dashboard_05_amenities.png",
+      "titulo": "Dashboard, pestaña Anfitriones y calidad: amenities"
+    }
+  ],
   "rendimiento": {
     "etapas_s": {
-      "1. Datos originales (descarga o verificación offline)": 0.020085799998923903,
-      "2. Lectura y perfil de calidad «antes»": 1.782271000000037,
-      "3. Limpieza": 1.2766967999996268,
-      "4. Variables derivadas": 0.19977830000061658,
-      "5. Validación y guardado del procesado": 0.5557315000005474,
-      "6. Perfil de calidad «después»": 0.23519210000085877,
-      "7. Análisis descriptivo y estadístico": 18.477976900001522,
-      "8. Figuras": 14.18645800000013
+      "1. Datos originales (descarga o verificación offline)": 0.025248400001146365,
+      "2. Lectura y perfil de calidad «antes»": 2.973302299998977,
+      "3. Limpieza": 5.732883900000161,
+      "4. Variables derivadas": 0.36233739999988757,
+      "5. Validación y guardado del procesado": 0.6193524999998772,
+      "6. Perfil de calidad «después»": 0.22883009999895876,
+      "7. Análisis descriptivo y estadístico": 88.53238670000064,
+      "8. Figuras": 14.60686639999949
     },
-    "total_computo_s": 36.73419040000226
+    "total_computo_s": 113.08120769999914
   },
   "afirmaciones": {
     "dataset_cumple_umbrales": true,
     "moneda_eur": true,
     "precio_es_cotizacion": true,
+    "ml_particiones_sin_solape": true,
     "nulos_precio_sin_disponibilidad": true,
     "precio_asimetrico": true,
     "log_mas_simetrico": true,
     "normalidad_rechazada": true,
     "superhost_mediana_mayor": true,
     "superhost_significativo_despreciable": true,
-    "superhost_no_significativo_ols": true,
+    "superhost_no_significativo_ols": false,
+    "superhost_evidencia_debil": true,
     "superhost_hc3_significativo": true,
     "sensibilidad_misma_decision": true,
     "entero_mas_caro": true,
     "kruskal_tipo_grande": true,
+    "tipo_mayor_efecto_que_distrito": true,
     "kruskal_distrito_significativo": true,
     "posthoc_tipo_todos": true,
     "posthoc_distrito_mayoria": true,
+    "top_distritos_empate": true,
     "chi2_tipo_superhost_despreciable": true,
     "chi2_multi_tipo_despreciable": true,
     "chi2_distrito_tipo_mayor": true,
@@ -4424,18 +5998,33 @@
     "larga_estancia_negativa": true,
     "aire_positivo": true,
     "bano_compartido_negativo": true,
+    "distrito_top_condicional": true,
     "heterocedasticidad": true,
     "residuos_no_normales": true,
     "vif_bajo": true,
+    "vif_distancia_alto_con_distritos": true,
     "ols_sensibilidad_signos": true,
+    "ols_sin_influyentes_signos": true,
+    "ols_sin_mensuales_signos": true,
+    "sin_mensuales_mismo_top2": true,
     "ml_supera_base": true,
-    "ml_mejor_que_ols": true,
+    "ml_aleatorio_optimista": true,
+    "ml_hgb_supera_lineal_misma_muestra": true,
     "capacidad_creciente": true,
     "multianuncio_mayoria": true,
     "mayoria_hosts_un_anuncio": true,
-    "ocupacion_propia_mayor": true,
-    "ingresos_propios_mayores": true,
+    "no_disponible_mayor": true,
+    "ingreso_hipotetico_mayor": true,
     "capacidad_mayor_correlacion": true,
     "salamanca_o_centro_top": true
-  }
+  },
+  "afirmaciones_invariantes": [
+    "dataset_cumple_umbrales",
+    "ml_particiones_sin_solape",
+    "moneda_eur",
+    "precio_es_cotizacion"
+  ],
+  "afirmaciones_no_cumplidas": [
+    "superhost_no_significativo_ols"
+  ]
 }

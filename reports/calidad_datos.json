@@ -117,21 +117,16 @@
   },
   "despues": {
     "filas": 23109,
-    "columnas": 109,
-    "nulos_total": 114173,
-    "pct_nulos_total": 4.53268733219235,
-    "columnas_con_nulos": 31,
+    "columnas": 112,
+    "nulos_total": 117013,
+    "pct_nulos_total": 4.521004494229212,
+    "columnas_con_nulos": 33,
     "columnas_100_nulas": [],
     "top_nulos": [
       {
         "columna": "license",
         "n": 10913,
         "pct": 47.224025271539226
-      },
-      {
-        "columna": "host_location",
-        "n": 7864,
-        "pct": 34.030031589424034
       },
       {
         "columna": "price_quote_total_price",
@@ -164,7 +159,7 @@
         "pct": 18.711324592150245
       },
       {
-        "columna": "ingresos_estimados_anuales",
+        "columna": "ingreso_hipotetico_anual",
         "n": 4324,
         "pct": 18.711324592150245
       },
@@ -197,30 +192,35 @@
         "columna": "review_scores_rating",
         "n": 3815,
         "pct": 16.508719546497037
+      },
+      {
+        "columna": "review_scores_accuracy",
+        "n": 3815,
+        "pct": 16.508719546497037
       }
     ],
     "dtypes": {
-      "bool": 30,
+      "bool": 31,
       "boolean": 1,
       "category": 3,
       "datetime64[us]": 6,
-      "float64": 33,
+      "float64": 34,
       "int64": 26,
-      "str": 7,
-      "string": 3
+      "str": 6,
+      "string": 5
     },
     "tipos_logicos": {
-      "booleano": 31,
-      "categorico": 9,
+      "booleano": 32,
+      "categorico": 11,
       "fecha": 6,
       "geoespacial": 2,
       "identificador": 2,
-      "numerico": 55,
-      "texto": 4
+      "numerico": 56,
+      "texto": 3
     },
     "duplicados_id": 0,
     "duplicados_filas": 0,
-    "memoria_mb": 19.702084
+    "memoria_mb": 20.169015
   },
   "conversiones": {
     "price": {
@@ -310,6 +310,7 @@
   },
   "reglas": {
     "precio_nulo_o_no_positivo (precio_valido=False)": 4324,
+    "precio negativo (precio_valido=False)": 0,
     "outlier_precio (flag, no se borra)": 609,
     "minimum_nights > 365 (flag)": 8,
     "minimum_nights >= 30 (flag larga estancia)": 3151,
@@ -340,6 +341,7 @@
     "source": "identificador técnico del scrape",
     "host_profile_id": "identificador técnico del scrape",
     "host_name": "dato personal innecesario (privacidad)",
+    "host_location": "dato personal innecesario (privacidad)",
     "description": "texto largo sustituido por métricas de longitud",
     "host_about": "texto largo sustituido por métricas de longitud",
     "price_quote_raw": "texto crudo ya convertido en columnas derivadas",
@@ -350,13 +352,6 @@
     "bathrooms": "reconstruida desde bathrooms_text"
   },
   "politica_nulos": [
-    {
-      "columna": "host_location",
-      "nulos": 7864,
-      "regla": "^(host_location|license)$",
-      "decision": "conservar NaN; license se resume en licencia_tipo",
-      "justificacion": "La ausencia es informativa (p. ej. «Sin licencia»)."
-    },
     {
       "columna": "bathrooms",
       "nulos": 19,
@@ -535,7 +530,7 @@
     {
       "columna": "license",
       "nulos": 10913,
-      "regla": "^(host_location|license)$",
+      "regla": "^license$",
       "decision": "conservar NaN; license se resume en licencia_tipo",
       "justificacion": "La ausencia es informativa (p. ej. «Sin licencia»)."
     },
@@ -545,6 +540,13 @@
       "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
       "decision": "conservar NaN; flag tiene_resenas",
       "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
+    },
+    {
+      "columna": "noches_cotizadas",
+      "nulos": 3568,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
     }
   ],
   "contabilidad_filas": {
