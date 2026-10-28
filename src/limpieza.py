@@ -20,8 +20,8 @@ import numpy as np
 import pandas as pd
 
 from src import config
-from src.config import Ciudad
 from src.errores import ErrorDatos
+from src.fuentes import reparar_mojibake
 from src.geo import dentro_bbox
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ ELIMINAR_URLS: tuple[str, ...] = (
 )
 ELIMINAR_IDS_TECNICOS: tuple[str, ...] = ("scrape_id", "source", "host_profile_id")
 # Minimización de datos personales: ni el nombre ni la ubicación declarada del anfitrión se usan
-# en el análisis ni en el dashboard. host_id se conserva porque es imprescindible para agrupar
+# en el análisis. host_id se conserva porque es imprescindible para agrupar
 # anuncios por anfitrión (errores agrupados, validación por grupos, composición de la oferta).
 ELIMINAR_PERSONALES: tuple[str, ...] = ("host_name", "host_location")
 ELIMINAR_TEXTO_LARGO: tuple[str, ...] = ("description", "host_about")
@@ -308,13 +308,61 @@ def _contar(mascara: pd.Series) -> int:
     return int(mascara.sum())
 
 
-def limpiar(df_raw: pd.DataFrame, barrios: pd.DataFrame, ciudad: Ciudad) -> tuple[pd.DataFrame, dict[str, Any]]:
-    """Aplica todas las conversiones y reglas. Devuelve (DataFrame limpio, registro de limpieza)."""
+def reparar_nombres(s: pd.Series) -> pd.Series:
+    """Repara la doble codificación de nombres de barrio o distrito (``'GuipÃºzcoa'`` -> ``'Guipúzcoa'``)."""
+    return s.map(lambda v: reparar_mojibake(v) if isinstance(v, str) else v).astype("string")
+
+
+def coordenadas_validas(df: pd.DataFrame) -> pd.Series:
+    """True si las coordenadas están dentro de la envolvente (bbox) de SU ciudad (``config.CIUDADES_ESPANA``)."""
+    valida = pd.Series(False, index=df.index)
+    for clave, sub in df.groupby("ciudad", sort=False):
+        bbox = config.CIUDADES_ESPANA[str(clave)].bbox
+        valida.loc[sub.index] = dentro_bbox(sub["latitude"], sub["longitude"], bbox)
+    return valida.astype(bool)
+
+
+def calidad_por_ciudad(df: pd.DataFrame) -> dict[str, dict[str, Any]]:
+    """Recuento por ciudad de cada regla de calidad (precio, outliers, estancias, coordenadas)."""
+    salida: dict[str, dict[str, Any]] = {}
+    for clave, s in df.groupby("ciudad", sort=True):
+        validos = int(s["precio_valido"].sum())
+        salida[str(clave)] = {
+            "filas": int(len(s)),
+            "precio_nulo": _contar(s["price"].isna()),
+            "pct_precio_nulo": float(s["price"].isna().mean() * 100),
+            "precio_cero": _contar(s["price"] == 0),
+            "precio_valido": validos,
+            "outliers_bajo": _contar(s["es_outlier_bajo"]),
+            "outliers_alto": _contar(s["es_outlier_alto"]),
+            "outliers_total": _contar(s["es_outlier_precio"]),
+            "pct_outliers": float(s["es_outlier_precio"].sum() / max(validos, 1) * 100),
+            "minimum_nights_extremo": _contar(s["minimum_nights_extremo"]),
+            "larga_estancia": _contar(s["alquiler_larga_estancia"]),
+            "pct_larga_estancia": float(s["alquiler_larga_estancia"].mean() * 100),
+            "fuera_bbox_o_nulas": _contar(~s["coords_validas"]),
+            "bedrooms_nulos": _contar(s["bedrooms"].isna()) if "bedrooms" in s else 0,
+        }
+    return salida
+
+
+def limpiar(df_raw: pd.DataFrame, barrios: dict[str, set[str]]) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Aplica todas las conversiones y reglas al conjunto unido de las 9 ciudades.
+
+    ``barrios`` es ``{clave_ciudad: nombres oficiales de neighbourhoods.csv}``. Las vallas de outliers se
+    calculan sobre el conjunto (ln del precio) y los recuentos se informan por ciudad.
+    Devuelve (DataFrame limpio, registro de limpieza).
+    """
     comprobar_columnas(df_raw, config.COLUMNAS_OBLIGATORIAS, "la limpieza")
     df = df_raw.copy()
+    reparados: dict[str, int] = {}
+    for col in ("neighbourhood_cleansed", "neighbourhood_group_cleansed"):
+        nuevo = reparar_nombres(df[col])
+        reparados[col] = _contar(nuevo.ne(df[col].astype("string")).fillna(False))
+        df[col] = nuevo
     n_raw = len(df)
     registro: dict[str, Any] = {"conversiones": {}, "reglas": {}, "columnas_eliminadas": {},
-                                "columnas_reconstruidas": {}}
+                                "columnas_reconstruidas": {}, "mojibake_reparado": reparados}
 
     # 1. Conversión de tipos ------------------------------------------------
     def _registrar_conversion(col: str, antes: pd.Series, despues: pd.Series, tipo: str) -> None:
@@ -472,20 +520,31 @@ def limpiar(df_raw: pd.DataFrame, barrios: pd.DataFrame, ciudad: Ciudad) -> tupl
         "nulos": _contar(df["minimum_nights"].isna()),
     }
 
-    # 7. Coordenadas --------------------------------------------------------------
-    df["coords_validas"] = dentro_bbox(df["latitude"], df["longitude"], ciudad.bbox)
-    registro["coordenadas"] = {"bbox": list(ciudad.bbox), "fuera_bbox_o_nulas": _contar(~df["coords_validas"])}
+    # 7. Coordenadas: bbox de la ciudad de cada anuncio -----------------------------
+    df["coords_validas"] = coordenadas_validas(df)
+    registro["coordenadas"] = {
+        "bbox_por_ciudad": {c.clave: list(c.bbox) for c in config.CIUDADES_ESPANA.values()},
+        "fuera_bbox_o_nulas": _contar(~df["coords_validas"]),
+    }
 
-    # 8. Cruce con barrios oficiales ------------------------------------------------
-    oficiales = set(barrios["neighbourhood"])
-    en_listings = set(df["neighbourhood_cleansed"].dropna())
-    no_oficiales = sorted(en_listings - oficiales)
-    sin_anuncios = sorted(oficiales - en_listings)
-    if no_oficiales:
-        logger.warning("Barrios del listing que no están en neighbourhoods.csv: %s", no_oficiales)
-    registro["barrios"] = {"barrios_oficiales": len(oficiales), "barrios_con_anuncios": len(en_listings),
-                           "no_oficiales": no_oficiales, "oficiales_sin_anuncios": sin_anuncios,
-                           "distritos": int(df["neighbourhood_group_cleansed"].nunique())}
+    # 8. Cruce con los barrios (o municipios) oficiales de cada ciudad ---------------
+    por_ciudad_barrios: dict[str, dict[str, Any]] = {}
+    for clave, sub in df.groupby("ciudad", sort=True):
+        oficiales = {reparar_mojibake(b) for b in barrios.get(str(clave), set())}
+        en_listings = set(sub["neighbourhood_cleansed"].dropna())
+        no_oficiales = sorted(en_listings - oficiales)
+        if no_oficiales:
+            logger.warning("%s: zonas del listing que no están en neighbourhoods.csv: %s", clave, no_oficiales)
+        por_ciudad_barrios[str(clave)] = {
+            "oficiales": len(oficiales), "con_anuncios": len(en_listings), "no_oficiales": no_oficiales,
+            "oficiales_sin_anuncios": len(oficiales - en_listings),
+            "distritos": int(sub["neighbourhood_group_cleansed"].nunique()),
+        }
+    registro["barrios"] = {
+        "por_ciudad": por_ciudad_barrios,
+        "zonas_con_anuncios": int(sum(v["con_anuncios"] for v in por_ciudad_barrios.values())),
+        "n_no_oficiales": int(sum(len(v["no_oficiales"]) for v in por_ciudad_barrios.values())),
+    }
 
     # 9. Imputación documentada de bedrooms / beds -------------------------------------
     imputados = {}
@@ -509,6 +568,7 @@ def limpiar(df_raw: pd.DataFrame, barrios: pd.DataFrame, ciudad: Ciudad) -> tupl
     }
     registro["contabilidad_filas"] = {"filas_raw": n_raw, "duplicados_eliminados": registro["duplicados"]["eliminados"],
                                       "filas_procesadas": len(df)}
+    registro["por_ciudad"] = calidad_por_ciudad(df)
     registro["politica_nulos"] = [
         {"columna": col, "nulos": int(df[col].isna().sum()), "regla": regla_nulos(col)[0],
          "decision": regla_nulos(col)[1], "justificacion": regla_nulos(col)[2]}
@@ -542,9 +602,13 @@ def validar_procesado(df: pd.DataFrame, documentadas: set[str] | None = None) ->
         errores.append("precio_por_persona no positivo")
     if df["id"].duplicated().any():
         errores.append("id duplicado")
-    for col in config.COLUMNAS_DASHBOARD:
+    for col in config.COLUMNAS_FINALES:
         if col not in df:
-            errores.append(f"falta la columna del dashboard {col}")
+            errores.append(f"falta la columna final {col}")
+    if "distancia_centro_km" in df and "ciudad" in df:
+        regiones = ~df["ciudad"].map(lambda c: config.CIUDADES_ESPANA[c].tipo == config.TIPO_URBANA).astype(bool)
+        if df.loc[regiones, "distancia_centro_km"].notna().any():
+            errores.append("distancia_centro_km calculada en una región sin centro definido")
     if errores:
         raise ErrorDatos("Validación del procesado fallida: " + "; ".join(errores))
     sin_documentar: list[str] = []

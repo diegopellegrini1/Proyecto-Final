@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 
 from src import config
-from src.config import Ciudad
 from src.geo import haversine_km
 from src.limpieza import limpiar_html
 
@@ -92,7 +91,10 @@ def licencia_tipo(license_: pd.Series) -> pd.Series:
     texto = limpiar_html(license_).str.lower()
     res = pd.Series(LICENCIA_OTRO, index=license_.index, dtype="string")
     res = res.mask(texto.str.contains("registration number", na=False), LICENCIA_REGISTRO)
-    res = res.mask(texto.str.contains("exempt", na=False), LICENCIA_EXENTA)
+    res = res.mask(texto.str.contains(r"exempt|exent|no es necesaria", na=False), LICENCIA_EXENTA)
+    # Si declara un número del registro único nacional, cuenta como registrado aunque la parte
+    # autonómica diga «Exempt» (p. ej. Madrid: «Exempt - seasonal rental» + número nacional).
+    res = res.mask(texto.str.contains("national registration number", na=False), LICENCIA_REGISTRO)
     res = res.mask(license_.isna() | texto.fillna("").eq(""), LICENCIA_SIN)
     return res
 
@@ -105,7 +107,28 @@ def categoria_precio(price: pd.Series, validas: pd.Series) -> tuple[pd.Series, l
     return categorias, [float(c) for c in cortes]
 
 
-def agregar_features(df: pd.DataFrame, ciudad: Ciudad, fecha_referencia: pd.Timestamp) -> tuple[pd.DataFrame, dict[str, Any]]:
+def distancia_centro(df: pd.DataFrame) -> pd.Series:
+    """Distancia haversine (km) al centro de SU ciudad, solo en las ciudades urbanas y con coordenadas válidas.
+
+    En las regiones (Girona, Mallorca, Menorca, Euskadi) no hay un centro único que tenga sentido
+    (muchos municipios, costa e interior): la distancia queda en NaN en lugar de inventar un centro.
+    """
+    salida = pd.Series(np.nan, index=df.index, dtype="float64")
+    for clave, sub in df.groupby("ciudad", sort=False):
+        ciudad = config.CIUDADES_ESPANA[str(clave)]
+        if ciudad.tipo != config.TIPO_URBANA or ciudad.centro is None:
+            continue
+        d = haversine_km(sub["latitude"], sub["longitude"], *ciudad.centro)
+        salida.loc[sub.index] = pd.Series(d, index=sub.index).where(sub["coords_validas"])
+    return salida.astype("float64")
+
+
+def registro_nacional(license_: pd.Series) -> pd.Series:
+    """True si el texto de licencia incluye el número del registro único nacional («National registration»)."""
+    return license_.astype("string").str.contains("national registration", case=False, na=False).astype(bool)
+
+
+def agregar_features(df: pd.DataFrame, fecha_referencia: pd.Timestamp) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Añade todas las variables derivadas. Devuelve (DataFrame nuevo, metadatos de features)."""
     out = df.copy()
     meta: dict[str, Any] = {}
@@ -113,20 +136,15 @@ def agregar_features(df: pd.DataFrame, ciudad: Ciudad, fecha_referencia: pd.Time
     out["tipo_habitacion_agrupado"], meta["agrupacion_tipo"] = agrupar_raras(
         out["tipo_habitacion"], out["precio_valido"], config.MIN_N_CATEGORIA_RARA, config.ETIQUETA_OTRAS_TIPO)
     out["log_precio"] = np.log(out["price"].where(out["precio_valido"])).astype("float64")
-    out["precio_por_persona"] = precio_por_persona(out["price"], out["accommodates"])
     out["antiguedad_host_anios"], meta["antiguedad_fuente"] = antiguedad_host(out, fecha_referencia)
     out["no_disponible_365"] = no_disponible_365(out["availability_365"])
-    out["ocupacion_inside_airbnb"] = (out["estimated_occupancy_l365d"] / 365).clip(0, 1).astype("float64")
     out["es_activo_probable"] = ~((out["availability_365"] == 0) & (out["number_of_reviews_ltm"] == 0))
-    # Proxy hipotético: precio de UNA cotización × días no disponibles futuros. No acota nada.
-    out["ingreso_hipotetico_anual"] = (out["price"].where(out["precio_valido"])
-                                       * (365 - out["availability_365"])).astype("float64")
     out["mes_cotizacion"] = mes_cotizacion(out["price_quote_checkin_date"])
     out["mes_cotizacion_agrupado"], meta["agrupacion_mes"] = agrupar_raras(
         out["mes_cotizacion"], out["precio_valido"], config.MIN_N_CATEGORIA_RARA, config.ETIQUETA_OTROS_MESES)
-    distancia = haversine_km(out["latitude"], out["longitude"], *ciudad.centro)
-    out["distancia_centro_km"] = pd.Series(distancia, index=out.index).where(out["coords_validas"]).astype("float64")
-    out["categoria_precio"], meta["cortes_categoria_precio"] = categoria_precio(out["price"], out["precio_valido"])
+    out["distancia_centro_km"] = distancia_centro(out)
+    meta["centros"] = {c.nombre: {"lat": c.centro[0], "lon": c.centro[1], "nombre": c.centro_nombre}
+                       for c in config.CIUDADES_ESPANA.values() if c.centro is not None}
     out["categoria_capacidad"] = pd.cut(out["accommodates"], bins=list(CORTES_CAPACIDAD),
                                         labels=list(ETIQUETAS_CAPACIDAD), ordered=True)
     out["es_multianuncio"] = (out["calculated_host_listings_count"] > 1).astype(bool)
@@ -134,10 +152,10 @@ def agregar_features(df: pd.DataFrame, ciudad: Ciudad, fecha_referencia: pd.Time
                                   labels=list(ETIQUETAS_SEGMENTO_HOST), ordered=True)
     if "license" in out:
         out["licencia_tipo"] = licencia_tipo(out["license"])
-    else:  # Serie explícita (no escalar) para conservar el dtype string
+        out["licencia_registro_nacional"] = registro_nacional(out["license"])
+    else:  # Series explícitas (no escalares) para conservar el dtype
         out["licencia_tipo"] = pd.Series(LICENCIA_SIN, index=out.index, dtype="string")
-    out["tiene_resenas"] = (out["number_of_reviews"] > 0).astype(bool)
-    out["dias_desde_ultima_resena"] = (fecha_referencia - out["last_review"]).dt.days.astype("float64")
+        out["licencia_registro_nacional"] = pd.Series(False, index=out.index, dtype=bool)
     meta["fecha_referencia"] = fecha_referencia
     meta["licencia_tipo_conteo"] = {str(k): int(v) for k, v in out["licencia_tipo"].value_counts().sort_index().items()}
     return out, meta

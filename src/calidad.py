@@ -7,6 +7,7 @@ from typing import Any
 import pandas as pd
 
 from src import config
+from src.errores import ErrorDatos
 
 TEXTO_LIBRE: frozenset[str] = frozenset({
     "name", "description", "host_about", "license", "neighborhood_overview", "amenities",
@@ -86,9 +87,17 @@ def perfilar(df: pd.DataFrame, top_n_nulos: int = 15) -> dict[str, Any]:
     }
 
 
-def comprobar_requisitos(perfil_raw: dict[str, Any]) -> dict[str, Any]:
-    """Comprueba los umbrales propios del dataset (≥ 1.000 filas, ≥ 20 columnas, 5 tipos)."""
-    tipos = perfil_raw["tipos_logicos"]
+def comprobar_requisitos(df_final: pd.DataFrame, perfil_union: dict[str, Any]) -> dict[str, Any]:
+    """Requisitos del enunciado sobre el conjunto FINAL procesado (≥ 50.000 filas y ≥ 20 columnas).
+
+    Lanza ``ErrorDatos`` si no se cumplen (no se publica un análisis sobre un conjunto que no cumple).
+    También informa de los tipos de variable presentes en el conjunto unido.
+    """
+    filas, columnas = df_final.shape
+    if filas < config.MIN_FILAS_UNION or columnas < config.MIN_COLUMNAS_UNION:
+        raise ErrorDatos(f"El conjunto final tiene {filas} filas y {columnas} columnas; el enunciado exige al "
+                         f"menos {config.MIN_FILAS_UNION} filas y {config.MIN_COLUMNAS_UNION} columnas.")
+    tipos = perfil_union["tipos_logicos"]
     presentes = {
         "numerico": tipos.get("numerico", 0) > 0,
         "categorico": tipos.get("categorico", 0) + tipos.get("booleano", 0) > 0,
@@ -97,21 +106,38 @@ def comprobar_requisitos(perfil_raw: dict[str, Any]) -> dict[str, Any]:
         "geoespacial": tipos.get("geoespacial", 0) > 0,
     }
     return {
-        "umbral_filas": config.UMBRAL_FILAS,
-        "umbral_columnas": config.UMBRAL_COLUMNAS,
-        "cumple_filas": perfil_raw["filas"] >= config.UMBRAL_FILAS,
-        "cumple_columnas": perfil_raw["columnas"] >= config.UMBRAL_COLUMNAS,
-        "tipos_presentes": presentes,
-        "cumple_tipos": all(presentes.values()),
+        "min_filas": config.MIN_FILAS_UNION, "min_columnas": config.MIN_COLUMNAS_UNION,
+        "filas_final": int(filas), "columnas_final": int(columnas),
+        "cumple_filas": bool(filas >= config.MIN_FILAS_UNION),
+        "cumple_columnas": bool(columnas >= config.MIN_COLUMNAS_UNION),
+        "tipos_presentes": presentes, "cumple_tipos": all(presentes.values()),
     }
 
 
-def construir_informe_calidad(antes: dict[str, Any], despues: dict[str, Any], registro: dict[str, Any]) -> dict[str, Any]:
-    """Ensambla ``calidad_datos.json`` a partir de los perfiles y del registro de limpieza."""
+def perfilar_por_ciudad(df: pd.DataFrame, columnas_clave: tuple[str, ...]) -> dict[str, dict[str, Any]]:
+    """Filas, % de celdas nulas y % de nulos de ``columnas_clave`` por ciudad."""
+    salida: dict[str, dict[str, Any]] = {}
+    for clave, s in df.groupby("ciudad", sort=True):
+        celdas = s.shape[0] * s.shape[1]
+        salida[str(clave)] = {
+            "filas": int(len(s)), "columnas": int(s.shape[1]),
+            "pct_nulos_total": float(s.isna().sum().sum() / celdas * 100) if celdas else 0.0,
+            "duplicados_id": int(s["id"].duplicated().sum()) if "id" in s else 0,
+            "nulos_pct": {c: float(s[c].isna().mean() * 100) for c in columnas_clave if c in s},
+        }
+    return salida
+
+
+def construir_informe_calidad(antes: dict[str, Any], despues: dict[str, Any], registro: dict[str, Any],
+                              por_ciudad_antes: dict[str, Any], por_ciudad_despues: dict[str, Any]) -> dict[str, Any]:
+    """Ensambla ``calidad_datos.json``: perfiles global y por ciudad (antes/después) y registro de limpieza."""
     claves = ("conversiones", "reglas", "columnas_eliminadas", "columnas_reconstruidas",
-              "politica_nulos", "contabilidad_filas", "duplicados", "imputados")
+              "politica_nulos", "contabilidad_filas", "duplicados", "imputados", "mojibake_reparado")
+    ciudades = sorted(set(por_ciudad_antes) | set(por_ciudad_despues))
     return {
         "antes": {k: v for k, v in antes.items() if k != "nulos_por_columna_pct"},
         "despues": {k: v for k, v in despues.items() if k != "nulos_por_columna_pct"},
+        "por_ciudad": {c: {"antes": por_ciudad_antes.get(c), "despues": por_ciudad_despues.get(c),
+                           "reglas": registro["por_ciudad"].get(c)} for c in ciudades},
         **{k: registro.get(k) for k in claves},
     }
