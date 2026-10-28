@@ -8,14 +8,14 @@ seaborn==0.13.2
 requests==2.33.1
 Jinja2==3.1.6
 openpyxl==3.1.5
-streamlit==1.66.1
-plotly==7.1.0
 scikit-learn==1.9.1
 scikit-posthocs==0.17.1
 pyarrow==26.0.0
+# Unión geográfica con el seccionado censal del INE (solo para recalcular la asignación anuncio-sección).
 pyshp==3.1.6
 shapely==2.2.0
 pyproj==3.8.0
+# Notebooks y tests.
 ipykernel==7.4.0
 nbformat==5.11.1
 nbclient==0.11.0

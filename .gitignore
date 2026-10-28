@@ -9,7 +9,7 @@ venv/
 # Infraestructura del flujo de trabajo (no forma parte del proyecto)
 .agents/
 
-# Datos extra pesados (reviews/calendar) y temporales
+# Datos extra pesados (cartografía del INE, > 25 MB) y temporales
 data/extra/
 *.log
 *.tmp
@@ -17,7 +17,6 @@ data/extra/
 
 # Secretos
 .env
-.streamlit/secrets.toml
 
 # Sistema
 .DS_Store
