@@ -41,35 +41,40 @@ EXCLUIR_DIRS = {".git", ".agents", ".venv", "venv", "data"}
 # Cifras clave que deben aparecer (marcadas) en cada documento.
 CIFRAS_CLAVE: dict[str, list[str]] = {
     "README.md": [
-        "dataset.filas_raw", "dataset.columnas_raw", "descriptivo.precio.mediana", "descriptivo.precio.media",
-        "descriptivo.precio.n", "limpieza.precio.pct_nulo", "estadistica.kruskal_tipo.tamano_efecto.valor",
-        "estadistica.mann_whitney_superhost.tamano_efecto.valor", "estadistica.ols.r2_ajustado",
-        "estadistica.ols.n_efectivo", "descriptivo.hosts.pct_anuncios_multianuncio", "meta.fecha_snapshot_url",
-        "precio_naturaleza.pct_con_descuento", "estadistica.ml.cv.r2_media", "estadistica.ml.aleatorio.r2",
-        "dataset.tipos_raw.identificador",
+        "dataset.filas_procesadas", "dataset.columnas_procesadas", "dataset.union.total.pct_distrito",
+        "dataset.fuente_airbnb.n_ficheros", "dataset.fuente_ine.n_tablas", "descriptivo.precio.mediana",
+        "descriptivo.precio.media", "descriptivo.precio.n", "limpieza.precio.pct_nulo",
+        "estadistica.renta_precio.global_distrito.rho", "estadistica.ols.coef_renta.pct_por_10pct_renta",
+        "estadistica.ols.delta_r2_ajustado_ine_pp", "estadistica.ols.r2_ajustado", "estadistica.ols.n_efectivo",
+        "estadistica.ml.cv.r2_media", "estadistica.ml.aleatorio.r2", "precio_naturaleza.pct_con_descuento",
+        "meta.snapshot_min", "meta.snapshot_max", "meta.anio_ine", "dataset.fuente_ine.actualizacion.fecha",
     ],
     "reports/informe.md": [
-        "dataset.filas_raw", "dataset.columnas_raw", "dataset.filas_procesadas", "dataset.columnas_procesadas",
+        "dataset.filas_union", "dataset.columnas_union", "dataset.filas_procesadas", "dataset.columnas_procesadas",
+        "dataset.union.total.pct_distrito", "dataset.union.concordancia_total.pct_coinciden",
         "limpieza.precio.nulo", "limpieza.precio.pct_nulo", "limpieza.outliers.valla_inf", "limpieza.outliers.valla_sup",
         "limpieza.outliers.n_total", "limpieza.minimum_nights.extremo_mayor_365", "limpieza.duplicados.por_id",
         "descriptivo.precio.mediana", "descriptivo.precio.media", "descriptivo.precio.std", "descriptivo.precio.iqr",
-        "descriptivo.precio.asimetria", "descriptivo.precio.curtosis_exceso",
-        "descriptivo.correlaciones.con_precio.0.spearman", "estadistica.normalidad_precio.p_valor",
-        "estadistica.mann_whitney_superhost.p_valor", "estadistica.mann_whitney_superhost.tamano_efecto.valor",
-        "estadistica.kruskal_tipo.tamano_efecto.valor", "estadistica.kruskal_distrito.tamano_efecto.valor",
-        "estadistica.chi2_tipo_superhost.tamano_efecto.valor", "estadistica.posthoc_distrito.n_pares_significativos",
-        "estadistica.bootstrap.tipo.0.ic_inf", "estadistica.ols.r2_ajustado", "estadistica.ols.diagnostico.breusch_pagan_p",
-        "estadistica.ols.vif_max.vif", "estadistica.ols.coef_superhost.pct",
+        "descriptivo.precio.asimetria", "descriptivo.correlaciones.con_precio.0.spearman",
+        "estadistica.normalidad_precio.p_valor", "estadistica.mann_whitney_superhost.tamano_efecto.valor",
+        "estadistica.kruskal_tipo.tamano_efecto.valor", "estadistica.kruskal_ciudad.tamano_efecto.valor",
+        "estadistica.posthoc_ciudad.n_pares_significativos", "estadistica.bootstrap.ciudades.0.ic_inf_cluster",
+        "estadistica.renta_precio.global_distrito.rho", "estadistica.renta_precio.global_distrito.cluster_zona.ic_inf",
+        "estadistica.renta_precio.por_ciudad.0.distrito.rho", "estadistica.renta_precio.ecologico_global.rho",
+        "estadistica.ols.r2_ajustado", "estadistica.ols.coef_renta.pct_por_10pct_renta",
+        "estadistica.ols.delta_r2_ajustado_ine_pp", "estadistica.ols.diagnostico.breusch_pagan_p",
+        "estadistica.ols.vif_max.vif", "estadistica.ols.coef_superhost.pct", "estadistica.ols.f_cluster",
         "precio_naturaleza.pct_con_descuento", "precio_naturaleza.pct_noches_igual_minimo",
-        "estadistica.ols.f_cluster", "estadistica.ols.vif_completo_distancia", "estadistica.ml.cv.r2_media",
-        "estadistica.ml.cv.r2_std", "estadistica.ml.aleatorio.r2", "estadistica.ols.top_distritos.0.mediana_bruta",
+        "estadistica.ml.cv.r2_media", "estadistica.ml.cv.r2_std", "estadistica.ml.aleatorio.r2",
+        "estadistica.ml.aporte_r2_ine",
     ],
 }
 
 # Números permitidos en las plantillas (texto convencional, no resultados).
 PERMITIDOS_PLANTILLA: tuple[str, ...] = (
     r"\bH[01]\b", r"IC 95 %", r"CC BY 4\.0", r"Python 3\.13", r"py -3\.13", r"25 MB", r"SHA-256", r"UTF-8",
-    r"\bHC3\b", r"\b[QP]\d{1,2}\b", r"VIF > (5|10)", r"^\| \d+ \|", r"^#+ \d+\.", r"^\d+\. ", r"10 criterios",
+    r"\bHC3\b", r"\b[QP]\d{1,2}\b", r"\bP80/P20\b", r"^\| \d+ \|", r"^#+ \d+\.\d*", r"^\d+\. ",
+    r"\b10 % (?:mayor|más|de renta)", r"\(\+10 %\)", r"\+10 %", r"(?i:\bfuente [12]\b)", r"ln\(1 \+",
 )
 
 
