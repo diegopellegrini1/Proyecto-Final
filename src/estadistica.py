@@ -34,16 +34,18 @@ HIPOTESIS: dict[str, tuple[str, str]] = {
         "Las distribuciones difieren (contraste bilateral)."),
     "kruskal_tipo": ("La distribución del precio es la misma en todos los tipos de habitación.",
                      "Al menos un tipo de habitación tiene una distribución de precio distinta."),
-    "kruskal_distrito": ("La distribución del precio es la misma en todos los distritos (n ≥ 30).",
-                         "Al menos un distrito tiene una distribución de precio distinta."),
+    "kruskal_ciudad": ("La distribución del precio es la misma en todas las ciudades y regiones.",
+                       "Al menos una ciudad o región tiene una distribución de precio distinta."),
     "posthoc": ("Para cada par de grupos, no hay diferencia en la distribución del precio.",
                 "El par de grupos difiere (p ajustado por Bonferroni < α)."),
     "chi2_tipo_superhost": ("El tipo de habitación y ser superhost son independientes.",
                             "Existe asociación entre tipo de habitación y ser superhost."),
-    "chi2_distrito_tipo": ("El distrito y el tipo de habitación son independientes.",
-                           "Existe asociación entre distrito y tipo de habitación."),
+    "chi2_ciudad_tipo": ("La ciudad y el tipo de habitación son independientes.",
+                         "Existe asociación entre ciudad y tipo de habitación."),
     "chi2_multi_tipo": ("Ser anfitrión multi-anuncio y el tipo de habitación son independientes.",
                         "Existe asociación entre ser multi-anuncio y el tipo de habitación."),
+    "spearman_renta": ("ρ de Spearman entre la renta neta por persona de la zona (INE) y el precio es 0.",
+                       "ρ ≠ 0 (contraste bilateral; IC y p por bootstrap remuestreando distritos censales)."),
     "ols": ("Cada coeficiente β es 0 (la variable no se asocia con ln(precio) controlando por el resto).",
             "β ≠ 0."),
 }
@@ -377,58 +379,159 @@ def bootstrap_mediana_cluster(valores: np.ndarray, grupos: np.ndarray, n_boot: i
 
 
 # --------------------------------------------------------------------------
+# Relación renta-precio: Spearman con bootstrap por clusters
+# --------------------------------------------------------------------------
+def _grupos_empate(v: np.ndarray) -> tuple[np.ndarray, int]:
+    """Para cada observación, el índice (0..k-1, en orden creciente de valor) de su grupo de valores iguales."""
+    _, inversa = np.unique(v, return_inverse=True)
+    return inversa, int(inversa.max()) + 1
+
+
+def _rangos_ponderados(grupo: np.ndarray, n_grupos: int, w: np.ndarray) -> np.ndarray:
+    """Rangos medios de una muestra en la que la observación i aparece ``w[i]`` veces.
+
+    Equivale a ``rankdata`` sobre los datos replicados: cada grupo de valores iguales con peso total W y
+    peso acumulado anterior C recibe el rango C + (W + 1) / 2. Coste O(n), sin volver a ordenar.
+    """
+    peso = np.bincount(grupo, weights=w, minlength=n_grupos)
+    rango = np.cumsum(peso) - peso + (peso + 1) / 2
+    return rango[grupo]
+
+
+def _pearson_ponderado(x: np.ndarray, y: np.ndarray, w: np.ndarray) -> float:
+    """Correlación de Pearson con pesos de frecuencia ``w``; NaN si alguna variable es constante."""
+    total = w.sum()
+    mx, my = (w * x).sum() / total, (w * y).sum() / total
+    dx, dy = x - mx, y - my
+    sxx, syy = (w * dx * dx).sum(), (w * dy * dy).sum()
+    if sxx <= 0 or syy <= 0:
+        return float("nan")
+    return float((w * dx * dy).sum() / np.sqrt(sxx * syy))
+
+
+def spearman_cluster(x: pd.Series, y: pd.Series, clusters: dict[str, pd.Series], n_boot: int,
+                     rng: np.random.Generator, nivel: float = 0.95) -> dict[str, Any]:
+    """ρ de Spearman con IC percentil y p bootstrap remuestreando clusters (p. ej. distrito o anfitrión).
+
+    Cada réplica remuestrea clusters con reemplazo (cada uno con todos sus anuncios) y calcula la ρ de
+    Spearman de la muestra replicada; se implementa con pesos de frecuencia (exactamente equivalente).
+    El p asintótico de ``scipy.stats.spearmanr`` supone observaciones independientes; aquí no lo son
+    (la renta es la misma para todos los anuncios de un distrito y un anfitrión tiene varios anuncios), así
+    que se informa solo como referencia. La decisión se toma con el bootstrap por clusters: p bilateral
+    = 2·min(P(ρ* ≤ 0), P(ρ* ≥ 0)) con la corrección (k + 1)/(B + 1).
+    """
+    ok = x.notna() & y.notna()
+    for g in clusters.values():
+        ok &= g.reindex(x.index).notna()
+    xv, yv = x[ok].to_numpy(dtype="float64"), y[ok].to_numpy(dtype="float64")
+    salida: dict[str, Any] = {"n": int(ok.sum()), "n_boot": int(n_boot)}
+    if len(xv) < config.MIN_N_GRUPO or np.unique(xv).size < 2:
+        return {**salida, "rho": float("nan"), "evaluable": False}
+    rho = float(stats.spearmanr(xv, yv).statistic)
+    p_asint = float(stats.spearmanr(xv, yv).pvalue)
+    salida.update({"rho": rho, "p_asintotico": p_asint, "evaluable": True,
+                   "n_valores_distintos_x": int(np.unique(xv).size)})
+    gx, kx = _grupos_empate(xv)
+    gy, ky = _grupos_empate(yv)
+    a = (1 - nivel) / 2
+    for nombre, g in clusters.items():
+        _, inversa = np.unique(g[ok].astype(str).to_numpy(), return_inverse=True)
+        n_cl = int(inversa.max()) + 1
+        reps = np.empty(n_boot)
+        for b in range(n_boot):
+            veces = np.bincount(rng.integers(0, n_cl, size=n_cl), minlength=n_cl)
+            w = veces[inversa].astype("float64")
+            reps[b] = _pearson_ponderado(_rangos_ponderados(gx, kx, w), _rangos_ponderados(gy, ky, w), w)
+        reps = reps[~np.isnan(reps)]
+        k_le, k_ge = int((reps <= 0).sum()), int((reps >= 0).sum())
+        p_boot = float(min(1.0, 2 * min((k_le + 1) / (len(reps) + 1), (k_ge + 1) / (len(reps) + 1))))
+        salida[nombre] = {"n_clusters": n_cl, "ic_inf": float(np.quantile(reps, a)),
+                          "ic_sup": float(np.quantile(reps, 1 - a)), "p_boot": p_boot,
+                          "significativo": bool(p_boot < config.ALFA), "n_replicas_validas": int(len(reps))}
+    return salida
+
+
+def holm(pvalores: dict[str, float], alfa: float = config.ALFA) -> dict[str, dict[str, Any]]:
+    """Corrección de Holm sobre una familia de p-valores ``{nombre: p}``."""
+    from statsmodels.stats.multitest import multipletests
+
+    nombres = [k for k, v in pvalores.items() if v is not None and np.isfinite(v)]
+    if not nombres:
+        return {}
+    rechaza, p_aj, _, _ = multipletests([pvalores[k] for k in nombres], alpha=alfa, method="holm")
+    return {k: {"p": float(pvalores[k]), "p_holm": float(p), "significativo_holm": bool(r)}
+            for k, p, r in zip(nombres, p_aj, rechaza)}
+
+
+# --------------------------------------------------------------------------
 # OLS
 # --------------------------------------------------------------------------
 VARIABLES_OLS_NUMERICAS: tuple[str, ...] = (
-    "accommodates", "bedrooms", "bathrooms", "bano_compartido", "n_amenities", "distancia_centro_km",
+    "accommodates", "bedrooms", "bathrooms", "bano_compartido", "n_amenities",
     "host_is_superhost", "es_multianuncio", "alquiler_larga_estancia", "tiene_aire_acondicionado",
-    "tiene_ascensor", "tiene_terraza_balcon", "tiene_parking_cualquiera", "tiene_wifi", "log1p_resenas",
+    "tiene_piscina", "tiene_terraza_balcon", "tiene_parking_cualquiera", "log1p_resenas",
+)
+# Variables de la zona (INE, distrito censal). La renta entra en logaritmo: β es una elasticidad.
+VARIABLES_OLS_INE: tuple[str, ...] = (
+    "ln_renta_dis", "ine_dis_gini", "ine_dis_edad_media", "ine_dis_pct_hogares_unipersonales",
 )
 NOMBRES_TERMINOS: dict[str, str] = {
     "accommodates": "Capacidad (+1 persona)", "bedrooms": "Dormitorios (+1)", "bathrooms": "Baños (+1)",
     "bano_compartido": "Baño compartido", "n_amenities": "Amenities (+1)",
     "distancia_centro_km": "Distancia al centro (+1 km)", "host_is_superhost": "Superhost",
     "es_multianuncio": "Anfitrión multi-anuncio", "alquiler_larga_estancia": "Estancia mínima ≥ 30 noches",
-    "tiene_aire_acondicionado": "Aire acondicionado", "tiene_ascensor": "Ascensor",
-    "tiene_terraza_balcon": "Terraza/balcón", "tiene_parking_cualquiera": "Parking (cualquiera)", "tiene_wifi": "Wifi",
+    "tiene_aire_acondicionado": "Aire acondicionado", "tiene_piscina": "Piscina",
+    "tiene_terraza_balcon": "Terraza/balcón", "tiene_parking_cualquiera": "Parking (cualquiera)",
     "log1p_resenas": "ln(1 + nº reseñas)",
+    "ln_renta_dis": "ln(renta neta por persona del distrito)", "ine_dis_gini": "Gini del distrito (+1 punto)",
+    "ine_dis_edad_media": "Edad media del distrito (+1 año)",
+    "ine_dis_pct_hogares_unipersonales": "% hogares unipersonales del distrito (+1 punto)",
 }
 # Términos cuyos coeficientes se comparan entre especificaciones (sensibilidades).
 TERMINOS_CLAVE: tuple[str, ...] = (
-    "accommodates", "distancia_centro_km", "host_is_superhost", "tiene_aire_acondicionado", "bano_compartido",
-    "alquiler_larga_estancia",
+    "ln_renta_dis", "ine_dis_gini", "accommodates", "host_is_superhost", "es_multianuncio",
+    "alquiler_larga_estancia", "bano_compartido",
 )
+REFERENCIA_LICENCIA = "Sin licencia"
 
 
-def _matriz_ols(df: pd.DataFrame) -> pd.DataFrame:
-    """Prepara el DataFrame de la regresión (booleanos a 0/1, casos completos)."""
-    d = pd.DataFrame({
-        "log_precio": df["log_precio"],
-        **{c: df[c].astype("float64") for c in VARIABLES_OLS_NUMERICAS if c != "log1p_resenas"},
-        "log1p_resenas": np.log1p(df["number_of_reviews"].astype("float64")),
-        "tipo": df["tipo_habitacion_agrupado"].astype("string"),
-        "licencia": df["licencia_tipo"].astype("string"),
-        "distrito": df["neighbourhood_group_cleansed"].astype("string"),
-        "mes": df["mes_cotizacion_agrupado"].astype("string"),
-        "host_id": df["host_id"],
-    })
-    d = d.dropna()
-    for c in ("tipo", "licencia", "distrito", "mes"):
-        d[c] = d[c].astype(str)
-    return d
+def anadir_derivadas_modelo(df: pd.DataFrame) -> pd.DataFrame:
+    """Columnas transformadas que usan OLS y ML: ln(1 + reseñas) y ln(renta del distrito)."""
+    return df.assign(
+        log1p_resenas=np.log1p(df["number_of_reviews"].astype("float64")),
+        ln_renta_dis=np.log(df[config.RENTA_PRINCIPAL].astype("float64").where(df[config.RENTA_PRINCIPAL] > 0)),
+    )
 
 
-def formula_ols(ref_tipo: str, ref_distrito: str, ref_licencia: str, ref_mes: str | None = None,
-                con_distrito: bool = True, excluir: tuple[str, ...] = ()) -> str:
-    """Fórmula de statsmodels para ln(precio). ``ref_mes=None`` omite el control de mes de cotización."""
-    numericas = " + ".join(v for v in VARIABLES_OLS_NUMERICAS if v not in excluir)
-    formula = (f"log_precio ~ C(tipo, Treatment('{ref_tipo}')) + {numericas} + "
-               f"C(licencia, Treatment('{ref_licencia}'))")
-    if con_distrito:
-        formula += f" + C(distrito, Treatment('{ref_distrito}'))"
-    if ref_mes is not None:
-        formula += f" + C(mes, Treatment('{ref_mes}'))"
-    return formula
+def _matriz_ols(df: pd.DataFrame, numericas: tuple[str, ...]) -> pd.DataFrame:
+    """DataFrame de la regresión (booleanos a 0/1). Casos completos sobre las variables del modelo
+    principal (con INE), para que las especificaciones con y sin INE usen exactamente las mismas filas."""
+    d = anadir_derivadas_modelo(df)
+    todas = dict.fromkeys([*VARIABLES_OLS_NUMERICAS, *VARIABLES_OLS_INE, *numericas])
+    salida = pd.DataFrame({
+        "log_precio": d["log_precio"],
+        **{c: d[c].astype("float64") for c in todas},
+        "tipo": d["tipo_habitacion_agrupado"].astype("string"),
+        "licencia": d["licencia_tipo"].astype("string"),
+        "ciudad": d["ciudad"].map(lambda c: config.CIUDADES_ESPANA[c].nombre).astype("string"),
+        "mes": d["mes_cotizacion_agrupado"].astype("string"),
+        "host_id": d["host_id"],
+        "distrito_ine": d["codigo_distrito_ine"].astype("string"),
+    }).dropna()
+    for c in ("tipo", "licencia", "ciudad", "mes", "distrito_ine"):
+        salida[c] = salida[c].astype(str)
+    return salida
+
+
+def formula_ols(numericas: tuple[str, ...], referencias: dict[str, str | None], con_ciudad: bool) -> str:
+    """Fórmula de statsmodels para ln(precio) con efectos fijos de ciudad, tipo, licencia y mes."""
+    partes = [f"C(tipo, Treatment('{referencias['tipo']}'))", *numericas,
+              f"C(licencia, Treatment('{referencias['licencia']}'))"]
+    if con_ciudad:
+        partes.append(f"C(ciudad, Treatment('{referencias['ciudad']}'))")
+    if referencias.get("mes") is not None:
+        partes.append(f"C(mes, Treatment('{referencias['mes']}'))")
+    return "log_precio ~ " + " + ".join(partes)
 
 
 def _nombre_termino(t: str) -> str:
@@ -437,7 +540,7 @@ def _nombre_termino(t: str) -> str:
         return NOMBRES_TERMINOS[t]
     if "[T." in t:
         nivel = t.split("[T.", 1)[1].rstrip("]")
-        for prefijo, etiqueta in (("C(tipo", "Tipo"), ("C(licencia", "Licencia"), ("C(distrito", "Distrito"),
+        for prefijo, etiqueta in (("C(tipo", "Tipo"), ("C(licencia", "Licencia"), ("C(ciudad", "Ciudad"),
                                   ("C(mes", "Mes de cotización")):
             if t.startswith(prefijo):
                 return f"{etiqueta}: {nivel}"
@@ -474,33 +577,56 @@ def gvif(exog: pd.DataFrame) -> list[dict[str, Any]]:
     return sorted(filas, key=lambda f: -f["gvif_ajustado"])
 
 
-def _coeficientes(cluster: Any, hc3: Any, alfa: float) -> list[dict[str, Any]]:
-    """Coeficientes con cambio %, IC 95 % (cluster), p cluster, p HC3 y p de Holm sobre la familia."""
+def _coeficientes(cluster: Any, hc3: Any, alfa: float, cluster_dis: Any | None = None) -> list[dict[str, Any]]:
+    """Coeficientes con cambio %, IC 95 % (cluster por anfitrión), p cluster, p HC3 y p de Holm.
+
+    Si se pasa ``cluster_dis`` (errores agrupados por distrito censal), los términos del INE incluyen
+    también su p e IC con esa agrupación, la adecuada para variables que solo varían entre distritos.
+    """
     from statsmodels.stats.multitest import multipletests
 
     ic = cluster.conf_int(alpha=alfa)
+    ic_d = cluster_dis.conf_int(alpha=alfa) if cluster_dis is not None else None
     terminos = [t for t in cluster.params.index if t != "Intercept"]
     p_holm = multipletests([float(cluster.pvalues[t]) for t in terminos], alpha=alfa, method="holm")[1]
     salida = []
     for t, ph in zip(terminos, p_holm):
         b = float(cluster.params[t])
-        salida.append({
+        fila = {
             "termino": t, "nombre": _nombre_termino(t), "beta": b, "pct": 100 * (np.exp(b) - 1),
             "ic_inf_pct": 100 * (np.exp(ic.loc[t, 0]) - 1), "ic_sup_pct": 100 * (np.exp(ic.loc[t, 1]) - 1),
             "p_cluster": float(cluster.pvalues[t]), "p_hc3": float(hc3.pvalues[t]), "p_holm": float(ph),
             "significativo": bool(cluster.pvalues[t] < alfa), "significativo_holm": bool(ph < alfa),
-            "es_distrito": t.startswith("C(distrito"), "es_mes": t.startswith("C(mes"),
-        })
+            "es_ciudad": t.startswith("C(ciudad"), "es_mes": t.startswith("C(mes"),
+            "es_ine": t in VARIABLES_OLS_INE,
+        }
+        if ic_d is not None and t in VARIABLES_OLS_INE:
+            fila.update({"p_cluster_distrito": float(cluster_dis.pvalues[t]),
+                         "ic_inf_pct_distrito": 100 * (np.exp(ic_d.loc[t, 0]) - 1),
+                         "ic_sup_pct_distrito": 100 * (np.exp(ic_d.loc[t, 1]) - 1),
+                         "significativo_distrito": bool(cluster_dis.pvalues[t] < alfa)})
+        if t == "ln_renta_dis":
+            # Elasticidad: cambio % del precio asociado a una renta un 10 % mayor.
+            fila["pct_por_10pct_renta"] = 100 * (1.1 ** b - 1)
+            fila["ic_inf_10pct"] = 100 * (1.1 ** float(ic.loc[t, 0]) - 1)
+            fila["ic_sup_10pct"] = 100 * (1.1 ** float(ic.loc[t, 1]) - 1)
+            if ic_d is not None:
+                fila["ic_inf_10pct_distrito"] = 100 * (1.1 ** float(ic_d.loc[t, 0]) - 1)
+                fila["ic_sup_10pct_distrito"] = 100 * (1.1 ** float(ic_d.loc[t, 1]) - 1)
+        salida.append(fila)
     return salida
 
 
-def ajustar_ols(df: pd.DataFrame, ref_distrito: str, incluir_outliers: bool = False, alfa: float = config.ALFA,
-                *, mascara_extra: pd.Series | None = None, con_distrito: bool = True, con_mes: bool = True,
+def ajustar_ols(df: pd.DataFrame, alfa: float = config.ALFA, *, mascara_extra: pd.Series | None = None,
+                con_ine: bool = True, con_distancia: bool = False, con_mes: bool = True, con_ciudad: bool = True,
                 excluir: tuple[str, ...] = (), diagnostico: bool = True) -> dict[str, Any]:
-    """OLS sobre ln(precio) con errores agrupados por anfitrión, HC3, diagnóstico, VIF/GVIF y sensibilidad Cook.
+    """OLS sobre ln(precio) con efectos fijos de ciudad, errores agrupados por anfitrión, HC3 y diagnóstico.
 
-    El contraste global se publica como Wald/F con la covarianza agrupada (coherente con la inferencia
-    de los coeficientes); el F convencional se conserva solo como referencia «no robusta».
+    - ``con_ine``: añade las variables de la zona (``VARIABLES_OLS_INE``). Con y sin INE se usan las
+      mismas filas (casos completos sobre las variables del modelo principal), así ΔR² es comparable.
+    - ``con_distancia``: añade la distancia al centro (solo tiene sentido con ``mascara_extra`` de
+      ciudades urbanas: en las regiones es NaN y esas filas se pierden).
+    - Los términos del INE se contrastan además con errores agrupados por distrito censal.
     ``diagnostico=False`` ajusta una especificación alternativa sin diagnóstico (para sensibilidades).
     """
     import statsmodels.formula.api as smf
@@ -508,45 +634,56 @@ def ajustar_ols(df: pd.DataFrame, ref_distrito: str, incluir_outliers: bool = Fa
     from statsmodels.stats.outliers_influence import variance_inflation_factor
     from statsmodels.stats.stattools import jarque_bera
 
-    mascara = df["precio_valido"] & df["coords_validas"]
-    if not incluir_outliers:
-        mascara &= ~df["es_outlier_precio"]
+    mascara = df["precio_valido"].astype(bool)
     if mascara_extra is not None:
         mascara &= mascara_extra.reindex(df.index, fill_value=False).astype(bool)
+    numericas = tuple(v for v in (*VARIABLES_OLS_NUMERICAS, *(VARIABLES_OLS_INE if con_ine else ()),
+                                  *(("distancia_centro_km",) if con_distancia else ())) if v not in excluir)
     base = df[mascara]
-    datos = _matriz_ols(base)
+    datos = _matriz_ols(base, numericas)
     n_inicial, n_efectivo = int(len(base)), int(len(datos))
-    ref_tipo = config.TRADUCCION_TIPO_HABITACION["Entire home/apt"]
-    ref_licencia = "Sin licencia"
-    ref_mes = str(datos["mes"].value_counts().idxmax()) if con_mes and len(datos) else None
-    formula = formula_ols(ref_tipo, ref_distrito, ref_licencia, ref_mes, con_distrito, excluir)
+    if n_efectivo < config.MIN_N_GRUPO * 10:
+        raise ErrorDatos(f"Muy pocas filas completas para la regresión OLS ({n_efectivo}).")
+    ciudades = sorted(datos["ciudad"].unique())
+    con_ciudad = con_ciudad and len(ciudades) > 1
+    referencias: dict[str, str | None] = {
+        "tipo": config.TRADUCCION_TIPO_HABITACION["Entire home/apt"], "licencia": REFERENCIA_LICENCIA,
+        "ciudad": config.CIUDAD_REFERENCIA if config.CIUDAD_REFERENCIA in ciudades else ciudades[0],
+        "mes": str(datos["mes"].value_counts().idxmax()) if con_mes else None,
+    }
+    formula = formula_ols(numericas, referencias, con_ciudad)
 
-    def _ajustar(d: pd.DataFrame) -> tuple[Any, Any, Any, Any]:
+    def _ajustar(d: pd.DataFrame) -> tuple[Any, Any, Any, Any, Any]:
         try:
             modelo = smf.ols(formula, data=d)
+            cl_dis = (modelo.fit(cov_type="cluster", cov_kwds={"groups": pd.factorize(d["distrito_ine"])[0]})
+                      if con_ine else None)
             return (modelo, modelo.fit(),
                     modelo.fit(cov_type="cluster", cov_kwds={"groups": d["host_id"].to_numpy()}),
-                    modelo.fit(cov_type="HC3"))
+                    modelo.fit(cov_type="HC3"), cl_dis)
         except (np.linalg.LinAlgError, ValueError) as exc:
             raise ErrorDatos(f"No se pudo ajustar la regresión OLS: {exc}") from exc
 
-    modelo, ajuste, cluster, hc3 = _ajustar(datos)
-    coeficientes = _coeficientes(cluster, hc3, alfa)
+    modelo, ajuste, cluster, hc3, cl_dis = _ajustar(datos)
+    coeficientes = _coeficientes(cluster, hc3, alfa, cl_dis)
     resultado: dict[str, Any] = {
         "formula": formula, "n_inicial": n_inicial, "n_efectivo": n_efectivo,
-        "perdidas_por_nulos": n_inicial - n_efectivo, "incluye_outliers": incluir_outliers,
-        "con_distrito": con_distrito, "con_mes": con_mes, "excluidos": list(excluir),
-        "referencias": {"tipo": ref_tipo, "distrito": ref_distrito, "licencia": ref_licencia, "mes": ref_mes},
+        "perdidas_por_nulos": n_inicial - n_efectivo, "con_ine": con_ine, "con_distancia": con_distancia,
+        "con_mes": con_mes, "con_ciudad": con_ciudad, "excluidos": list(excluir), "referencias": referencias,
+        "ciudades": ciudades, "n_anfitriones": int(datos["host_id"].nunique()),
+        "n_distritos_ine": int(datos["distrito_ine"].nunique()),
         "r2": float(ajuste.rsquared), "r2_ajustado": float(ajuste.rsquared_adj), "aic": float(ajuste.aic),
         "f_cluster": float(cluster.fvalue), "f_cluster_p": float(cluster.f_pvalue),
-        "f_cluster_gl": [int(len(ajuste.params) - 1), int(datos["host_id"].nunique() - 1)],
         "f_no_robusto": float(ajuste.fvalue), "f_no_robusto_p": float(ajuste.f_pvalue),
         "n_parametros": int(len(ajuste.params)), "n_coeficientes": len(coeficientes),
         "n_significativos": int(sum(c["significativo"] for c in coeficientes)),
         "n_significativos_holm": int(sum(c["significativo_holm"] for c in coeficientes)),
-        "coeficientes": coeficientes, "errores": "agrupados por anfitrión (cluster); HC3 como comparación",
+        "coeficientes": coeficientes,
+        "errores": "agrupados por anfitrión (cluster); HC3 como comparación; INE también por distrito censal",
         "h0": HIPOTESIS["ols"][0], "h1": HIPOTESIS["ols"][1], "alfa": alfa,
     }
+    resultado["coef_por_termino"] = {c["termino"]: c for c in coeficientes
+                                     if not (c["es_ciudad"] or c["es_mes"]) and "[T." not in c["termino"]}
     if not diagnostico:
         return resultado
 
@@ -561,9 +698,9 @@ def ajustar_ols(df: pd.DataFrame, ref_distrito: str, incluir_outliers: bool = Fa
         "curtosis_residuos": float(curt), "n_cook_mayor_4_n": int((cook > umbral_cook).sum()),
         "pct_cook_mayor_4_n": float((cook > umbral_cook).mean() * 100),
     }
-    # VIF sin dummies de distrito ni de mes (variables numéricas y tipo/licencia) …
+    # VIF de las variables numéricas y del INE (sin dummies de ciudad ni de mes) …
     exog = pd.DataFrame(modelo.exog, columns=modelo.exog_names)
-    cols = [c for c in exog.columns if not c.startswith(("C(distrito", "C(mes"))]
+    cols = [c for c in exog.columns if not c.startswith(("C(ciudad", "C(mes"))]
     x_vif = exog[cols].to_numpy()
     vif = [{"termino": c, "nombre": _nombre_termino(c), "vif": float(variance_inflation_factor(x_vif, i))}
            for i, c in enumerate(cols) if c != "Intercept"]
@@ -572,22 +709,23 @@ def ajustar_ols(df: pd.DataFrame, ref_distrito: str, incluir_outliers: bool = Fa
     resultado["vif_max"] = vif[0]
     resultado["n_vif_mayor_5"] = int(sum(r["vif"] > 5 for r in vif))
     resultado["n_vif_mayor_10"] = int(sum(r["vif"] > 10 for r in vif))
-    # … y con la matriz COMPLETA (con dummies): VIF de la distancia y GVIF por término.
-    i_dist = list(exog.columns).index("distancia_centro_km")
-    resultado["vif_completo_distancia"] = float(variance_inflation_factor(exog.to_numpy(), i_dist))
+    # … y con la matriz COMPLETA (con todas las dummies): VIF de la renta y GVIF por término.
+    if "ln_renta_dis" in exog.columns:
+        i_renta = list(exog.columns).index("ln_renta_dis")
+        resultado["vif_completo_renta"] = float(variance_inflation_factor(exog.to_numpy(), i_renta))
     resultado["gvif"] = gvif(exog)
     resultado["gvif_max"] = resultado["gvif"][0]
 
     # Sensibilidad: reajuste sin observaciones influyentes (Cook > 4/n).
     sin_infl = datos[cook <= umbral_cook]
-    _, aj2, cl2, hc2 = _ajustar(sin_infl)
-    coef2 = {c["termino"]: c for c in _coeficientes(cl2, hc2, alfa)}
+    _, aj2, cl2, hc2, cld2 = _ajustar(sin_infl)
+    coef2 = {c["termino"]: c for c in _coeficientes(cl2, hc2, alfa, cld2)}
     resultado["sensibilidad_sin_influyentes"] = {
         "n_efectivo": int(len(sin_infl)), "n_excluidas": int(len(datos) - len(sin_infl)),
         "r2_ajustado": float(aj2.rsquared_adj),
         "coeficientes": {t: {"pct": coef2[t]["pct"], "significativo": coef2[t]["significativo"],
                              "pct_principal": next(c["pct"] for c in coeficientes if c["termino"] == t)}
-                         for t in TERMINOS_CLAVE if t in coef2 and t not in excluir},
+                         for t in TERMINOS_CLAVE if t in coef2},
         **comparar_signos(resultado, {"coeficientes": list(coef2.values()), "r2_ajustado": float(aj2.rsquared_adj),
                                       "n_efectivo": int(len(sin_infl))}),
     }
@@ -600,8 +738,8 @@ def ajustar_ols(df: pd.DataFrame, ref_distrito: str, incluir_outliers: bool = Fa
 def comparar_signos(principal: dict[str, Any], sensibilidad: dict[str, Any]) -> dict[str, Any]:
     """Compara signos de los coeficientes significativos del modelo principal con la sensibilidad."""
     otros = {c["termino"]: c["beta"] for c in sensibilidad["coeficientes"]}
-    signif = [c for c in principal["coeficientes"] if c["significativo"]]
-    coinciden = [c["termino"] for c in signif if np.sign(otros.get(c["termino"], 0)) == np.sign(c["beta"])]
+    signif = [c for c in principal["coeficientes"] if c["significativo"] and c["termino"] in otros]
+    coinciden = [c["termino"] for c in signif if np.sign(otros[c["termino"]]) == np.sign(c["beta"])]
     return {"n_significativos": len(signif), "n_signos_coinciden": len(coinciden),
             "signos_coinciden": len(coinciden) == len(signif),
             "r2_ajustado": sensibilidad["r2_ajustado"], "n_efectivo": sensibilidad["n_efectivo"]}
@@ -619,6 +757,19 @@ def coeficientes_clave(principal: dict[str, Any], alternativo: dict[str, Any]) -
                                     "p_alternativo": a["p_cluster"], "significativo_alternativo": a["significativo"],
                                     "mismo_signo": bool(np.sign(a["pct"]) == np.sign(c["pct"]))}
     return salida
+
+
+def resumen_sensibilidad(principal: dict[str, Any], alternativo: dict[str, Any]) -> dict[str, Any]:
+    """Resumen comparable de una especificación alternativa: n, R² ajustado, coeficientes clave y renta."""
+    renta = alternativo["coef_por_termino"].get("ln_renta_dis")
+    return {"n_efectivo": alternativo["n_efectivo"], "r2_ajustado": alternativo["r2_ajustado"],
+            "coeficientes": coeficientes_clave(principal, alternativo),
+            "renta": None if renta is None else {k: renta[k] for k in (
+                "beta", "pct_por_10pct_renta", "ic_inf_10pct", "ic_sup_10pct", "p_cluster", "significativo")
+                if k in renta} | ({"p_cluster_distrito": renta["p_cluster_distrito"],
+                                   "significativo_distrito": renta["significativo_distrito"]}
+                                  if "p_cluster_distrito" in renta else {}),
+            "todos_mismo_signo": all(c["mismo_signo"] for c in coeficientes_clave(principal, alternativo).values())}
 
 
 # --------------------------------------------------------------------------
@@ -823,9 +974,12 @@ def ajustar_modelo_ml(df: pd.DataFrame, semilla: int, filas_ols: pd.Index | None
 
     features = [f for f in config.FEATURES_ML if f in df.columns]
     comprobar_fuga(features)
-    datos = df[df["precio_valido"]]
+    datos = anadir_derivadas_modelo(df[df["precio_valido"]])
     particiones = particiones_por_anfitrion(datos["host_id"], config.N_FOLDS_ML, semilla)
     principal = evaluar_cv(datos, features, "hgb", particiones, semilla, importancia=True)
+    # Aportación predictiva de la zona: mismo modelo y mismas particiones sin las variables del INE.
+    sin_ine = [f for f in features if f not in config.VARIABLES_INE_ML]
+    cv_sin_ine = evaluar_cv(datos, sin_ine, "hgb", particiones, semilla)["modelo"]
 
     # Contraste: partición aleatoria por fila (mide interpolación dentro de anfitriones ya vistos).
     X = preparar_X(datos, features)
@@ -839,8 +993,8 @@ def ajustar_modelo_ml(df: pd.DataFrame, semilla: int, filas_ols: pd.Index | None
 
     comparacion: dict[str, Any] = {}
     if filas_ols is not None and len(filas_ols):
-        sub = df.loc[filas_ols]
-        vars_ols = [*VARIABLES_OLS_NUMERICAS, "tipo_habitacion", "licencia_tipo", "neighbourhood_group_cleansed",
+        sub = anadir_derivadas_modelo(df.loc[filas_ols])
+        vars_ols = [*VARIABLES_OLS_NUMERICAS, *VARIABLES_OLS_INE, "tipo_habitacion", "licencia_tipo", "ciudad",
                     "mes_cotizacion"]
         part_ols = particiones_por_anfitrion(sub["host_id"], config.N_FOLDS_ML, semilla)
         comparacion = {
@@ -858,8 +1012,13 @@ def ajustar_modelo_ml(df: pd.DataFrame, semilla: int, filas_ols: pd.Index | None
                       "raras aprendidas dentro del Pipeline solo con el train de cada partición",
         "cv": cv, "cv_base": principal["base"], "aleatorio": aleatorio,
         "caida_r2_aleatorio_a_grupos": aleatorio["r2"] - cv["r2_media"],
+        "cv_sin_ine": cv_sin_ine, "features_ine": list(config.VARIABLES_INE_ML),
+        "aporte_r2_ine": cv["r2_media"] - cv_sin_ine["r2_media"],
         "comparacion_misma_muestra": comparacion,
         "importancia_permutacion": principal["importancia"][:10],
+        "importancia_completa": principal["importancia"],
+        "rango_ine_en_importancia": min(i for i, r in enumerate(principal["importancia"], 1)
+                                         if r["variable"] in config.VARIABLES_INE_ML),
         "nota": "Importancia predictiva (media de las particiones), no causal. El MAE en € tras exp() tiene sesgo "
                 "de retransformación y lo dominan pocos anuncios extremos; la mediana del error absoluto es robusta.",
     }
