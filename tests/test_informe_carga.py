@@ -104,6 +104,20 @@ def test_verificador_enlaces_y_placeholders(tmp_path):
     assert vc.placeholders("Todo correcto") == []
 
 
+def test_lotes_de_subida_cubren_todo_y_respetan_limites():
+    spec = importlib.util.spec_from_file_location("verificar_subida", config.RAIZ / "scripts" / "verificar_subida.py")
+    vs = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(vs)
+    archivos = vs.recorrer()
+    lotes = vs.proponer_lotes(archivos)
+    assert sorted(p for _, lista in lotes for p in lista) == sorted(archivos)
+    assert all(len(lista) <= config.LOTE_SUBIDA_ARCHIVOS for _, lista in lotes)
+    # Ningún lote supera el peso orientativo salvo que lo imponga un único archivo
+    assert all(vs._peso(lista) <= config.LOTE_SUBIDA_BYTES or len(lista) == 1 for _, lista in lotes)
+    rel = {p.relative_to(config.RAIZ).as_posix() for p in archivos}
+    assert "dashboard/Dashboard_Airbnb_Espana.xlsx" in rel and not any(r.startswith(".agents/") for r in rel)
+
+
 def test_lint_plantilla_detecta_literal():
     assert vc.lint_plantilla("Hay 23.109 anuncios") != []
     assert vc.lint_plantilla('Hay {{ cifra("a", "n0") }} anuncios, IC 95 %, H0 y `x_365`') == []
