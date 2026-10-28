@@ -16,6 +16,7 @@ Proyecto final del Máster en Data Analytics. Une dos fuentes públicas, los anu
 | Análisis descriptivo | Nacional y por ciudad: precios, tipos, capacidad, anfitriones, licencias, ocupación, mapas y correlaciones | [notebooks/01_eda.ipynb](notebooks/01_eda.ipynb), [src/analisis.py](src/analisis.py) |
 | Análisis estadístico | Kruskal-Wallis y Dunn-Bonferroni, Mann-Whitney, chi-cuadrado, bootstrap por anfitrión y por distrito, Spearman renta-precio, OLS con efectos fijos de ciudad y errores agrupados, VIF/GVIF, Holm, modelo ML con validación agrupada y sensibilidades | [notebooks/02_analisis_estadistico.ipynb](notebooks/02_analisis_estadistico.ipynb), [src/estadistica.py](src/estadistica.py) |
 | Visualización | <!--f:meta.parametros.n_figuras:n0-->20<!--/f--> figuras con matplotlib y seaborn | [reports/figures/](reports/figures/), [src/visualizacion.py](src/visualizacion.py) |
+| Dashboard operativo (Excel) | Libro de Excel sin macros generado desde los datos finales: selectores de ciudad y tipo, KPI y gráficos nativos que se recalculan con fórmulas, comparador de anuncios, renta y precio por ciudad, resumen por ciudad y tabla de datos con filtros | [dashboard/Dashboard_Airbnb_Espana.xlsx](dashboard/Dashboard_Airbnb_Espana.xlsx), [dashboard/README_dashboard.md](dashboard/README_dashboard.md), [src/dashboard_excel.py](src/dashboard_excel.py) |
 | Informe explicativo | Metodología, resultados, limitaciones y recomendaciones | [reports/informe.md](reports/informe.md) |
 | README con pasos e informe | Este archivo | [README.md](README.md) |
 | Organización de carpetas | Ver la estructura más abajo | [requirements.txt](requirements.txt), [.gitignore](.gitignore), [LICENSE](LICENSE) |
@@ -31,6 +32,20 @@ Proyecto final del Máster en Data Analytics. Une dos fuentes públicas, los anu
 **Qué es el precio:** el precio por noche de una cotización fechada de Airbnb (entradas entre el <!--f:precio_naturaleza.checkin_min:fecha-->2026-09-17<!--/f--> y el <!--f:precio_naturaleza.checkin_max:fecha-->2027-09-28<!--/f-->), **con los descuentos ya aplicados** (el <!--f:precio_naturaleza.pct_con_descuento:pct1-->19,9 %<!--/f--> de las cotizaciones tiene alguno) y sin tasas. No es el precio pagado por un huésped.
 
 Todas las cifras de este README y del informe se generan desde [reports/findings.json](reports/findings.json). [scripts/verificar_consistencia.py](scripts/verificar_consistencia.py) comprueba que estos documentos **reproducen** findings.json (cada cifra marcada coincide, el texto se regenera idéntico, sin enlaces rotos ni números escritos a mano en las plantillas). Es una comprobación de transcripción: no comprueba que las interpretaciones sean ciertas; eso lo sostienen el análisis, sus supuestos y las sensibilidades del informe.
+
+## Dashboard
+
+[dashboard/Dashboard_Airbnb_Espana.xlsx](dashboard/Dashboard_Airbnb_Espana.xlsx) es un dashboard operativo en Excel (Excel 2016 o posterior y Microsoft 365, sin macros; no necesita Python). Se genera con el pipeline desde el conjunto final y `findings.json`, sin cifras escritas a mano. Contiene:
+
+- **Dashboard:** desplegables de ciudad y tipo de alojamiento; tarjetas con anuncios con precio, mediana, media, P25 y P75, % superhost, % de anuncios de anfitriones con varios anuncios y renta neta media de la zona; gráficos de mediana por ciudad, anuncios por tramo de precio, mediana por tipo, anuncios por capacidad y renta frente a precio por distrito censal. Todo se recalcula con fórmulas nativas al cambiar los desplegables.
+- **Comparador:** ciudad + tipo + capacidad → precio típico de anuncios comparables, con aviso si hay menos de <!--f:meta.parametros.min_n_grupo:n0-->30<!--/f--> anuncios.
+- **Renta y precio**, **Resumen ciudades**, **Datos** (tabla de Excel con los <!--f:descriptivo.precio.n:n0-->89.614<!--/f--> anuncios con precio, sin datos personales) y **Cálculos** (tablas auxiliares de los gráficos).
+
+Guía de uso, compatibilidad y limitaciones: [dashboard/README_dashboard.md](dashboard/README_dashboard.md).
+
+![Vista previa generada con Python de los gráficos del dashboard (no es una captura de Excel)](reports/figures/dashboard_vista_previa.png)
+
+*Vista previa generada con Python de los gráficos del dashboard (no es una captura de Excel).*
 
 ## Datos
 
@@ -54,7 +69,7 @@ Todas las cifras de este README y del informe se generan desde [reports/findings
 ├─ src/                            módulos reutilizables (type hints y docstrings)
 │  ├─ fuentes.py                   descarga, lectura y unión de las dos fuentes
 │  ├─ limpieza.py  features.py  calidad.py  diccionario.py
-│  ├─ analisis.py  estadistica.py  visualizacion.py  informe.py
+│  ├─ analisis.py  estadistica.py  visualizacion.py  informe.py  dashboard_excel.py
 │  ├─ carga.py  config.py  formato.py  geo.py  errores.py
 │  └─ plantillas/                  plantillas Jinja2 del README y del informe
 ├─ notebooks/                      01_eda.ipynb y 02_analisis_estadistico.ipynb (ejecutados, con salidas)
@@ -64,7 +79,10 @@ Todas las cifras de este README y del informe se generan desde [reports/findings
 │  ├─ findings.json                todas las cifras calculadas
 │  ├─ calidad_datos.json           calidad antes/después, global y por ciudad
 │  ├─ diccionario_datos.md         diccionario de columnas con su fuente
-│  └─ figures/                     figuras PNG
+│  └─ figures/                     figuras PNG (incluida la vista previa del dashboard)
+├─ dashboard/
+│  ├─ Dashboard_Airbnb_Espana.xlsx dashboard operativo en Excel (generado por src/dashboard_excel.py)
+│  └─ README_dashboard.md          guía del dashboard
 ├─ scripts/                        recuentos y verificaciones independientes, ejecución de notebooks
 └─ tests/                          tests de pytest
 ```
@@ -74,8 +92,8 @@ Todas las cifras de este README y del informe se generan desde [reports/findings
 Requiere Python 3.13 y Git.
 
 ```bash
-git clone https://github.com/diegopellegrini1/Proyecto-Final-Airbnb-Madrid.git
-cd Proyecto-Final-Airbnb-Madrid
+git clone https://github.com/diegopellegrini1/Proyecto-Final-Airbnb-Espana.git
+cd Proyecto-Final-Airbnb-Espana
 ```
 
 Windows (PowerShell):
@@ -99,10 +117,11 @@ pip install -r requirements.txt
 ## Ejecución
 
 ```bash
-python run_pipeline.py --sin-descarga   # todo desde data/raw, sin red: unión, limpieza, análisis, figuras, documentos y notebooks
+python run_pipeline.py --sin-descarga   # todo desde data/raw, sin red: unión, limpieza, análisis, figuras, dashboard, documentos y notebooks
 python -B -m pytest -q                  # tests (-B: sin __pycache__)
 ```
 
+- Etapas: unión de las dos fuentes, perfil de calidad antes, limpieza por ciudad, variables derivadas, conjunto final, perfil de calidad después, análisis descriptivo y estadístico, figuras, `findings.json`, **dashboard de Excel** (`src/dashboard_excel.py`: libro, vista previa y guía en `dashboard/`), documentos, notebooks y verificación de consistencia. Solo el dashboard: `python -m src.dashboard_excel`.
 - Sin `--sin-descarga`, el pipeline usa `data/raw` si sus hashes coinciden con los manifiestos y solo descarga si falta algo. `--forzar-descarga` vuelve a buscar los snapshots más recientes (pueden cambiar las cifras).
 - Otras opciones: `--semilla`, `--n-boot`, `--sin-ml`, `--sin-notebooks`, `--sin-verificacion`. Los tiempos de cada etapa quedan en `reports/findings.json`.
 - Recuentos y comprobaciones independientes (no importan `src/`): `python scripts/contar_filas_espana.py` y `python scripts/recalcular_cifras.py`.
@@ -133,6 +152,7 @@ Este proyecto se desarrolló con un asistente de IA, que escribió el código, l
 
 - Los `listings.csv.gz` de `data/raw/inside_airbnb/` son los ficheros de Inside Airbnb **sin modificar** (se conservan para reproducir el análisis sin conexión y verificar su hash) de las <!--f:descriptivo.n_ciudades:n0-->9<!--/f--> ciudades y regiones. Contienen datos **públicos** de los anfitriones tal como aparecen en Airbnb (nombre, URL y foto de perfil, descripción y ubicación declarada), redistribuidos por Inside Airbnb.
 - El conjunto procesado (`data/processed/`) **no incluye** nombres, URLs, descripciones ni la ubicación declarada de los anfitriones. Conserva `host_id` (identificador numérico público de Airbnb) porque es imprescindible para el análisis: agrupar los errores de la regresión, validar el modelo sin repetir anfitriones entre entrenamiento y prueba, el bootstrap por anfitrión y la composición de la oferta.
+- El dashboard de Excel solo incluye columnas de los anuncios con precio necesarias para el análisis: sin nombres, URLs, fotos, coordenadas ni `host_id`.
 - Los datos del INE son agregados estadísticos por territorio (distrito censal y municipio), sin datos de personas.
 - No se cruzan los datos con otras fuentes de personas ni se intenta reidentificar a nadie.
 

@@ -293,12 +293,14 @@ Son hipótesis que se desprenden de asociaciones observadas, no efectos demostra
 - **Licencias:** se clasifican por el texto que muestra el anuncio, sin verificar en registros oficiales.
 - **Observacional:** correlación no implica causalidad; anuncios de un mismo anfitrión o de un mismo distrito no son independientes (se tiene en cuenta con errores agrupados y bootstrap por clusters).
 
-## 9. Reproducibilidad
+## 9. Dashboard y reproducibilidad
+
+Los resultados de este informe se pueden explorar en el dashboard operativo de Excel, [dashboard/Dashboard_Airbnb_Espana.xlsx](../dashboard/Dashboard_Airbnb_Espana.xlsx): selectores de ciudad y tipo de alojamiento con indicadores y gráficos que se recalculan con fórmulas nativas, un comparador por ciudad, tipo y capacidad (con aviso si hay menos de <!--f:meta.parametros.min_n_grupo:n0-->30<!--/f--> anuncios), la correlación renta-precio por ciudad y una tabla con los anuncios con precio. Guía: [dashboard/README_dashboard.md](../dashboard/README_dashboard.md).
 
 ```bash
 python run_pipeline.py --sin-descarga
 ```
 
-Regenera el conjunto final, las figuras, `reports/findings.json`, este informe, el README, el diccionario y los notebooks, y ejecuta `scripts/verificar_consistencia.py`. Semilla: <!--f:meta.semilla:n0-->42<!--/f-->; remuestreos bootstrap: <!--f:meta.n_boot:n0-->2.000<!--/f-->.
+Regenera el conjunto final, las figuras, `reports/findings.json`, el dashboard de Excel, este informe, el README, el diccionario y los notebooks, y ejecuta `scripts/verificar_consistencia.py`. Semilla: <!--f:meta.semilla:n0-->42<!--/f-->; remuestreos bootstrap: <!--f:meta.n_boot:n0-->2.000<!--/f-->.
 
 Fuentes: Inside Airbnb (Creative Commons Attribution 4.0 International (CC BY 4.0)) e INE. Elaboración propia con datos extraídos del sitio web del INE: www.ine.es. Última actualización del ADRH: <!--f:dataset.fuente_ine.actualizacion.fecha:fecha-->2026-10-19<!--/f-->.
