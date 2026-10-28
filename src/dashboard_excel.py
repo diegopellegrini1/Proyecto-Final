@@ -964,7 +964,14 @@ def vista_previa(resultado: dict[str, Any], findings: dict[str, Any], ruta: Path
     import matplotlib.pyplot as plt
     from matplotlib.ticker import FuncFormatter
 
-    sel = sel or Seleccion()
+    # Estilo por defecto de matplotlib: la imagen no depende del estilo que hayan fijado otras etapas.
+    with plt.style.context("default"):
+        _dibujar_vista_previa(resultado, findings, ruta, sel or Seleccion(), plt, FuncFormatter)
+
+
+def _dibujar_vista_previa(resultado: dict[str, Any], findings: dict[str, Any], ruta: Path, sel: Seleccion,
+                          plt: Any, FuncFormatter: Any) -> None:  # noqa: N803
+    """Dibuja y guarda la vista previa (llamada dentro de un contexto de estilo fijo)."""
     t, kpi = resultado["tablas"], resultado["kpi"]
     eur = FuncFormatter(lambda x, _: formato.eur0(x))
     miles = FuncFormatter(lambda x, _: formato.n0(x))

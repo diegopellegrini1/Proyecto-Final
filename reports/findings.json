@@ -105,7 +105,7 @@
       "openpyxl": "3.1.5",
       "xlsxwriter": "3.2.9"
     },
-    "generado_utc": "2026-10-28T12:56:26+00:00"
+    "generado_utc": "2026-10-28T13:40:54+00:00"
   },
   "dataset": {
     "filas_union": 109437,
@@ -6997,7 +6997,7 @@
         {
           "termino": "C(licencia, Treatment('Sin licencia'))[T.Otro / en proceso]",
           "nombre": "Licencia: Otro / en proceso",
-          "vif": 1.0101490848312749
+          "vif": 1.0101490848309767
         }
       ],
       "vif_max": {
@@ -8611,16 +8611,16 @@
   ],
   "rendimiento": {
     "etapas_s": {
-      "1. Dos fuentes (Inside Airbnb + INE) y unión por sección censal": 42.688671599999,
-      "2. Perfil de calidad «antes» (global y por ciudad)": 1.4983259999989968,
-      "3. Limpieza por ciudad": 31.48409879999963,
-      "4. Variables derivadas": 1.6682079000001977,
-      "5. Selección de columnas, requisitos (≥ 50.000 × 20) y guardado": 0.8774634000001242,
-      "6. Perfil de calidad «después» (global y por ciudad)": 0.7000489000001835,
-      "7. Análisis descriptivo y estadístico": 276.56406529999913,
-      "8. Figuras": 13.514532600000166
+      "1. Dos fuentes (Inside Airbnb + INE) y unión por sección censal": 50.663924500000576,
+      "2. Perfil de calidad «antes» (global y por ciudad)": 2.40600429999904,
+      "3. Limpieza por ciudad": 27.77435669999977,
+      "4. Variables derivadas": 1.319195399999444,
+      "5. Selección de columnas, requisitos (≥ 50.000 × 20) y guardado": 0.9106716999995115,
+      "6. Perfil de calidad «después» (global y por ciudad)": 0.6703646000023582,
+      "7. Análisis descriptivo y estadístico": 453.89689389999694,
+      "8. Figuras": 16.68615789999967
     },
-    "total_computo_s": 368.9954144999974
+    "total_computo_s": 554.3275689999973
   },
   "afirmaciones": {
     "dataset_cumple_requisitos": true,
