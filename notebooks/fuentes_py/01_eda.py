@@ -1,26 +1,30 @@
 # %% [markdown]
-# # 01 · Análisis exploratorio (EDA): Airbnb en Madrid
+# # 01 · Análisis exploratorio: Airbnb en España y renta de la zona
 #
 # ## Introducción
 #
-# Este notebook recorre el análisis exploratorio del proyecto final del Máster en Data Analytics. La pregunta de
-# fondo es doble: **con qué se asocia el precio por noche** de un anuncio de Airbnb en Madrid y **cómo está
-# organizada la oferta** (qué se alquila, dónde y quién lo alquila). Antes de cualquier contraste formal conviene
-# mirar los datos con calma: cómo se distribuye el precio, qué columnas faltan, qué grupos son pequeños y qué
-# relaciones aparecen a simple vista.
+# Este notebook recorre la parte exploratoria del proyecto final del Máster en Data Analytics. La pregunta de
+# negocio es **qué explica el precio por noche de un alojamiento turístico en España y cómo se relaciona con la
+# renta de la zona en la que está**. Para responderla se combinan dos fuentes públicas e independientes:
 #
-# El notebook **no repite la limpieza**. Lee el dataset procesado (`data/processed/listings_limpio.parquet`) y los
-# resultados (`reports/findings.json`) que genera `python run_pipeline.py`, y llama a las mismas funciones de
-# `src/` que el pipeline, de modo que las cifras del notebook y las del informe salen del mismo código. Además de
-# leer resultados, aquí se calculan **operaciones pandas explícitas** (`describe`, `value_counts`,
-# `groupby().agg`, `crosstab`, `pivot_table`, `merge`) directamente sobre el DataFrame, para que se vea cómo se
-# obtienen las tablas.
+# 1. **Inside Airbnb**, que publica los anuncios visibles en Airbnb el día del scrape para nueve ciudades y regiones
+#    españolas (Madrid, Barcelona, Valencia, Sevilla, Málaga, Girona, Mallorca, Menorca y Euskadi).
+# 2. **El Atlas de Distribución de Renta de los Hogares (ADRH) del INE**, con la renta, la desigualdad y varios
+#    indicadores demográficos por municipio y por distrito censal.
 #
-# Una advertencia de lectura que vale para todo el notebook: los datos son **observacionales**. Cuando decimos que
-# el precio «se asocia» con algo, no afirmamos que ese algo lo cause. Las interpretaciones que siguen a cada figura
-# se generan con cifras leídas de `findings.json` o calculadas en la propia celda; ninguna está escrita a mano.
+# El recorrido es el de cualquier análisis de datos: cargar las dos fuentes y comprobar qué contienen, unirlas,
+# revisar la calidad antes y después de limpiar, y describir el conjunto final con tablas y figuras. El análisis
+# estadístico formal (contrastes, regresión y modelo predictivo) está en el notebook `02_analisis_estadistico`.
 #
-# Se genera desde `notebooks/fuentes_py/01_eda.py` con `python scripts/ejecutar_notebooks.py`.
+# **Cómo se calculan las cifras.** Las cifras que aparecen en el texto salen de dos sitios: de
+# `reports/findings.json`, que genera `python run_pipeline.py`, o de operaciones pandas hechas en la propia celda.
+# Ninguna está escrita a mano. Además de leer resultados, aquí se hacen operaciones pandas explícitas
+# (`groupby().agg`, `crosstab`, `merge` y `pivot_table`) para que se vea cómo se construyen las tablas.
+#
+# **Una advertencia que vale para todo el notebook:** los datos son observacionales. Cuando se dice que el
+# precio «se asocia» con algo, no se afirma que ese algo lo cause.
+#
+# El notebook se genera desde `notebooks/fuentes_py/01_eda.py` con `python scripts/ejecutar_notebooks.py`.
 
 # %%
 import sys
@@ -31,19 +35,23 @@ RAIZ = Path.cwd().parent if Path.cwd().name == "notebooks" else Path.cwd()
 sys.path.insert(0, str(RAIZ))
 
 import json
+import logging
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from IPython.display import Markdown, display
 
-from src import analisis, carga, config, formato as fmt, visualizacion as viz
+from src import config, formato as fmt, fuentes, visualizacion as viz
+from src.analisis import ETIQUETAS_VARIABLES, NOMBRE_CIUDAD
 
+logging.disable(logging.WARNING)
 %matplotlib inline
 viz.configurar_estilo()
-plt.rcParams["figure.dpi"] = 72  # imágenes incrustadas ligeras (las figuras del informe se guardan a 150 dpi)
+plt.rcParams["figure.dpi"] = 60  # imágenes incrustadas ligeras (las del informe se guardan a 150 dpi)
 pd.set_option("display.max_columns", 30)
+pd.set_option("display.width", 160)
 
-df = pd.read_parquet(config.RUTA_PARQUET)
 with open(config.RUTA_FINDINGS, encoding="utf-8") as f:
     findings = json.load(f)
 with open(config.RUTA_CALIDAD, encoding="utf-8") as f:
@@ -55,369 +63,351 @@ def lectura(texto: str) -> None:
     """Muestra una interpretación en Markdown (las cifras van dentro del f-string, nunca a mano)."""
     display(Markdown(texto))
 
+# %% [markdown]
+# ## 1. Fuente 1: los anuncios de Inside Airbnb
+#
+# Cada ciudad tiene su propio `listings.csv.gz`. La función `fuentes.leer_listings_espana` comprueba antes el hash
+# SHA-256 de cada fichero contra el manifiesto (para estar seguros de que se analiza exactamente lo descargado) y
+# los concatena, añadiendo dos columnas: la ciudad y la fecha del snapshot. Con `groupby().agg` se resume cuántos
+# anuncios hay por ciudad, cuántos publican precio y en qué fecha se tomó cada snapshot.
 
-print(f"Dataset procesado: {fmt.n0(df.shape[0])} filas × {fmt.n0(df.shape[1])} columnas")
+# %%
+listings = fuentes.leer_listings_espana()
+precio_texto = listings["price"].astype("string").str.replace(r"[$,]", "", regex=True)
+listings["precio_num"] = pd.to_numeric(precio_texto, errors="coerce")
+resumen_fuente1 = (listings.groupby("ciudad")
+                   .agg(anuncios=("id", "size"), con_precio=("precio_num", lambda s: (s > 0).sum()),
+                        snapshot=("fecha_snapshot", "first"), anfitriones=("host_id", "nunique"))
+                   .rename(index=NOMBRE_CIUDAD))
+resumen_fuente1.loc["Total"] = [resumen_fuente1["anuncios"].sum(), resumen_fuente1["con_precio"].sum(), "",
+                                listings["host_id"].nunique()]
+print(f"Inside Airbnb: {fmt.n0(listings.shape[0])} anuncios × {fmt.n0(listings.shape[1] - 1)} columnas")
+resumen_fuente1
+
+# %%
+grande = resumen_fuente1.drop(index="Total")["anuncios"].astype(int)
+lectura(f"**Lectura.** La fuente 1 aporta {fmt.n0(grande.sum())} anuncios. La zona con más anuncios es "
+        f"{grande.idxmax()} ({fmt.n0(grande.max())}) y la que menos {grande.idxmin()} ({fmt.n0(grande.min())}). "
+        f"Los snapshots se tomaron entre el {findings['meta']['snapshot_min']} y el {findings['meta']['snapshot_max']}: "
+        "son fotos casi simultáneas, pero no idénticas, y por eso se conserva la fecha de cada una. Una parte de los "
+        "anuncios no publica precio; se verá más abajo que esos huecos no son aleatorios.")
 
 # %% [markdown]
-# ## 1. Datos y requisitos mínimos
+# ## 2. Fuente 2: la renta del INE
 #
-# El primer paso es comprobar que el conjunto de datos cumple los requisitos del proyecto: un volumen suficiente
-# de filas y columnas y variedad de tipos de variable (numéricas, categóricas, fechas, texto y coordenadas). La
-# clasificación por tipo se hace por código en `src/calidad.py` sobre el fichero original, no a ojo.
+# El ADRH se publica en tablas provinciales en formato largo: una fila por territorio, indicador y año.
+# `fuentes.leer_adrh` las lee todas (verificando también sus hashes) y `fuentes.elegir_anio_adrh` elige el año
+# más reciente en el que todos los indicadores tienen dato en la mayoría de los distritos. Con `pivot_table` se
+# pasa del formato largo a una tabla ancha, con una columna por indicador, que es la forma que necesita la unión.
 
 # %%
-meta, dataset = findings["meta"], findings["dataset"]
-print("Snapshot (fecha de la URL):", meta["fecha_snapshot_url"])
-print("Fechas de scrape (last_scraped):", meta["last_scraped_min"][:10], "→", meta["last_scraped_max"][:10])
-print("Licencia:", dataset["licencia"]["nombre"], "| verificada en la página:", dataset["licencia"]["verificada_en_pagina"])
-tipos = pd.Series(dataset["tipos_raw"], name="columnas").sort_values(ascending=False)
-tipos.to_frame().assign(pct=lambda t: (t["columnas"] / t["columnas"].sum() * 100).round(1))
+largo = fuentes.leer_adrh()
+anio = fuentes.elegir_anio_adrh(largo)
+print(f"ADRH: {fmt.n0(len(largo))} filas en formato largo; año elegido: {anio}")
+print("Niveles territoriales:", largo["nivel"].value_counts().to_dict())
+distritos_anio = largo[(largo["nivel"] == "distrito") & (largo["periodo"] == anio)
+                       & largo["indicador"].isin(config.INDICADORES_ADRH)]
+ancho = distritos_anio.pivot_table(index="codigo", columns="indicador", values="valor", aggfunc="first")
+ancho = ancho.rename(columns=config.INDICADORES_ADRH)
+ancho[["renta_neta_persona", "renta_mediana_uc", "gini", "edad_media", "pct_hogares_unipersonales"]].describe().round(1)
 
 # %%
-lectura(f"**Lectura.** El fichero original tiene {fmt.n0(dataset['filas_raw'])} anuncios y "
-        f"{fmt.n0(dataset['columnas_raw'])} columnas; la tabla anterior suma exactamente "
-        f"{fmt.n0(tipos.sum())} columnas repartidas en {len(tipos)} tipos lógicos, entre ellos "
-        f"{fmt.n0(dataset['tipos_raw']['identificador'])} identificadores. Predominan las numéricas "
-        f"({fmt.n0(dataset['tipos_raw']['numerico'])}), lo esperable en un scrape con muchas métricas de "
-        "disponibilidad y reseñas.")
+lectura(f"**Lectura.** Para {anio} hay {fmt.n0(len(ancho))} distritos censales con datos en las provincias "
+        f"descargadas. La renta neta media por persona va de {fmt.eur0(ancho['renta_neta_persona'].min())} a "
+        f"{fmt.eur0(ancho['renta_neta_persona'].max())} y su mediana es "
+        f"{fmt.eur0(ancho['renta_neta_persona'].median())}. Es una variedad suficiente como para preguntarse si los "
+        "anuncios de zonas más ricas son más caros. Conviene recordar que es renta de "
+        f"{anio} y que los anuncios son de 2026: es contexto socioeconómico de la zona, no un dato simultáneo.")
 
 # %% [markdown]
-# ## 2. Calidad de datos antes y después de limpiar
+# ## 3. Unión de las dos fuentes
 #
-# La limpieza sigue un orden documentado: perfilar, convertir tipos, derivar variables, eliminar columnas y aplicar
-# reglas de calidad. Cada regla registra cuántas filas afecta. Comparar el perfil «antes» y «después» permite ver
-# que la limpieza no ha perdido filas sin contabilizarlas y que los nulos que quedan tienen una decisión explícita
-# (conservar, imputar con indicador o eliminar la columna).
+# Inside Airbnb y el INE no comparten ningún identificador. La unión es geográfica: cada anuncio se sitúa en la
+# sección censal que contiene sus coordenadas (punto en polígono con el seccionado oficial del INE). El código de
+# sección tiene diez dígitos; los siete primeros son el distrito censal y los cinco primeros el municipio, que son
+# las claves del ADRH. El cálculo geométrico ya está hecho y guardado en `data/interim/asignacion_secciones.csv.gz`,
+# así que aquí se reproduce la unión con un `merge` explícito.
 
 # %%
-resumen = pd.DataFrame({
-    "antes": {k: calidad["antes"][k] for k in ("filas", "columnas", "nulos_total", "pct_nulos_total", "columnas_con_nulos")},
-    "después": {k: calidad["despues"][k] for k in ("filas", "columnas", "nulos_total", "pct_nulos_total", "columnas_con_nulos")},
-})
-resumen
+asignacion = fuentes.asegurar_asignacion(listings)
+base = listings.merge(asignacion[["ciudad", "id", "codigo_seccion_ine"]], on=["ciudad", "id"], how="left",
+                      validate="one_to_one")
+base["codigo_distrito_ine"] = base["codigo_seccion_ine"].astype("string").str[:7]
+renta_distrito = ancho[["renta_neta_persona", "gini"]].add_prefix("ine_dis_")
+unido_nb = base.merge(renta_distrito, left_on="codigo_distrito_ine", right_index=True, how="left",
+                      validate="many_to_one")
+tasa = (unido_nb.assign(con_ine=unido_nb["ine_dis_renta_neta_persona"].notna())
+        .groupby("ciudad")["con_ine"].agg(anuncios="size", con_dato_ine="sum", pct="mean")
+        .rename(index=NOMBRE_CIUDAD))
+tasa["pct"] = (tasa["pct"] * 100).round(2)
+print(f"Filas antes y después del merge: {fmt.n0(len(listings))} → {fmt.n0(len(unido_nb))}")
+tasa
 
 # %%
-pd.Series(calidad["reglas"], name="filas afectadas").to_frame()
-
-# %%
-pd.DataFrame(calidad["politica_nulos"])[["columna", "nulos", "decision"]].head(20)
-
-# %%
-perfil_antes = {"nulos_por_columna_pct": (carga.leer_listings().isna().mean() * 100).to_dict()}
-viz.fig_calidad_nulos(perfil_antes);
-
-# %%
-nulos = pd.Series(perfil_antes["nulos_por_columna_pct"])
-lectura(f"**Lectura.** {fmt.n0((nulos == 100).sum())} columnas vienen completamente vacías en este snapshot "
-        f"(en rojo) y se eliminan con su motivo. El precio falta en el {fmt.pct1(findings['limpieza']['precio']['pct_nulo'])} "
-        f"de los anuncios, y el {fmt.pct1(findings['limpieza']['precio']['pct_nulos_sin_disponibilidad'])} de esos "
-        "nulos corresponde a anuncios sin ningún día disponible: los nulos no son aleatorios, por eso el precio no "
-        "se imputa y el análisis describe solo la oferta reservable.")
+total = findings["dataset"]["union"]["total"]
+lectura(f"**Lectura.** El `merge` es un *left join*: no pierde ningún anuncio ({fmt.n0(len(unido_nb))} filas antes y "
+        f"después). Recibe dato del INE el {fmt.pct2(unido_nb['ine_dis_renta_neta_persona'].notna().mean() * 100)} "
+        f"de los anuncios, la misma cifra que calcula el pipeline ({fmt.pct2(total['pct_distrito'])}). Los "
+        f"{fmt.n0(findings['dataset']['union']['n_sin_emparejar'])} que quedan sin dato están casi todos en la costa "
+        "de las regiones: la anonimización de coordenadas de Airbnb desplaza algunos puntos al mar, fuera de toda "
+        "sección. Se conservan con valores vacíos en lugar de borrarlos o de asignarles una zona inventada. Como "
+        f"validación, la unidad asignada coincide con la que declara Inside Airbnb en el "
+        f"{fmt.pct2(findings['dataset']['union']['concordancia_total']['pct_coinciden'])} de los anuncios validados.")
 
 # %% [markdown]
-# ## 3. Qué es exactamente el precio
+# ## 4. Calidad de datos antes y después de limpiar
 #
-# Antes de describir el precio hay que saber qué mide. En Inside Airbnb, `price` es el precio por noche de una
-# **cotización concreta**: Airbnb calcula cuánto costaría una estancia en unas fechas determinadas (normalmente la
-# primera ventana reservable, con la duración mínima del anuncio). Ese precio ya lleva aplicados los descuentos
-# (semanal, mensual, de última hora) y no incluye tasas. Las cifras siguientes se calculan en la limpieza a partir
-# del JSON `price_quote_raw`.
+# El conjunto unido completo tiene muchas columnas que no hacen falta (URLs, textos largos, datos personales del
+# anfitrión) y problemas típicos de un scrape: precios en texto con símbolo de dólar, booleanos como `t`/`f`,
+# baños descritos en texto y nombres con doble codificación en Euskadi. La limpieza los resuelve con reglas
+# documentadas y cuenta cuántas filas afecta cada una, **también por ciudad**. Primero, el perfil global antes y
+# después.
 
 # %%
-pn = findings["precio_naturaleza"]
-pd.Series({k: v for k, v in pn.items() if k != "partidas_descuento"}, name="valor").to_frame()
+claves = ("filas", "columnas", "nulos_total", "pct_nulos_total", "columnas_con_nulos")
+pd.DataFrame({"antes (conjunto unido)": {k: calidad["antes"][k] for k in claves},
+              "después (conjunto final)": {k: calidad["despues"][k] for k in claves}})
 
 # %%
-lectura(f"**Lectura.** El {fmt.pct1(pn['pct_con_descuento'])} de las cotizaciones con precio incluye algún "
-        f"descuento (mediana {fmt.pct1(pn['mediana_pct_descuento'])} del subtotal). La estancia cotizada coincide "
-        f"con la estancia mínima en el {fmt.pct1(pn['pct_noches_igual_minimo'])} de los casos, y entre los anuncios "
-        f"con estancia mínima de {config.MIN_NIGHTS_LARGA_ESTANCIA} noches o más el "
-        f"{fmt.pct1(pn['pct_mensual_entre_min30'])} usa tarifa mensual. Es decir: el «precio por noche» mezcla "
-        "tarifas de estancia corta con tarifas mensuales repartidas, algo que habrá que controlar.")
+viz.fig_calidad_nulos(calidad);
+
+# %%
+nulos = pd.DataFrame({NOMBRE_CIUDAD[c]: v["antes"]["nulos_pct"] for c, v in calidad["por_ciudad"].items()}).T
+sin_distrito = nulos.index[nulos["neighbourhood_group_cleansed"] == 100].tolist()
+lectura(f"**Lectura.** El precio es la columna clave con más huecos: va del {fmt.pct1(nulos['price'].min())} en "
+        f"{nulos['price'].idxmin()} al {fmt.pct1(nulos['price'].max())} en {nulos['price'].idxmax()}. "
+        f"La columna de distrito está vacía por completo en {', '.join(sin_distrito)}: en esas zonas Inside Airbnb "
+        "solo informa del municipio o del barrio, y por eso el análisis compara ciudades con la ciudad y con el "
+        "distrito censal del INE, que sí existe en todas. Dormitorios, camas y baños apenas tienen huecos tras "
+        "reconstruirlos.")
 
 # %% [markdown]
-# ## 4. Distribución del precio
+# Las reglas de limpieza por ciudad muestran dónde se concentra cada problema. Las vallas de atípicos se calculan
+# una sola vez sobre el logaritmo del precio de todo el conjunto, para que «atípico» signifique lo mismo en todas
+# las ciudades; después se cuenta cuántos caen en cada una.
+
+# %%
+reglas = pd.DataFrame({NOMBRE_CIUDAD[c]: v["reglas"] for c, v in calidad["por_ciudad"].items()}).T
+reglas[["filas", "pct_precio_nulo", "precio_cero", "outliers_total", "pct_outliers", "larga_estancia",
+        "minimum_nights_extremo", "fuera_bbox_o_nulas"]].round(1)
+
+# %%
+lp = findings["limpieza"]
+lectura(f"**Lectura.** Las vallas de Tukey sobre ln(precio) quedan en {fmt.eur2(lp['outliers']['valla_inf'])} y "
+        f"{fmt.eur2(lp['outliers']['valla_sup'])}. {reglas['pct_outliers'].idxmax()} concentra la mayor proporción de "
+        f"atípicos ({fmt.pct1(reglas['pct_outliers'].max())} de sus anuncios con precio), lo que encaja con un mercado "
+        "de alojamientos caros que no tienen por qué ser errores: por eso se marcan pero no se borran, y el notebook 02 "
+        f"repite los análisis sin ellos. Las estancias mínimas de {config.MIN_NIGHTS_LARGA_ESTANCIA} noches o más pesan sobre todo en "
+        f"{reglas['larga_estancia'].idxmax()} ({fmt.n0(reglas['larga_estancia'].max())} anuncios), un mercado de "
+        "alquiler de temporada con precios por noche muy distintos. Ninguna coordenada cae fuera de la envolvente de "
+        "su ciudad. El precio no se imputa: el "
+        f"{fmt.pct1(lp['precio']['pct_nulos_sin_disponibilidad'])} de los precios vacíos son anuncios sin ningún día "
+        "disponible, así que el análisis de precio describe solo la oferta reservable (sesgo de selección).")
+
+# %% [markdown]
+# ## 5. El conjunto final
 #
-# Se describen solo los anuncios con precio publicado (`precio_valido`). La tabla compara el precio, el precio sin
-# outliers (vallas de Tukey sobre el logaritmo, que se marcan pero no se borran) y el logaritmo del precio, que es
-# la escala de la regresión. Usamos `describe` de pandas y, para la asimetría y la curtosis, la función del
-# proyecto; ambas se comprueban contra `findings.json`.
+# El conjunto final procesado se guarda en Parquet con una selección de columnas: las del anuncio que usa el
+# análisis, las claves de la unión y siete indicadores del INE por distrito y por municipio. El pipeline comprueba
+# que cumple los requisitos del enunciado (al menos 50.000 filas y 20 columnas) y se detiene si no. Aquí se lee y se
+# vuelve a comprobar.
 
 # %%
-con_precio = df[df["precio_valido"]]
-con_precio["price"].describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95, 0.99]).round(2)
+df = pd.read_parquet(config.RUTA_PARQUET)
+cp = df[df["precio_valido"]].assign(nombre_ciudad=lambda d: d["ciudad"].map(NOMBRE_CIUDAD))
+print(f"Conjunto final: {fmt.n0(df.shape[0])} filas × {fmt.n0(df.shape[1])} columnas "
+      f"({sum(c.startswith('ine_') for c in df.columns)} del INE)")
+print("¿Cumple ≥ 50.000 filas y ≥ 20 columnas?", df.shape[0] >= config.MIN_FILAS_UNION and df.shape[1] >= config.MIN_COLUMNAS_UNION)
+df.dtypes.astype(str).value_counts().to_frame("columnas")
 
-# %%
-desc = pd.DataFrame({
-    "precio": analisis.descriptivos(con_precio["price"]),
-    "precio sin outliers": analisis.descriptivos(con_precio.loc[~con_precio["es_outlier_precio"], "price"]),
-    "ln(precio)": analisis.descriptivos(con_precio["log_precio"]),
-})
-# Comprobación: el notebook reproduce las mismas cifras que findings.json.
-assert abs(desc.loc["mediana", "precio"] - D["precio"]["mediana"]) < 1e-9
-assert abs(desc.loc["asimetria", "precio"] - D["precio"]["asimetria"]) < 1e-9
-desc.round(2)
+# %% [markdown]
+# ## 6. Precio: distribución y ciudades
+#
+# **Qué es el precio.** `price` es el precio por noche de una cotización concreta que Inside Airbnb pide a Airbnb
+# para unas fechas. Ya incluye los descuentos aplicables y no incluye tasas. No es lo que pagó un huésped.
 
 # %%
 viz.fig_distribucion_precio(df);
 
 # %%
-lectura(f"**Lectura.** La mediana es {fmt.eur2(desc.loc['mediana', 'precio'])} y la media "
-        f"{fmt.eur2(desc.loc['media', 'precio'])}: la media queda por encima porque la cola derecha es muy larga "
-        f"(asimetría {fmt.n2(desc.loc['asimetria', 'precio'])}, máximo {fmt.eur0(desc.loc['max', 'precio'])}). "
-        f"En logaritmo la asimetría baja a {fmt.n2(desc.loc['asimetria', 'ln(precio)'])}, por eso la regresión "
-        "trabaja con `ln(precio)` y los contrastes de grupos usan rangos. La mediana es el resumen más honesto del "
-        "«precio típico».")
+p = cp["price"]
+lectura(f"**Lectura.** El precio es muy asimétrico: la mediana es {fmt.eur2(p.median())} y la media "
+        f"{fmt.eur2(p.mean())}, arrastrada por una cola de anuncios muy caros (el máximo es {fmt.eur0(p.max())}). "
+        f"La asimetría es {fmt.n2(D['precio']['asimetria'])}. En logaritmo la distribución es casi simétrica "
+        f"(asimetría {fmt.n2(D['log_precio']['asimetria'])}), por eso los modelos trabajan con ln(precio) y las "
+        "comparaciones usan contrastes basados en rangos.")
 
 # %% [markdown]
-# ### Sensibilidad: sin estancias mensuales
-#
-# Como el precio de las estancias de un mes o más suele ser una tarifa mensual repartida, repetimos los
-# descriptivos sin esos anuncios ni las cotizaciones mensuales. Si las conclusiones descriptivas cambiaran mucho,
-# habría que separar los dos mercados en todo el análisis.
+# Con `groupby().agg` se calcula el resumen de precio por ciudad. Se informan mediana y cuartiles porque la media
+# está muy influida por la cola de precios altos.
 
 # %%
-corta = con_precio[analisis.mascara_sin_mensuales(con_precio)]
-comparacion = pd.DataFrame({"todos": con_precio["price"].describe(), "sin estancias mensuales": corta["price"].describe()})
-comparacion.round(2)
+por_ciudad = (cp.groupby("nombre_ciudad")["price"]
+              .agg(n="size", mediana="median", media="mean", q1=lambda s: s.quantile(0.25),
+                   q3=lambda s: s.quantile(0.75))
+              .sort_values("mediana", ascending=False).round(1))
+por_ciudad
 
 # %%
-lectura(f"**Lectura.** Al quitar {fmt.n0(len(con_precio) - len(corta))} anuncios de estancia mensual, la mediana "
-        f"pasa de {fmt.eur2(con_precio['price'].median())} a {fmt.eur2(corta['price'].median())}. Los precios de "
-        "estancia corta son más altos por noche, como cabía esperar; el dashboard excluye por defecto ese mercado.")
+viz.fig_precio_por_ciudad(df);
+
+# %%
+lectura(f"**Lectura.** {por_ciudad.index[0]} es la zona más cara (mediana {fmt.eur0(por_ciudad['mediana'].iloc[0])}) "
+        f"y {por_ciudad.index[-1]} la más barata ({fmt.eur0(por_ciudad['mediana'].iloc[-1])}). Las cajas se solapan "
+        f"mucho: el ε² de Kruskal-Wallis por ciudad es {fmt.n3(E['kruskal_ciudad']['tamano_efecto']['valor'])}, así que "
+        "la ciudad explica una parte moderada de la variación y dentro de cada ciudad queda mucha. Las tres zonas más "
+        f"caras son {', '.join(por_ciudad.index[:3])}.")
 
 # %% [markdown]
-# ## 5. Otras variables clave
+# ## 7. Tipo de habitación y capacidad
 #
-# Capacidad, estancia mínima, disponibilidad, reseñas y valoración. Las variables de conteo suelen ser asimétricas y
-# con valores extremos (estancias mínimas de más de un año, anuncios con cientos de reseñas), lo que vuelve a
-# aconsejar medianas y rangos intercuartílicos.
+# `pd.crosstab` con `normalize="index"` da el reparto de tipos de habitación dentro de cada ciudad (cada fila suma
+# 100 %).
 
 # %%
-pd.DataFrame({c: analisis.descriptivos(df[c]) for c in
-              ["accommodates", "minimum_nights", "availability_365", "number_of_reviews", "review_scores_rating"]}).round(2)
-
-# %% [markdown]
-# ## 6. Precio por tipo de habitación, distrito, barrio y capacidad
-#
-# Aquí aparecen las primeras operaciones de agregación explícitas. `groupby().agg` calcula n, mediana, media y
-# cuartiles por grupo; `value_counts` muestra cuántos anuncios hay de cada tipo (incluidos los que no tienen precio).
+mix = (pd.crosstab(cp["nombre_ciudad"], cp["tipo_habitacion_agrupado"], normalize="index") * 100).round(1)
+mix.sort_values(mix.columns[0], ascending=False)
 
 # %%
-df["tipo_habitacion"].value_counts().to_frame("anuncios").assign(
-    pct=lambda t: (t["anuncios"] / t["anuncios"].sum() * 100).round(1))
+viz.fig_tipo_por_ciudad(findings);
 
 # %%
-por_tipo = (con_precio.groupby("tipo_habitacion", observed=True)["price"]
-            .agg(n="size", mediana="median", media="mean", q1=lambda s: s.quantile(0.25), q3=lambda s: s.quantile(0.75))
-            .sort_values("mediana", ascending=False))
-assert por_tipo["mediana"].round(6).tolist() == [round(g["mediana"], 6) for g in D["por_tipo"]]
-por_tipo.round(2)
+entero = mix["Alojamiento entero"]
+lectura(f"**Lectura.** El alojamiento entero domina en todas partes, pero con diferencias: es el "
+        f"{fmt.pct1(entero.max())} de los anuncios con precio en {entero.idxmax()} y solo el "
+        f"{fmt.pct1(entero.min())} en {entero.idxmin()}, donde las habitaciones privadas tienen más peso. Esto "
+        "importa para comparar ciudades: parte de la diferencia de precio entre ciudades es una diferencia en el "
+        "tipo de producto, y por eso la regresión del notebook 02 controla el tipo de habitación.")
 
 # %%
 viz.fig_precio_por_tipo(df);
-
-# %%
-mayor, menor = por_tipo.index[0], por_tipo.index[-1]
-lectura(f"**Lectura.** La mediana más alta es la de {mayor.lower()} ({fmt.eur2(por_tipo.loc[mayor, 'mediana'])}, "
-        f"n = {fmt.n0(por_tipo.loc[mayor, 'n'])}) y la más baja la de {menor.lower()} "
-        f"({fmt.eur2(por_tipo.loc[menor, 'mediana'])}, n = {fmt.n0(por_tipo.loc[menor, 'n'])}). Las cajas casi no se "
-        "solapan entre alojamiento entero y habitación privada; los tipos con muy pocos anuncios se describen pero "
-        "se agrupan para la inferencia.")
-
-# %% [markdown]
-# ### Distritos
-#
-# Para los distritos usamos `pivot_table`, que cruza distrito y tipo de habitación con la mediana del precio. Así
-# se ve si un distrito es caro porque todo es caro o porque tiene más alojamientos enteros. Solo se ordenan los
-# distritos con al menos `MIN_N_GRUPO` anuncios con precio.
-
-# %%
-pivote = pd.pivot_table(con_precio, index="neighbourhood_group_cleansed", columns="tipo_habitacion_agrupado",
-                        values="price", aggfunc="median", observed=True)
-pivote["n"] = con_precio.groupby("neighbourhood_group_cleansed", observed=True).size()
-pivote = pivote[pivote["n"] >= config.MIN_N_GRUPO].sort_values("Alojamiento entero", ascending=False)
-pivote.round(1)
-
-# %%
-viz.fig_precio_por_distrito(findings);
-
-# %%
-d0, d1, db = D["por_distrito"][0], D["por_distrito"][1], D["distrito_mas_barato"]
-empate = E["top_distritos_empate"]
-lectura(f"**Lectura.** {d0['grupo']} ({fmt.eur2(d0['mediana'])}) y {d1['grupo']} ({fmt.eur2(d1['mediana'])}) tienen "
-        f"las medianas más altas y {db['grupo']} ({fmt.eur2(db['mediana'])}, n = {fmt.n0(db['n'])}) la más baja. "
-        + (f"Entre los dos primeros no hay diferencia estadística (Dunn-Bonferroni p = {fmt.n3(empate['p_ajustado'])}). "
-           if empate["empate"] else "")
-        + "La tabla cruzada muestra que el orden se mantiene en buena medida dentro del alojamiento entero, así que "
-          "no se explica solo por la mezcla de tipos.")
-
-# %% [markdown]
-# ### Barrios y capacidad
-#
-# Con más de un centenar de barrios, muchos tienen pocos anuncios y su mediana es inestable. La figura solo muestra barrios con al
-# menos `MIN_N_GRUPO` anuncios con precio y el informe da intervalos bootstrap para los extremos.
-
-# %%
-viz.fig_precio_por_barrio(df, config.MIN_N_GRUPO);
-
-# %%
-b = E["bootstrap"]["barrios_extremos"]
-lectura(f"**Lectura.** El barrio de mediana más alta es {b[0]['grupo']} ({fmt.eur2(b[0]['mediana'])}, n = "
-        f"{fmt.n0(b[0]['n'])}; IC 95 % por anfitrión {fmt.eur0(b[0]['ic_inf_cluster'])}–{fmt.eur0(b[0]['ic_sup_cluster'])}) "
-        f"y el de mediana más baja {b[2]['grupo']} ({fmt.eur2(b[2]['mediana'])}, n = {fmt.n0(b[2]['n'])}). "
-        + ("Sus intervalos se solapan con los del segundo barrio de cada lista, así que el orden exacto no es "
-           "distinguible." if not (E["bootstrap"]["barrio_top_distinguible"] and E["bootstrap"]["barrio_bottom_distinguible"])
-           else "Ambos se distinguen del segundo de su lista."))
-
-# %%
 viz.fig_precio_por_capacidad(findings);
 
 # %%
-cap = pd.DataFrame(D["por_capacidad"]).set_index("grupo")
-lectura(f"**Lectura.** La mediana sube con la capacidad, desde {fmt.eur2(cap['mediana'].iloc[0])} en "
-        f"{cap.index[0]} hasta {fmt.eur2(cap['mediana'].iloc[-1])} en {cap.index[-1]}. La capacidad es, además, la "
-        "variable más correlacionada con el precio (sección 10).")
+pt = cp.pivot_table(index="categoria_capacidad", columns="tipo_habitacion_agrupado", values="price",
+                    aggfunc="median", observed=True).round(0)
+pt
+
+# %%
+caps = D["por_capacidad"]
+lectura(f"**Lectura.** El precio crece con la capacidad en cada tramo: de {fmt.eur0(caps[0]['mediana'])} para "
+        f"{caps[0]['grupo']} a {fmt.eur0(caps[-1]['mediana'])} para {caps[-1]['grupo']}. La tabla dinámica "
+        "(`pivot_table`) muestra que el patrón se repite dentro del alojamiento entero, así que no se debe solo a que "
+        "las habitaciones privadas sean pequeñas. Los tipos minoritarios tienen pocos anuncios con precio "
+        f"({fmt.n0((cp['tipo_habitacion'] == 'Habitación de hotel').sum())} de hotel y "
+        f"{fmt.n0((cp['tipo_habitacion'] == 'Habitación compartida').sum())} compartidas), así que sus medianas por "
+        "tramo son poco estables.")
 
 # %% [markdown]
-# ### Fecha de la cotización
-#
-# Como cada anuncio se cotiza para fechas distintas, el precio mezcla temporadas. La tabla agrupa por mes de
-# entrada de la cotización.
+# ## 8. Anfitriones y licencias
 
 # %%
-por_mes = con_precio.groupby("mes_cotizacion")["price"].agg(n="size", mediana="median")
-por_mes.round(2)
-
-# %%
-lectura(f"**Lectura.** La mayoría de cotizaciones se concentra en los primeros meses "
-        f"({fmt.pct1(D['mes_cotizacion']['pct_primeros_dos_meses'])} en los dos primeros). Las medianas mensuales "
-        f"van de {fmt.eur2(D['mes_cotizacion']['mes_mediana_min']['mediana'])} a "
-        f"{fmt.eur2(D['mes_cotizacion']['mes_mediana_max']['mediana'])} entre los meses con suficientes anuncios; "
-        "por eso los modelos del notebook 02 incluyen el mes como control.")
-
-# %% [markdown]
-# ## 7. Composición de anfitriones
-#
-# Un mismo anfitrión puede tener muchos anuncios. Con `groupby("host_id").size()` contamos anuncios por anfitrión y
-# con `merge` añadimos ese recuento a cada anuncio para comparar el precio según el tamaño de la cartera. Tener
-# varios anuncios mide concentración de la oferta, no prueba gestión profesional.
-
-# %%
-por_host = df.groupby("host_id").size().rename("anuncios_del_host").reset_index()
-por_host["anuncios_del_host"].describe().round(2)
-
-# %%
-con_host = con_precio.merge(por_host, on="host_id", how="left", validate="many_to_one")
-con_host.groupby("segmento_host", observed=True).agg(
-    anuncios=("price", "size"), mediana=("price", "median"), pct_superhost=("host_is_superhost", "mean")).round(3)
-
-# %%
-viz.fig_composicion_hosts(df, findings);
+viz.fig_anfitriones(df, findings);
 
 # %%
 h = D["hosts"]
-lectura(f"**Lectura.** Hay {fmt.n0(h['n_hosts'])} anfitriones; el {fmt.pct1(h['pct_hosts_un_anuncio'])} tiene un solo "
-        f"anuncio, pero el {fmt.pct1(h['pct_anuncios_multianuncio'])} de los anuncios pertenece a cuentas con varios y "
-        f"el mayor tiene {fmt.n0(h['anuncios_por_host_max'])}. Es una oferta concentrada: por eso los contrastes del "
-        "notebook 02 tienen en cuenta la dependencia entre anuncios del mismo anfitrión.")
+lectura(f"**Lectura.** Hay {fmt.n0(h['n_hosts'])} anfitriones. El {fmt.pct1(h['pct_hosts_un_anuncio'])} tiene un solo "
+        f"anuncio, pero esos anfitriones pequeños suman poca oferta: el {fmt.pct1(h['pct_anuncios_multianuncio'])} de los "
+        "anuncios es de anfitriones con varios, y los "
+        f"{fmt.n0(h['n_hosts_top1pct'])} anfitriones con más anuncios (el uno por ciento) reúnen el "
+        f"{fmt.pct1(h['pct_anuncios_top1pct_hosts'])}. El histograma en doble escala logarítmica lo refleja: muchos "
+        "anfitriones con uno o dos anuncios y unos pocos con cientos. Tener varios anuncios no dice por sí solo quién "
+        "gestiona el alojamiento.")
+
+# %%
+viz.fig_licencias_por_ciudad(findings);
+
+# %%
+lic = pd.DataFrame(D["licencia_por_ciudad_pct"]).T
+lectura(f"**Lectura.** El porcentaje de anuncios sin ningún número de licencia va del "
+        f"{fmt.pct1(lic['Sin licencia'].min())} en {lic['Sin licencia'].idxmin()} al "
+        f"{fmt.pct1(lic['Sin licencia'].max())} en {lic['Sin licencia'].idxmax()}. Es lo que declara el texto del "
+        "anuncio, sin verificar en ningún registro oficial; además las exenciones (por ejemplo, el alquiler de "
+        "temporada) dependen de cada comunidad autónoma, así que no se puede leer como un porcentaje de ilegalidad.")
 
 # %% [markdown]
-# ### Tipo de habitación y superhost: tabla cruzada
+# ## 9. Ocupación (proxy)
 #
-# `crosstab` con `normalize="index"` da el porcentaje de superhosts dentro de cada tipo de habitación. Es la tabla
-# que después se contrasta con chi-cuadrado.
+# No hay datos de reservas. Se usan dos aproximaciones distintas: el porcentaje de días no disponibles en el
+# calendario de los próximos 365 días (mezcla reservas y bloqueos del anfitrión) y la ocupación que estima Inside
+# Airbnb para los últimos doce meses a partir de las reseñas.
 
 # %%
-pd.crosstab(df["tipo_habitacion_agrupado"], df["host_is_superhost"], normalize="index", margins=True).mul(100).round(1)
+viz.fig_ocupacion(df, findings);
+
+# %%
+oc = D["ocupacion"]
+lectura(f"**Lectura.** La media del proxy de días no disponibles es {fmt.pct1(oc['no_disponible_media'])} y la de "
+        f"Inside Airbnb {fmt.pct1(oc['ocupacion_inside_airbnb_media'])}. Que el proxy sea mayor es lo esperable: "
+        "incluye bloqueos y mira hacia delante. Ambas medidas apenas se correlacionan entre anuncios "
+        f"(ρ = {fmt.n2(oc['spearman'])}), así que ninguna debe leerse como ocupación real.")
 
 # %% [markdown]
-# ## 8. Mapas de densidad y de precio
+# ## 10. Distribución territorial: precio y renta
 #
-# La densidad muestra dónde hay más anuncios; la coropleta, la mediana del precio por barrio (en gris los barrios
-# con muy pocos anuncios). Las coordenadas están desplazadas por Airbnb unos cientos de metros, así que los mapas
-# sirven para patrones de zona, no para ubicaciones exactas.
+# Dos juegos de mapas pequeños, uno por ciudad, con escala de color común. El primero colorea cada anuncio por su
+# precio; el segundo por la renta neta por persona del distrito censal en que cae.
 
 # %%
-geojson = carga.leer_geojson()
-ciudad = config.CIUDADES[config.CIUDAD_POR_DEFECTO]
-viz.fig_mapa_densidad(df, geojson, ciudad.centro, ciudad.centro_nombre);
+viz.fig_mapa_precio(df);
 
 # %%
-viz.fig_mapa_precio_barrio(df, geojson, config.MIN_N_BARRIO_MAPA);
+viz.fig_mapa_renta(df);
 
 # %%
-centro = (df["neighbourhood_group_cleansed"] == ciudad.distrito_referencia).mean() * 100
-lectura(f"**Lectura.** El distrito {ciudad.distrito_referencia} concentra el {fmt.pct1(centro)} de los anuncios y la "
-        "densidad cae rápidamente al alejarse de la Puerta del Sol. Los barrios de mediana más alta están en el "
-        "centro y el norte; la relación con la distancia se cuantifica con la regresión del notebook 02.")
+renta_ciudad = (df.assign(nombre_ciudad=df["ciudad"].map(NOMBRE_CIUDAD))
+                .groupby("nombre_ciudad")[config.RENTA_PRINCIPAL].agg(["median", "min", "max"]).round(0))
+union_tablas = por_ciudad[["mediana"]].merge(renta_ciudad, left_index=True, right_index=True)
+union_tablas.columns = ["mediana_precio", "renta_mediana", "renta_min", "renta_max"]
+union_tablas.sort_values("mediana_precio", ascending=False)
+
+# %%
+rho_ciudades = union_tablas["mediana_precio"].corr(union_tablas["renta_mediana"], method="spearman")
+lectura(f"**Lectura.** Los mapas muestran que la oferta se concentra en los centros urbanos y, en las regiones, en "
+        "la costa. La tabla, construida con un `merge` entre el resumen de precio y el de renta, pone las dos cosas "
+        "juntas: entre las nueve zonas, la correlación de Spearman entre la mediana del precio y la renta mediana es "
+        f"{fmt.n2(rho_ciudades)}. La zona más cara, {union_tablas['mediana_precio'].idxmax()}, tiene una renta "
+        f"mediana de {fmt.eur0(union_tablas.loc[union_tablas['mediana_precio'].idxmax(), 'renta_mediana'])}, y la de "
+        f"más renta, {union_tablas['renta_mediana'].idxmax()}, no es la más cara. A primera vista, entre ciudades la "
+        "renta no ordena los precios. El notebook 02 mira qué pasa dentro de cada ciudad.")
 
 # %% [markdown]
-# ## 9. Días no disponibles e ingreso hipotético
-#
-# `365 − availability_365` cuenta los días **no disponibles en el próximo año**, que incluyen reservas y bloqueos
-# del anfitrión: no es ocupación. Inside Airbnb estima la ocupación de los **últimos doce meses** a partir de
-# reseñas. Son ventanas distintas, así que la comparación es orientativa. Ambas medias se calculan sobre las mismas
-# filas.
-
-# %%
-oi = D["ocupacion_ingresos"]
-pd.Series({k: v for k, v in oi.items() if not isinstance(v, str)}, name="valor").to_frame().round(3)
-
-# %%
-viz.fig_ocupacion_ingresos(df, findings);
-
-# %%
-lectura(f"**Lectura.** Los días no disponibles promedian un {fmt.pct1(oi['no_disponible_media'])} frente a una "
-        f"ocupación estimada por Inside Airbnb del {fmt.pct1(oi['ocupacion_inside_airbnb_media'])} "
-        f"(n = {fmt.n0(oi['n_comparacion_ocupacion'])} en ambos casos). La diferencia mezcla bloqueos y ventana "
-        f"temporal; la correlación de Spearman del ingreso hipotético con el de Inside Airbnb es "
-        f"{fmt.n2(oi['spearman_propio_vs_inside'])}, moderada. Ninguna de las dos es un ingreso observado.")
-
-# %% [markdown]
-# ## 10. Amenities y correlaciones
-#
-# Los indicadores de amenities se calculan elemento a elemento sobre la lista JSON (así «Dishwasher» no cuenta como
-# lavadora ni «Pool table» como piscina). La prima de precio de cada amenity es una diferencia bruta de medianas,
-# que puede reflejar tipo de alojamiento o zona.
-
-# %%
-pd.DataFrame(D["amenities"])[["nombre", "prevalencia_pct", "mediana_con", "mediana_sin", "prima_pct"]].round(1)
-
-# %%
-viz.fig_amenities(findings);
-
-# %%
-am = pd.DataFrame(D["amenities"])
-lectura(f"**Lectura.** Las amenities más frecuentes son {', '.join(am['nombre'].str.lower().head(3))} "
-        f"(entre {fmt.pct1(am['prevalencia_pct'].iloc[2])} y {fmt.pct1(am['prevalencia_pct'].iloc[0])}). Las primas "
-        "brutas más grandes no deben leerse como el valor de añadir esa amenity: la regresión las compara a igualdad "
-        "de tipo, capacidad y zona.")
-
-# %%
-pd.DataFrame(D["correlaciones"]["con_precio"]).round(3)
+# ## 11. Correlaciones y amenities
 
 # %%
 viz.fig_correlaciones(findings);
 
 # %%
-c0 = D["correlaciones"]["con_precio"][0]
-lectura(f"**Lectura.** La variable más correlacionada con el precio es `{c0['variable']}` (ρ de Spearman = "
-        f"{fmt.n2(c0['spearman'])}; Pearson sobre el precio en bruto = {fmt.n2(c0['pearson'])}). Pearson en escala "
-        "original queda muy por debajo de Spearman porque los precios extremos dominan la covarianza; con este "
-        "precio tan asimétrico, rangos o logaritmos son la elección adecuada.")
+corr = D["correlaciones"]["con_precio_por_variable"]
+sp = pd.DataFrame(D["correlaciones"]["spearman"])
+ine_vars = [v for v in sp.columns if v.startswith("ine_")]
+par_ine = max(((a, b, sp.loc[a, b]) for i, a in enumerate(ine_vars) for b in ine_vars[i + 1:]), key=lambda x: abs(x[2]))
+par_ine = (ETIQUETAS_VARIABLES.get(par_ine[0], par_ine[0]), ETIQUETAS_VARIABLES.get(par_ine[1], par_ine[1]), par_ine[2])
+lectura(f"**Lectura.** Las variables del propio alojamiento son las más correlacionadas con el precio: capacidad "
+        f"(ρ = {fmt.n2(corr['accommodates']['spearman'])}), dormitorios ({fmt.n2(corr['bedrooms']['spearman'])}) y "
+        f"baños ({fmt.n2(corr['bathrooms']['spearman'])}). La renta del distrito apenas se correlaciona con el precio "
+        f"en el conjunto (ρ = {fmt.n3(corr['ine_dis_renta_neta_persona']['spearman'])}) y la del municipio menos aún "
+        f"({fmt.n3(corr['ine_mun_renta_neta_persona']['spearman'])}). Entre las propias variables del INE la mayor "
+        f"correlación en valor absoluto es la de {par_ine[0]} y {par_ine[1]} (ρ = {fmt.n2(par_ine[2])}), algo a vigilar "
+        "en la regresión con el VIF.")
+
+# %%
+viz.fig_amenities(findings);
+
+# %%
+am = pd.DataFrame(D["amenities"]).set_index("nombre")
+lectura(f"**Lectura.** La amenity más frecuente es {am['prevalencia_pct'].idxmax()} "
+        f"({fmt.pct1(am['prevalencia_pct'].max())} de los anuncios). La mayor diferencia bruta de mediana es la de "
+        f"{am['prima_pct'].idxmax()} ({fmt.signo_pct(am['prima_pct'].max())}). Es una diferencia sin controles: los "
+        "anuncios con o sin una amenity también difieren en tamaño, tipo y zona. La regresión del notebook 02 "
+        "estima la asociación de varias amenities manteniendo constantes esos factores.")
 
 # %% [markdown]
-# ## Conclusión del EDA
+# ## Conclusiones del análisis exploratorio
 #
-# El precio por noche es muy asimétrico, con una cola de precios extremos que aleja la media de la mediana, y es el
-# precio de una cotización concreta: ya incluye descuentos, depende de la duración cotizada (a menudo la estancia
-# mínima) y de la fecha. Las diferencias más visibles aparecen entre tipos de alojamiento, por capacidad y entre
-# zonas, con los distritos céntricos en la parte alta; los barrios pequeños tienen medianas inestables.
-# La oferta está concentrada en cuentas con varios anuncios, lo que obliga a tratar con cuidado la independencia
-# de las observaciones. Los días no disponibles y el ingreso hipotético son proxies con ventanas temporales
-# distintas a las de Inside Airbnb, útiles solo como orientación.
-#
-# Estas observaciones son **hipótesis**: el notebook `02_analisis_estadistico.ipynb` las contrasta formalmente, con
-# tamaños de efecto, sensibilidad a la dependencia por anfitrión y modelos multivariantes. La interpretación
-# completa y las limitaciones están en `reports/informe.md`.
+# - Las dos fuentes se unen sin perder anuncios y casi todos reciben datos del INE de su distrito censal.
+# - El precio es muy asimétrico y depende sobre todo del tipo y el tamaño del alojamiento.
+# - Las ciudades difieren en precio, pero también en el tipo de oferta, en la concentración de anfitriones y en las
+#   licencias declaradas: comparar ciudades exige controlar esas diferencias.
+# - A simple vista la renta de la zona ordena poco los precios entre ciudades. El notebook 02 contrasta formalmente
+#   la relación renta-precio dentro de cada ciudad y con una regresión que controla el resto de factores.
