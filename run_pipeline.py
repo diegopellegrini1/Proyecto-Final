@@ -1,5 +1,5 @@
 """Pipeline end-to-end: dos fuentes (Inside Airbnb, 9 ciudades de España + INE) → unión → limpieza →
-features → análisis → figuras → findings → documentos → notebooks → verificación.
+features → análisis → figuras → findings → dashboard Excel → documentos → notebooks → verificación.
 
 Uso (PowerShell, desde la raíz del repositorio):
 
@@ -118,7 +118,7 @@ def versiones() -> dict[str, str]:
     """Versiones de Python y de las librerías principales."""
     import importlib.metadata as md
     paquetes = ["pandas", "numpy", "scipy", "statsmodels", "scikit-learn", "scikit-posthocs", "matplotlib",
-                "seaborn", "pyarrow", "pyshp", "shapely", "pyproj", "openpyxl"]
+                "seaborn", "pyarrow", "pyshp", "shapely", "pyproj", "openpyxl", "xlsxwriter"]
     v = {"python": platform.python_version()}
     for p in paquetes:
         try:
@@ -231,7 +231,7 @@ def ejecutar(args: argparse.Namespace) -> None:
         if problemas:
             raise ErrorPipeline("Figuras inválidas: " + "; ".join(problemas))
         for sobrante in config.DIR_FIGURAS.glob("*.png"):
-            if sobrante.name not in set(nombres_fig):
+            if sobrante.name not in set(nombres_fig) and sobrante.name != config.NOMBRE_VISTA_PREVIA_DASHBOARD:
                 sobrante.unlink()
 
     tiempos_computo = dict(tiempos)
@@ -323,14 +323,18 @@ def ejecutar(args: argparse.Namespace) -> None:
         findings["afirmaciones_no_cumplidas"] = sorted(k for k, v in findings["afirmaciones"].items() if not v)
         escribir_json(findings, config.RUTA_FINDINGS)
 
-    with etapa("10. Documentos (README, informe, diccionario)", tiempos):
+    with etapa("10. Dashboard operativo en Excel (dashboard/)", tiempos):
+        from src import dashboard_excel
+        dashboard_excel.construir(relectura, findings)
+
+    with etapa("11. Documentos (README, informe, diccionario)", tiempos):
         informe.escribir_documentos(findings, relectura)
 
     if not args.sin_notebooks:
-        with etapa("11. Notebooks ejecutados", tiempos):
+        with etapa("12. Notebooks ejecutados", tiempos):
             _ejecutar_script("ejecutar_notebooks.py")
     if not args.sin_verificacion:
-        with etapa("12. Verificación de consistencia", tiempos):
+        with etapa("13. Verificación de consistencia", tiempos):
             _ejecutar_script("verificar_consistencia.py")
     logger.info("Pipeline completado en %.1f s (cómputo etapas 1-8: %.1f s).",
                 time.perf_counter() - t_total, sum(tiempos_computo.values()))

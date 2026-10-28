@@ -4,3 +4,4 @@
 *.png binary
 # Datos originales byte a byte (el SHA-256 del manifiesto debe coincidir)
 data/raw/** -text
+*.xlsx binary

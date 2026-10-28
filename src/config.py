@@ -35,6 +35,21 @@ RUTA_INFORME: Path = DIR_REPORTS / "informe.md"
 RUTA_DICCIONARIO: Path = DIR_REPORTS / "diccionario_datos.md"
 RUTA_README: Path = RAIZ / "README.md"
 
+# Dashboard operativo en Excel (se genera con src/dashboard_excel.py desde el Parquet y findings.json).
+DIR_DASHBOARD: Path = RAIZ / "dashboard"
+RUTA_DASHBOARD_XLSX: Path = DIR_DASHBOARD / "Dashboard_Airbnb_Espana.xlsx"
+RUTA_DASHBOARD_README: Path = DIR_DASHBOARD / "README_dashboard.md"
+NOMBRE_VISTA_PREVIA_DASHBOARD: str = "dashboard_vista_previa.png"
+RUTA_VISTA_PREVIA_DASHBOARD: Path = DIR_FIGURAS / NOMBRE_VISTA_PREVIA_DASHBOARD
+# Tramos de precio del dashboard: límites inferiores cerrados [a, b) en euros; el último tramo es abierto.
+LIMITES_TRAMOS_PRECIO_EXCEL: tuple[int, ...] = (50, 100, 150, 200, 300, 500)
+# Tramos de capacidad del dashboard: (etiqueta, mínimo, máximo); None = sin tope. Etiquetas con texto para que
+# Excel no las convierta en números o fechas al elegirlas en un desplegable.
+TRAMOS_CAPACIDAD_EXCEL: tuple[tuple[str, int, int | None], ...] = (
+    ("1 persona", 1, 1), ("2 personas", 2, 2), ("3-4 personas", 3, 4), ("5-6 personas", 5, 6),
+    ("7 o más personas", 7, None),
+)
+
 # --------------------------------------------------------------------------
 # Parámetros de análisis
 # --------------------------------------------------------------------------
@@ -69,6 +84,7 @@ MIN_FILAS_UNION: int = 50_000
 MIN_COLUMNAS_UNION: int = 20
 LIMITE_PARQUET_BYTES: int = 25_000_000
 LOTE_SUBIDA_ARCHIVOS: int = 100                # máximo de archivos por lote al subir a GitHub arrastrando
+LOTE_SUBIDA_BYTES: int = 40_000_000            # peso orientativo máximo por lote (la subida web es lenta con más)
 
 # --------------------------------------------------------------------------
 # Descarga: fuente 1 (Inside Airbnb)
