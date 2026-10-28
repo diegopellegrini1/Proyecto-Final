@@ -1,38 +1,44 @@
-# Airbnb en Madrid: EDA, análisis estadístico y dashboard
+# Airbnb en España y renta de la zona: limpieza, análisis descriptivo y estadístico
 
-Proyecto final del Máster en Data Analytics. Análisis exploratorio, limpieza, análisis estadístico inferencial y un dashboard operativo en Streamlit sobre los anuncios públicos de **Inside Airbnb** para Madrid (snapshot <!--f:meta.fecha_snapshot_url:fecha-->2026-09-17<!--/f-->).
+Proyecto final del Máster en Data Analytics. Une dos fuentes públicas, los anuncios de **Inside Airbnb** de <!--f:descriptivo.n_ciudades:n0-->9<!--/f--> ciudades y regiones de España y el **Atlas de Distribución de Renta de los Hogares del INE**, para responder a una pregunta de negocio: **qué explica el precio de un alojamiento turístico en España y cómo se relaciona con la renta de la zona**.
 
 - **Autor:** Diego Hernández Pellegrini
 - **GitHub:** [diegopellegrini1](https://github.com/diegopellegrini1)
 - **Informe completo:** [reports/informe.md](reports/informe.md)
 
-## Objetivo
+## Requisitos del enunciado y dónde se cumplen
 
-Describir con qué se asocia el precio por noche de los anuncios de Airbnb en Madrid (tipo de alojamiento, ubicación, capacidad, anfitrión, amenities, fecha de la cotización) y cómo está estructurada la oferta, y ofrecer un dashboard con filtros y un comparador de anuncios similares. Todo el flujo es reproducible con un solo comando. El análisis es observacional: describe asociaciones, no efectos causales.
-
-## Dataset y requisitos mínimos
-
-| Requisito (criterio propio) | Valor en el dataset | ¿Cumple? |
+| Requisito | Cómo se cumple | Archivos |
 |---|---|---|
-| Filas (al menos <!--f:meta.parametros.umbral_filas:n0-->1.000<!--/f-->) | <!--f:dataset.filas_raw:n0-->23.109<!--/f--> anuncios | Sí |
-| Columnas (al menos <!--f:meta.parametros.umbral_columnas:n0-->20<!--/f-->) | <!--f:dataset.columnas_raw:n0-->90<!--/f--> columnas | Sí |
-| Tipos de variable | <!--f:dataset.tipos_raw.numerico:n0-->54<!--/f--> numéricas, <!--f:dataset.tipos_raw.categorico:n0-->4<!--/f--> categóricas, <!--f:dataset.tipos_raw.booleano:n0-->4<!--/f--> booleanas, <!--f:dataset.tipos_raw.fecha:n0-->6<!--/f--> de fecha, <!--f:dataset.tipos_raw.texto:n0-->10<!--/f--> de texto libre, <!--f:dataset.tipos_raw.geoespacial:n0-->2<!--/f--> geoespaciales y <!--f:dataset.tipos_raw.identificador:n0-->10<!--/f--> identificadores (en total, las <!--f:dataset.columnas_raw:n0-->90<!--/f--> columnas) | Sí |
+| Dos conjuntos de datos en bruto de dos fuentes distintas, adjuntos | Inside Airbnb: <!--f:dataset.fuente_airbnb.n_ficheros:n0-->27<!--/f--> ficheros de <!--f:descriptivo.n_ciudades:n0-->9<!--/f--> ciudades (<!--f:dataset.fuente_airbnb.bytes:n0-->63.162.113<!--/f--> bytes). INE: <!--f:dataset.fuente_ine.n_tablas:n0-->40<!--/f--> tablas del ADRH de <!--f:dataset.fuente_ine.n_provincias:n0-->10<!--/f--> provincias (<!--f:dataset.fuente_ine.bytes:n0-->34.273.215<!--/f--> bytes, gzip sin pérdida). Cada fuente con su manifiesto (URL, fecha, tamaño y SHA-256) | [data/raw/inside_airbnb/](data/raw/inside_airbnb/), [data/raw/ine/](data/raw/ine/) |
+| Conjunto final unido con al menos <!--f:meta.parametros.min_filas:n0-->50.000<!--/f--> filas y <!--f:meta.parametros.min_columnas:n0-->20<!--/f--> columnas | <!--f:dataset.filas_procesadas:n0-->109.437<!--/f--> filas × <!--f:dataset.columnas_procesadas:n0-->73<!--/f--> columnas (<!--f:dataset.n_columnas_ine_final:n0-->14<!--/f--> del INE). El <!--f:dataset.union.total.pct_distrito:pct2-->99,61 %<!--/f--> de los anuncios recibe datos del INE por cruce punto en polígono. El código lo comprueba y se detiene si no se cumple | [data/processed/airbnb_espana_ine.parquet](data/processed/airbnb_espana_ine.parquet), [muestra CSV](data/processed/airbnb_espana_ine_muestra.csv), [src/fuentes.py](src/fuentes.py), [src/calidad.py](src/calidad.py) |
+| Transformación y limpieza profunda | Conversión de tipos, reparación de textos, nulos con política explícita, atípicos por IQR sobre ln(precio), estancias extremas, coordenadas por ciudad, imputación con indicador, <!--f:features.n_flags_amenities:n0-->13<!--/f--> amenities y variables derivadas; informe de calidad antes/después **por ciudad** | [src/limpieza.py](src/limpieza.py), [src/features.py](src/features.py), [reports/calidad_datos.json](reports/calidad_datos.json), [reports/diccionario_datos.md](reports/diccionario_datos.md) |
+| Análisis descriptivo | Nacional y por ciudad: precios, tipos, capacidad, anfitriones, licencias, ocupación, mapas y correlaciones | [notebooks/01_eda.ipynb](notebooks/01_eda.ipynb), [src/analisis.py](src/analisis.py) |
+| Análisis estadístico | Kruskal-Wallis y Dunn-Bonferroni, Mann-Whitney, chi-cuadrado, bootstrap por anfitrión y por distrito, Spearman renta-precio, OLS con efectos fijos de ciudad y errores agrupados, VIF/GVIF, Holm, modelo ML con validación agrupada y sensibilidades | [notebooks/02_analisis_estadistico.ipynb](notebooks/02_analisis_estadistico.ipynb), [src/estadistica.py](src/estadistica.py) |
+| Visualización | <!--f:meta.parametros.n_figuras:n0-->20<!--/f--> figuras con matplotlib y seaborn | [reports/figures/](reports/figures/), [src/visualizacion.py](src/visualizacion.py) |
+| Informe explicativo | Metodología, resultados, limitaciones y recomendaciones | [reports/informe.md](reports/informe.md) |
+| README con pasos e informe | Este archivo | [README.md](README.md) |
+| Organización de carpetas | Ver la estructura más abajo | [requirements.txt](requirements.txt), [.gitignore](.gitignore), [LICENSE](LICENSE) |
 
-Fuente: `listings.csv.gz`, `neighbourhoods.csv` y `neighbourhoods.geojson` de [Inside Airbnb](https://insideairbnb.com/get-the-data/). La fecha del snapshot (<!--f:meta.fecha_snapshot_url:fecha-->2026-09-17<!--/f-->) es la que figura en la URL de descarga; los anuncios se scrapearon entre el <!--f:meta.last_scraped_min:fecha-->2026-09-19<!--/f--> y el <!--f:meta.last_scraped_max:fecha-->2026-09-22<!--/f-->. La clasificación por tipos y el cumplimiento se calculan por código (`src/calidad.py`). URLs, fechas, tamaños y hashes SHA-256 de los ficheros descargados: [data/raw/MANIFEST.json](data/raw/MANIFEST.json).
+## Resultados clave
 
-**Qué es el precio:** el precio por noche de una cotización concreta de Airbnb, **ya con los descuentos aplicables** (el <!--f:precio_naturaleza.pct_con_descuento:pct1-->20,3 %<!--/f--> de las cotizaciones con precio tiene alguno) y sin tasas. La estancia cotizada suele ser la estancia mínima del anuncio, y en estancias de <!--f:meta.parametros.min_nights_larga_estancia:n0-->30<!--/f--> noches o más suele ser una tarifa mensual repartida entre las noches.
+- **Precio.** Mediana <!--f:descriptivo.precio.mediana:eur2-->170,00 €<!--/f--> y media <!--f:descriptivo.precio.media:eur2-->263,99 €<!--/f--> por noche (<!--f:descriptivo.precio.n:n0-->89.614<!--/f--> anuncios con precio). Mallorca es la zona más cara (mediana <!--f:descriptivo.ciudad_mas_cara.mediana:eur0-->312 €<!--/f-->) y Valencia la más barata (<!--f:descriptivo.ciudad_mas_barata.mediana:eur0-->134 €<!--/f-->). El <!--f:limpieza.precio.pct_nulo:pct1-->18,1 %<!--/f--> de los anuncios no publica precio.
+- **Qué se asocia con el precio.** Tipo de habitación (Kruskal-Wallis, ε² = <!--f:estadistica.kruskal_tipo.tamano_efecto.valor:n3-->0,161<!--/f-->), ciudad (ε² = <!--f:estadistica.kruskal_ciudad.tamano_efecto.valor:n3-->0,114<!--/f-->) y capacidad (ρ = <!--f:descriptivo.correlaciones.con_precio_por_variable.accommodates.spearman:n2-->0,61<!--/f-->). En la regresión, cada persona más de capacidad se asocia con un precio <!--f:estadistica.ols.coef_accommodates.pct:signo_pct-->+9,1 %<!--/f--> y una estancia mínima de <!--f:meta.parametros.min_nights_larga_estancia:n0-->30<!--/f--> noches o más con <!--f:estadistica.ols.coef_larga_estancia.pct:signo_pct-->-51,1 %<!--/f--> por noche.
+- **Renta de la zona.** Anuncio a anuncio y mezclando ciudades, la correlación de Spearman entre la renta del distrito y el precio es débil (ρ = <!--f:estadistica.renta_precio.global_distrito.rho:n3-->0,073<!--/f-->, IC 95 % remuestreando distritos <!--f:estadistica.renta_precio.global_distrito.cluster_zona.ic_inf:n3-->0,001<!--/f--> a <!--f:estadistica.renta_precio.global_distrito.cluster_zona.ic_sup:n3-->0,138<!--/f-->). Dentro de cada ciudad es positiva y modesta (de <!--f:estadistica.renta_precio.rho_ciudad_min.distrito.rho:n2-->0,03<!--/f--> a <!--f:estadistica.renta_precio.rho_ciudad_max.distrito.rho:n2-->0,29<!--/f-->). Con efectos fijos de ciudad y el resto de controles, una renta un 10 % mayor se asocia con un precio <!--f:estadistica.ols.coef_renta.pct_por_10pct_renta:signo_pct-->+4,3 %<!--/f--> mayor, pero el INE solo añade <!--f:estadistica.ols.delta_r2_ajustado_ine_pp:n1-->2,1<!--/f--> puntos de R² ajustado. **La renta explica poco del precio**, y es una asociación, no un efecto causal.
+- **Modelos.** OLS sobre ln(precio): R² ajustado = <!--f:estadistica.ols.r2_ajustado:n3-->0,609<!--/f--> (n = <!--f:estadistica.ols.n_efectivo:n0-->89.182<!--/f-->). HistGradientBoosting validado con particiones agrupadas por anfitrión: R² = <!--f:estadistica.ml.cv.r2_media:n3-->0,713<!--/f--> ± <!--f:estadistica.ml.cv.r2_std:n3-->0,014<!--/f--> (con una partición aleatoria saldría <!--f:estadistica.ml.aleatorio.r2:n3-->0,769<!--/f-->, una cifra optimista).
+- **Anfitriones.** El <!--f:descriptivo.hosts.pct_anuncios_multianuncio:pct1-->75,0 %<!--/f--> de los anuncios es de anfitriones con varios anuncios, aunque el <!--f:descriptivo.hosts.pct_hosts_un_anuncio:pct1-->70,2 %<!--/f--> de los anfitriones tiene uno solo. Ser superhost se asocia con un precio <!--f:estadistica.ols.coef_superhost.pct:signo_pct-->+2,6 %<!--/f--> al controlar, una diferencia pequeña que no sobrevive a la corrección de Holm.
 
-## Resumen de hallazgos
+**Qué es el precio:** el precio por noche de una cotización fechada de Airbnb (entradas entre el <!--f:precio_naturaleza.checkin_min:fecha-->2026-09-17<!--/f--> y el <!--f:precio_naturaleza.checkin_max:fecha-->2027-09-28<!--/f-->), **con los descuentos ya aplicados** (el <!--f:precio_naturaleza.pct_con_descuento:pct1-->19,9 %<!--/f--> de las cotizaciones tiene alguno) y sin tasas. No es el precio pagado por un huésped.
 
-- **Precio muy asimétrico:** mediana <!--f:descriptivo.precio.mediana:eur2-->151,00 €<!--/f--> y media <!--f:descriptivo.precio.media:eur2-->208,63 €<!--/f--> por noche en <!--f:descriptivo.precio.n:n0-->18.785<!--/f--> anuncios con precio (asimetría <!--f:descriptivo.precio.asimetria:n2-->31,54<!--/f-->). El <!--f:limpieza.precio.pct_nulo:pct1-->18,7 %<!--/f--> de los anuncios no publica precio, sobre todo los que no tienen fechas disponibles.
-- **Tipo de habitación, la mayor diferencia entre grupos:** Alojamiento entero <!--f:estadistica.bootstrap.tipo.0.mediana:eur2-->173,63 €<!--/f--> (IC 95 % por anfitrión <!--f:estadistica.bootstrap.tipo.0.ic_inf_cluster:eur2-->167,00 €<!--/f--> – <!--f:estadistica.bootstrap.tipo.0.ic_sup_cluster:eur2-->180,00 €<!--/f-->) frente a habitación privada <!--f:estadistica.bootstrap.tipo.1.mediana:eur2-->74,00 €<!--/f--> (<!--f:estadistica.bootstrap.tipo.1.ic_inf_cluster:eur2-->66,00 €<!--/f--> – <!--f:estadistica.bootstrap.tipo.1.ic_sup_cluster:eur2-->81,67 €<!--/f-->); Kruskal-Wallis con ε² = <!--f:estadistica.kruskal_tipo.tamano_efecto.valor:n3-->0,234<!--/f--> (efecto grande), mayor que el del distrito (ε² = <!--f:estadistica.kruskal_distrito.tamano_efecto.valor:n3-->0,122<!--/f-->).
-- **Ubicación:** Salamanca (<!--f:descriptivo.por_distrito.0.mediana:eur2-->188,34 €<!--/f-->) y Centro (<!--f:descriptivo.por_distrito.1.mediana:eur2-->180,00 €<!--/f-->) son los distritos con mayor mediana (empatados estadísticamente) y Moratalaz (<!--f:descriptivo.distrito_mas_barato.mediana:eur2-->58,00 €<!--/f-->) el de menor. En la regresión, dentro de un mismo distrito, cada km desde la Puerta del Sol se asocia con un precio <!--f:estadistica.ols.coef_distancia.pct:signo_pct-->-5,0 %<!--/f-->.
-- **Superhost:** la diferencia bruta (mediana <!--f:estadistica.mann_whitney_superhost.extra.mediana_a:eur2-->163,50 €<!--/f--> frente a <!--f:estadistica.mann_whitney_superhost.extra.mediana_b:eur2-->147,00 €<!--/f-->) es estadísticamente significativa pero con efecto despreciable (r = <!--f:estadistica.mann_whitney_superhost.tamano_efecto.valor:n4-->0,0997<!--/f-->). Al controlar en la regresión no hay evidencia robusta de una prima (coeficiente <!--f:estadistica.ols.coef_superhost.pct:signo_pct-->+3,4 %<!--/f-->, IC 95 % <!--f:estadistica.ols.coef_superhost.ic_inf_pct:signo_pct-->+0,5 %<!--/f--> a <!--f:estadistica.ols.coef_superhost.ic_sup_pct:signo_pct-->+6,5 %<!--/f-->); si existe, es pequeña.
-- **Regresión OLS sobre ln(precio)** con controles de distrito y de mes de la cotización: R² ajustado = <!--f:estadistica.ols.r2_ajustado:n3-->0,601<!--/f--> con n = <!--f:estadistica.ols.n_efectivo:n0-->18.159<!--/f-->; capacidad <!--f:estadistica.ols.coef_accommodates.pct:signo_pct-->+11,0 %<!--/f--> por persona, habitación privada <!--f:estadistica.ols.coef_privada.pct:signo_pct-->-24,2 %<!--/f-->, estancia mínima larga <!--f:estadistica.ols.coef_por_termino.alquiler_larga_estancia.pct:signo_pct-->-37,7 %<!--/f-->, aire acondicionado <!--f:estadistica.ols.coef_por_termino.tiene_aire_acondicionado.pct:signo_pct-->+12,8 %<!--/f--> (errores agrupados por anfitrión; asociaciones, no efectos causales).
-- **Modelo predictivo:** HistGradientBoosting validado con <!--f:estadistica.ml.n_folds:n0-->5<!--/f--> particiones agrupadas por anfitrión (`GroupKFold`): R² = <!--f:estadistica.ml.cv.r2_media:n3-->0,669<!--/f--> ± <!--f:estadistica.ml.cv.r2_std:n3-->0,071<!--/f--> y mediana del error absoluto ≈ <!--f:estadistica.ml.cv.medae_eur_media:eur0-->30 €<!--/f--> por noche (línea base: <!--f:estadistica.ml.cv_base.medae_eur_media:eur0-->62 €<!--/f-->). Con una partición aleatoria el R² sería <!--f:estadistica.ml.aleatorio.r2:n3-->0,755<!--/f-->, una cifra optimista porque comparte anfitriones entre entrenamiento y prueba.
-- **Oferta concentrada:** el <!--f:descriptivo.hosts.pct_anuncios_multianuncio:pct1-->73,5 %<!--/f--> de los anuncios es de cuentas con varios anuncios y el <!--f:descriptivo.hosts.pct_anuncios_hosts_6_o_mas:pct1-->50,0 %<!--/f--> de cuentas con seis o más anuncios, aunque el <!--f:descriptivo.hosts.pct_hosts_un_anuncio:pct1-->70,3 %<!--/f--> de los anfitriones tiene uno solo. Tener varios anuncios no implica por sí solo gestión profesional.
+Todas las cifras de este README y del informe se generan desde [reports/findings.json](reports/findings.json). [scripts/verificar_consistencia.py](scripts/verificar_consistencia.py) comprueba que estos documentos **reproducen** findings.json (cada cifra marcada coincide, el texto se regenera idéntico, sin enlaces rotos ni números escritos a mano en las plantillas). Es una comprobación de transcripción: no comprueba que las interpretaciones sean ciertas; eso lo sostienen el análisis, sus supuestos y las sensibilidades del informe.
 
-Todas las cifras de este README y del informe se generan desde [reports/findings.json](reports/findings.json). [scripts/verificar_consistencia.py](scripts/verificar_consistencia.py) comprueba que estos documentos **reproducen** findings.json (cada cifra marcada coincide, el texto se regenera idéntico, sin enlaces rotos ni números escritos a mano en las plantillas). Es una comprobación de transcripción: **no** comprueba que las interpretaciones sean ciertas; eso lo sostienen el análisis, sus supuestos y las sensibilidades del informe.
+## Datos
+
+**Fuente 1, Inside Airbnb.** `listings.csv.gz`, `neighbourhoods.csv` y `neighbourhoods.geojson` de Barcelona, Euskadi, Girona, Madrid, Málaga, Mallorca, Menorca, Sevilla, Valencia, snapshots del <!--f:meta.snapshot_min:fecha-->2026-09-17<!--/f--> al <!--f:meta.snapshot_max:fecha-->2026-09-28<!--/f-->. Manifiesto: [data/raw/inside_airbnb/MANIFEST.json](data/raw/inside_airbnb/MANIFEST.json).
+
+**Fuente 2, INE.** Atlas de Distribución de Renta de los Hogares (ADRH): renta neta y bruta por persona y por hogar, mediana por unidad de consumo, Gini, P80/P20, edad media, tamaño del hogar, hogares unipersonales, población y riesgo de pobreza, por municipio y distrito censal. Año de referencia: <!--f:meta.anio_ine:texto-->2024<!--/f-->. Manifiesto: [data/raw/ine/MANIFEST.json](data/raw/ine/MANIFEST.json).
+
+**Unión.** Cada anuncio se sitúa en su sección censal cruzando sus coordenadas con el seccionado oficial del INE (punto en polígono). La sección da el distrito censal y el municipio, que son las claves del ADRH. El seccionado pesa más de <!--f:meta.parametros.limite_subida_mb:n0-->25<!--/f--> MB y no se versiona (se descarga en `data/extra/`); el resultado del cruce sí está en [data/interim/asignacion_secciones.csv.gz](data/interim/asignacion_secciones.csv.gz), así que la unión se reproduce sin red. Emparejados: <!--f:dataset.union.total.con_distrito:n0-->109.010<!--/f--> de <!--f:dataset.union.total.anuncios:n0-->109.437<!--/f--> anuncios (<!--f:dataset.union.total.pct_distrito:pct2-->99,61 %<!--/f-->); los <!--f:dataset.union.n_sin_emparejar:n0-->427<!--/f--> restantes se conservan con valores vacíos. La unidad asignada coincide con la declarada por Inside Airbnb en el <!--f:dataset.union.concordancia_total.pct_coinciden:pct2-->99,58 %<!--/f--> de los anuncios validados.
 
 ## Estructura del repositorio
 
@@ -40,23 +46,26 @@ Todas las cifras de este README y del informe se generan desde [reports/findings
 ├─ run_pipeline.py                 pipeline completo (un solo comando)
 ├─ requirements.txt                dependencias con versiones fijas
 ├─ data/
-│  ├─ raw/                         datos originales de Inside Airbnb + MANIFEST.json (URL, fecha, tamaño, SHA-256)
-│  └─ processed/                   listings_limpio.parquet + listings_muestra.csv (muestra legible)
+│  ├─ raw/
+│  │  ├─ inside_airbnb/<ciudad>/   fuente 1: listings.csv.gz, neighbourhoods.csv/.geojson + MANIFEST.json
+│  │  └─ ine/                      fuente 2: tablas del ADRH (.csv.gz) + MANIFEST.json
+│  ├─ interim/                     asignación anuncio → sección censal (resultado del cruce geográfico)
+│  └─ processed/                   conjunto final unido (Parquet) + muestra CSV legible
 ├─ src/                            módulos reutilizables (type hints y docstrings)
-│  ├─ carga.py  limpieza.py  calidad.py  features.py  diccionario.py
-│  ├─ estadistica.py  analisis.py  visualizacion.py  informe.py
-│  ├─ config.py  formato.py  geo.py  errores.py
-│  └─ plantillas/                  plantillas Jinja2 de README e informe
+│  ├─ fuentes.py                   descarga, lectura y unión de las dos fuentes
+│  ├─ limpieza.py  features.py  calidad.py  diccionario.py
+│  ├─ analisis.py  estadistica.py  visualizacion.py  informe.py
+│  ├─ carga.py  config.py  formato.py  geo.py  errores.py
+│  └─ plantillas/                  plantillas Jinja2 del README y del informe
 ├─ notebooks/                      01_eda.ipynb y 02_analisis_estadistico.ipynb (ejecutados, con salidas)
 │  └─ fuentes_py/                  fuentes .py de los notebooks
-├─ dashboard/                      app Streamlit (app.py, datos.py, filtros.py, graficos.py)
 ├─ reports/
 │  ├─ informe.md                   informe explicativo
 │  ├─ findings.json                todas las cifras calculadas
-│  ├─ calidad_datos.json           calidad de datos antes/después
-│  ├─ diccionario_datos.md         diccionario de columnas
-│  └─ figures/                     figuras PNG generadas por script
-├─ scripts/                        ejecución de notebooks, verificadores y exportación de gráficos
+│  ├─ calidad_datos.json           calidad antes/después, global y por ciudad
+│  ├─ diccionario_datos.md         diccionario de columnas con su fuente
+│  └─ figures/                     figuras PNG
+├─ scripts/                        recuentos y verificaciones independientes, ejecución de notebooks
 └─ tests/                          tests de pytest
 ```
 
@@ -90,98 +99,45 @@ pip install -r requirements.txt
 ## Ejecución
 
 ```bash
-python run_pipeline.py                 # descarga (o verifica) datos, limpia, analiza, genera figuras, documentos y notebooks
-python -B -m pytest -q                 # tests (-B: sin __pycache__)
-streamlit run dashboard/app.py --server.address 127.0.0.1   # dashboard en http://127.0.0.1:8501 (solo en este equipo)
+python run_pipeline.py --sin-descarga   # todo desde data/raw, sin red: unión, limpieza, análisis, figuras, documentos y notebooks
+python -B -m pytest -q                  # tests (-B: sin __pycache__)
 ```
 
-`--server.address 127.0.0.1` hace que el dashboard solo sea accesible desde tu propio equipo; sin ese parámetro, Streamlit escucha en todas las interfaces de red y otros equipos de la misma red (por ejemplo, una wifi pública) podrían abrirlo.
+- Sin `--sin-descarga`, el pipeline usa `data/raw` si sus hashes coinciden con los manifiestos y solo descarga si falta algo. `--forzar-descarga` vuelve a buscar los snapshots más recientes (pueden cambiar las cifras).
+- Otras opciones: `--semilla`, `--n-boot`, `--sin-ml`, `--sin-notebooks`, `--sin-verificacion`. Los tiempos de cada etapa quedan en `reports/findings.json`.
+- Recuentos y comprobaciones independientes (no importan `src/`): `python scripts/contar_filas_espana.py` y `python scripts/recalcular_cifras.py`.
+- Antes de subir a GitHub arrastrando archivos (la subida web no aplica `.gitignore`): `python scripts/verificar_subida.py --limpiar` borra cachés, comprueba que ningún archivo supera <!--f:meta.parametros.limite_subida_mb:n0-->25<!--/f--> MB y propone lotes de subida. No subas `.venv/`, `data/extra/` ni `.agents/`.
 
-Opciones útiles de `run_pipeline.py`: `--sin-descarga` (modo offline: exige `data/raw` íntegro y también rechaza `--incluir-reviews`/`--incluir-calendar` si esos ficheros no están ya en caché), `--forzar-descarga`, `--semilla`, `--n-boot`, `--sin-ml`, `--sin-notebooks`, `--sin-verificacion`. Si `data/raw` ya contiene los ficheros y su hash coincide con el manifiesto, el pipeline no usa la red. Los tiempos de ejecución de cada etapa quedan en `reports/findings.json` (no en este README, para que se regenere idéntico en cualquier máquina).
+Notebooks: [notebooks/01_eda.ipynb](notebooks/01_eda.ipynb) y [notebooks/02_analisis_estadistico.ipynb](notebooks/02_analisis_estadistico.ipynb). Se regeneran con `python scripts/ejecutar_notebooks.py` (el pipeline lo hace al final).
 
-Notebooks: [notebooks/01_eda.ipynb](notebooks/01_eda.ipynb) y [notebooks/02_analisis_estadistico.ipynb](notebooks/02_analisis_estadistico.ipynb). Se regeneran y ejecutan con `python scripts/ejecutar_notebooks.py` (el pipeline lo hace al final), usan los mismos módulos de `src/` y narran cada resultado con cifras leídas de `findings.json` o calculadas en la propia celda.
+### Cómo editar un texto
 
-**Antes de subir a GitHub arrastrando archivos** (la subida web no aplica `.gitignore`): `python scripts/verificar_subida.py --limpiar` borra cachés y comprueba que ningún archivo supera 25 MB. No subas `.venv/` ni `data/extra/`.
-
-**README e informe se generan desde plantillas** (`src/plantillas/`): para cambiar el texto se edita la plantilla y se vuelve a ejecutar el pipeline. Si se edita `README.md` o `reports/informe.md` a mano, el verificador lo detecta y la siguiente ejecución lo sobrescribe.
-
-## Dashboard
-
-`streamlit run dashboard/app.py --server.address 127.0.0.1` abre una app con barra lateral de filtros (distrito, barrio en cascada, tipo de habitación, capacidad, superhost, precio mínimo y máximo, búsqueda por nombre y **excluir estancias mínimas de <!--f:meta.parametros.min_nights_larga_estancia:n0-->30<!--/f--> noches o más**, activado por defecto) y seis pestañas:
-
-1. **Resumen:** KPIs (anuncios, precio mediano y medio, % de días no disponibles, % superhost, % multi-anuncio, valoración media), histograma de precio y mediana por distrito. Bajo los KPIs, una nota explica por qué no coinciden con el informe: por defecto se excluyen los precios por encima del P99 y las estancias mensuales, y solo se cuentan anuncios con precio.
-2. **Comparador:** eliges tipo, capacidad y distrito o barrio y devuelve cuántos anuncios comparables hay, su mediana y su rango P25–P75, con aviso si hay menos de <!--f:meta.parametros.min_n_comparador:n0-->30<!--/f-->.
-3. **Mapa:** puntos coloreados por precio (muestreo aleatorio con semilla si hay más de <!--f:meta.parametros.max_puntos_mapa:n0-->10.000<!--/f--> puntos) o coropleta de la mediana por barrio. Mapas base de CARTO sin API key (necesita internet en el navegador). Si falta el GeoJSON de barrios, solo se desactiva la vista de barrios.
-4. **Precios:** precio por tipo de habitación, frente a la distancia al centro y por barrio.
-5. **Anfitriones y calidad:** segmentos de anfitrión, puntuaciones y amenities.
-6. **Datos:** tabla filtrable con nombres de columna en español y descarga del CSV filtrado (separador `;` y BOM, para abrirlo directamente en Excel en español).
-
-El dashboard lee `data/processed/` (no limpia datos al arrancar), usa `st.cache_data` y comprueba al arrancar el Parquet, sus columnas y el GeoJSON, con mensajes que indican qué hacer. Si los filtros dejan cero anuncios muestra un aviso.
-
-**Gráficos exportados del dashboard.** Las imágenes siguientes **no son capturas de pantalla**: son gráficos generados con las mismas funciones de `dashboard/graficos.py` sobre los datos reales y los filtros por defecto, exportados a PNG con `python scripts/exportar_graficos_dashboard.py`.
-
-![Dashboard, pestaña Resumen: distribución del precio](reports/figures/dashboard_01_histograma_precio.png)
-
-![Dashboard, pestaña Resumen: mediana del precio por distrito](reports/figures/dashboard_02_mediana_distrito.png)
-
-![Dashboard, pestaña Precios: precio por tipo de habitación](reports/figures/dashboard_03_precio_tipo.png)
-
-![Dashboard, pestaña Precios: precio frente a distancia al centro](reports/figures/dashboard_04_precio_distancia.png)
-
-![Dashboard, pestaña Anfitriones y calidad: amenities](reports/figures/dashboard_05_amenities.png)
-
-
-## Mapeo de los criterios de evaluación
-
-| # | Criterio | Dónde se cumple |
-|---|---|---|
-| 1 | Requisitos mínimos del conjunto de datos | [Dataset y requisitos mínimos](#dataset-y-requisitos-mínimos), [src/calidad.py](src/calidad.py), [reports/findings.json](reports/findings.json) |
-| 2 | Uso eficiente de Python y Pandas | [src/](src/) (operaciones vectorizadas, sin bucles por fila, type hints), [notebooks/01_eda.ipynb](notebooks/01_eda.ipynb) (operaciones pandas visibles), [run_pipeline.py](run_pipeline.py), [tests/](tests/) |
-| 3 | Uso eficiente de herramienta de visualización | [src/visualizacion.py](src/visualizacion.py), [reports/figures/](reports/figures/), [dashboard/graficos.py](dashboard/graficos.py) (Plotly) |
-| 4 | Transformación y limpieza de datos | [src/limpieza.py](src/limpieza.py), [src/features.py](src/features.py), [reports/calidad_datos.json](reports/calidad_datos.json), [reports/diccionario_datos.md](reports/diccionario_datos.md) |
-| 5 | Análisis descriptivo | [notebooks/01_eda.ipynb](notebooks/01_eda.ipynb), [src/analisis.py](src/analisis.py), [informe, sección de hallazgos descriptivos](reports/informe.md) |
-| 6 | Análisis estadístico | [notebooks/02_analisis_estadistico.ipynb](notebooks/02_analisis_estadistico.ipynb), [src/estadistica.py](src/estadistica.py) |
-| 7 | Dashboard operativo | [dashboard/app.py](dashboard/app.py), [tests/test_dashboard.py](tests/test_dashboard.py), [scripts/verificar_dashboard.py](scripts/verificar_dashboard.py) |
-| 8 | Informe explicativo | [reports/informe.md](reports/informe.md) |
-| 9 | README del proyecto | este archivo, generado desde [src/plantillas/README.md.j2](src/plantillas/README.md.j2) |
-| 10 | Correcta organización del repositorio GitHub | [estructura](#estructura-del-repositorio), [requirements.txt](requirements.txt), [.gitignore](.gitignore), [LICENSE](LICENSE), [scripts/verificar_subida.py](scripts/verificar_subida.py) |
-
-## Por qué hay tanta infraestructura
-
-Plantillas, marcadores de cifra, manifiesto con hashes y verificadores tienen un único fin: que **ninguna cifra del texto se escriba a mano** y que, si los datos cambian, los documentos se regeneren y cualquier discrepancia se detecte. El manifiesto garantiza que se analiza exactamente el fichero descargado. Nada de esto valida las interpretaciones: esas se justifican en el informe.
+README e informe se generan desde plantillas: para cambiar un texto se edita `src/plantillas/README.md.j2` o `src/plantillas/informe.md.j2` y se vuelve a ejecutar `python run_pipeline.py --sin-descarga`. Si se edita `README.md` o `reports/informe.md` a mano, el verificador lo detecta y la siguiente ejecución lo sobrescribe. Las cifras se escriben en la plantilla con `cifra("ruta.en.findings", "formato")`, nunca a mano.
 
 ## Limitaciones
 
-- **Datos scrapeados** de la web pública de Airbnb: pueden tener errores y campos vacíos (<!--f:calidad.n_columnas_100_nulas:n0-->13<!--/f--> columnas vienen vacías en este snapshot).
-- **Precio de anuncio ≠ precio pagado:** es una **cotización para unas fechas concretas** (entradas entre el <!--f:precio_naturaleza.checkin_min:fecha-->2026-09-19<!--/f--> y el <!--f:precio_naturaleza.checkin_max:fecha-->2027-09-18<!--/f-->), ya con descuentos y sin tasas, no una media anual. El símbolo `$` del fichero es un artefacto: las cotizaciones están en EUR.
-- **Días no disponibles e ingreso hipotético:** `365 − availability_365` no es ocupación real (incluye bloqueos y mira al próximo año, no al pasado); el ingreso derivado es un proxy, no un ingreso observado.
-- **Sesgo de selección:** los análisis de precio solo incluyen anuncios que publican precio, y los que no lo hacen son sobre todo anuncios sin disponibilidad.
-- **Snapshot único** (fecha de la URL frente a fechas de scrape, explicadas arriba): no hay tendencia.
-- **Correlación ≠ causalidad**, anuncios de un mismo anfitrión no independientes (errores agrupados, bootstrap por anfitrión y un anuncio por anfitrión) y coordenadas anonimizadas por Airbnb.
+- Datos **scrapeados** de la web pública de Airbnb, un snapshot por ciudad (del <!--f:meta.snapshot_min:fecha-->2026-09-17<!--/f--> al <!--f:meta.snapshot_max:fecha-->2026-09-28<!--/f-->): sin evolución temporal.
+- **Precio de anuncio ≠ precio pagado**, y los anuncios sin precio no son aleatorios (sesgo de selección).
+- **Desfase temporal:** renta de <!--f:meta.anio_ine:texto-->2024<!--/f--> frente a anuncios de los snapshots indicados arriba.
+- **Málaga:** sus distritos censales no coinciden con los municipales. **Coordenadas anonimizadas** por Airbnb.
+- **Ocupación** aproximada por los días no disponibles del calendario (reservas y bloqueos), no observada.
+- **Observacional:** asociaciones, no efectos causales.
 
-Detalle completo en el [informe](reports/informe.md).
-
-## Datos adicionales (reviews y calendar)
-
-El pipeline puede descargar, para el mismo snapshot, las reseñas y el calendario:
-
-```bash
-python run_pipeline.py --incluir-reviews --incluir-calendar
-```
-
-Se guardan en `data/extra/` (ignorada por git) y no se usan en el análisis. Son ficheros grandes (las reseñas superan los 25 MB de subida web de GitHub), por eso no forman parte del repositorio.
+Detalle en el [informe](reports/informe.md).
 
 ## Uso de herramientas de IA
 
-En este proyecto se utilizó un asistente de IA como apoyo para escribir y depurar código, revisar la consistencia de los datos y redactar la documentación. El autor revisó y validó el código, los datos y las conclusiones del análisis. Ninguna cifra se ha escrito a mano: todas proceden de ejecutar el código sobre los datos públicos (`reports/findings.json`), y un script comprueba que los documentos las reproducen fielmente.
+Este proyecto se desarrolló con un asistente de IA, que escribió el código, las pruebas y la documentación de este repositorio siguiendo mis instrucciones. Yo definí el objetivo, elegí el conjunto de datos y el enfoque del análisis, y decidí qué correcciones aplicar tras dos revisiones de código independientes. Como ejercicio de aprendizaje, realicé por mi cuenta una versión propia del análisis y después la comparé con la implementación del asistente para entender sus decisiones. Ninguna cifra se ha escrito a mano: todas proceden de ejecutar el código sobre los datos públicos (`reports/findings.json`), y un script comprueba que los documentos las reproducen fielmente.
 
 ## Datos personales y privacidad
 
-- `data/raw/listings.csv.gz` es el fichero de Inside Airbnb **sin modificar** (se conserva para poder reproducir el análisis sin conexión y verificar su hash). Contiene datos **públicos** de los anfitriones tal como aparecen en Airbnb (`host_name`, `host_url`, `host_picture_url`, `host_about`, `host_location`), redistribuidos por Inside Airbnb.
-- Los datos procesados (`data/processed/`) **eliminan** el nombre, la ubicación declarada, las URLs y la descripción del anfitrión. Se conserva `host_id` (identificador numérico público de Airbnb) porque es imprescindible para el análisis: agrupar los errores de la regresión por anfitrión, validar el modelo sin repetir anfitriones entre entrenamiento y prueba, el bootstrap por anfitrión y la composición de la oferta. El dashboard no lo carga.
-- No se cruzan los datos con otras fuentes ni se intenta reidentificar a nadie.
+- Los `listings.csv.gz` de `data/raw/inside_airbnb/` son los ficheros de Inside Airbnb **sin modificar** (se conservan para reproducir el análisis sin conexión y verificar su hash) de las <!--f:descriptivo.n_ciudades:n0-->9<!--/f--> ciudades y regiones. Contienen datos **públicos** de los anfitriones tal como aparecen en Airbnb (nombre, URL y foto de perfil, descripción y ubicación declarada), redistribuidos por Inside Airbnb.
+- El conjunto procesado (`data/processed/`) **no incluye** nombres, URLs, descripciones ni la ubicación declarada de los anfitriones. Conserva `host_id` (identificador numérico público de Airbnb) porque es imprescindible para el análisis: agrupar los errores de la regresión, validar el modelo sin repetir anfitriones entre entrenamiento y prueba, el bootstrap por anfitrión y la composición de la oferta.
+- Los datos del INE son agregados estadísticos por territorio (distrito censal y municipio), sin datos de personas.
+- No se cruzan los datos con otras fuentes de personas ni se intenta reidentificar a nadie.
 
 ## Fuente de datos, atribución y licencias
 
-- **Datos:** [Inside Airbnb](https://insideairbnb.com/), «Get the Data», Madrid, snapshot <!--f:meta.fecha_snapshot_url:fecha-->2026-09-17<!--/f-->. Licencia: **Creative Commons Attribution 4.0 International (CC BY 4.0)** ([https://creativecommons.org/licenses/by/4.0/](https://creativecommons.org/licenses/by/4.0/)), verificada en la página de descargas el <!--f:dataset.licencia.fecha_verificacion:fecha-->2026-10-25<!--/f-->. La página de Inside Airbnb es ambigua: indica esa licencia y, en su pie, también una renuncia de derechos del autor; por prudencia se cita y se respeta la licencia con atribución. Los datos se han limpiado y transformado para este proyecto. No se usan datos privados ni de ninguna otra fuente.
+- **Inside Airbnb** ([insideairbnb.com](https://insideairbnb.com/), «Get the Data»), <!--f:descriptivo.n_ciudades:n0-->9<!--/f--> ciudades y regiones de España, snapshots del <!--f:meta.snapshot_min:fecha-->2026-09-17<!--/f--> al <!--f:meta.snapshot_max:fecha-->2026-09-28<!--/f-->. Licencia: **Creative Commons Attribution 4.0 International (CC BY 4.0)** ([https://creativecommons.org/licenses/by/4.0/](https://creativecommons.org/licenses/by/4.0/)), verificada en la página de descargas el <!--f:dataset.fuente_airbnb.licencia.fecha_verificacion:fecha-->2026-10-27<!--/f-->. La página de Inside Airbnb es ambigua: indica esa licencia y, en su pie, también una renuncia de derechos del autor; por prudencia se cita y se respeta la licencia con atribución. Los datos se han limpiado y transformado para este proyecto.
+- **INE**, Atlas de Distribución de Renta de los Hogares ([INEbase](https://www.ine.es/dynt3/inebase/es/index.htm?padre=7132)). Elaboración propia con datos extraídos del sitio web del INE: www.ine.es. Fecha de la última actualización del ADRH: <!--f:dataset.fuente_ine.actualizacion.fecha:fecha-->2026-10-19<!--/f--> ([página de resultados](https://ine.es/dyngs/INEbase/operacion.htm?c=Estadistica_C&cid=1254736177088&idp=1254735976608&menu=resultados)); tablas descargadas el <!--f:dataset.fuente_ine.fechas_descarga.1:fecha-->2026-10-27<!--/f-->. Reutilización autorizada por el [aviso legal del INE](https://www.ine.es/ss/Satellite?L=es_ES&c=Page&cid=1254735849170&p=1254735849170&pagename=Ayuda%2FINELayout) citando la fuente, sin desnaturalizar el sentido de los datos y sin sugerir que el INE patrocina este trabajo.
 - **Código:** licencia MIT, ver [LICENSE](LICENSE).

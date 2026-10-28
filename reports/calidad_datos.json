@@ -1,10 +1,10 @@
 {
   "antes": {
-    "filas": 23109,
-    "columnas": 90,
-    "nulos_total": 425829,
-    "pct_nulos_total": 20.474418336290334,
-    "columnas_con_nulos": 46,
+    "filas": 109437,
+    "columnas": 129,
+    "nulos_total": 2020368,
+    "pct_nulos_total": 14.311217816515864,
+    "columnas_con_nulos": 87,
     "columnas_100_nulas": [
       "bathrooms",
       "calendar_updated",
@@ -23,209 +23,697 @@
     "top_nulos": [
       {
         "columna": "neighborhood_overview",
-        "n": 23109,
+        "n": 109437,
         "pct": 100.0
       },
       {
         "columna": "host_since",
-        "n": 23109,
+        "n": 109437,
         "pct": 100.0
       },
       {
         "columna": "host_response_time",
-        "n": 23109,
+        "n": 109437,
         "pct": 100.0
       },
       {
         "columna": "host_response_rate",
-        "n": 23109,
+        "n": 109437,
         "pct": 100.0
       },
       {
         "columna": "host_acceptance_rate",
-        "n": 23109,
+        "n": 109437,
         "pct": 100.0
       },
       {
         "columna": "host_thumbnail_url",
-        "n": 23109,
+        "n": 109437,
         "pct": 100.0
       },
       {
         "columna": "host_neighbourhood",
-        "n": 23109,
+        "n": 109437,
         "pct": 100.0
       },
       {
         "columna": "host_total_listings_count",
-        "n": 23109,
+        "n": 109437,
         "pct": 100.0
       },
       {
         "columna": "host_verifications",
-        "n": 23109,
+        "n": 109437,
         "pct": 100.0
       },
       {
         "columna": "neighbourhood",
-        "n": 23109,
+        "n": 109437,
         "pct": 100.0
       },
       {
         "columna": "bathrooms",
-        "n": 23109,
+        "n": 109437,
         "pct": 100.0
       },
       {
         "columna": "calendar_updated",
-        "n": 23109,
+        "n": 109437,
         "pct": 100.0
       },
       {
         "columna": "instant_bookable",
-        "n": 23109,
+        "n": 109437,
         "pct": 100.0
       },
       {
         "columna": "source",
-        "n": 17084,
-        "pct": 73.92790687610888
+        "n": 86946,
+        "pct": 79.4484497930316
       },
       {
-        "columna": "host_about",
-        "n": 10968,
-        "pct": 47.462027781383874
+        "columna": "neighbourhood_group_cleansed",
+        "n": 48501,
+        "pct": 44.31864908577538
       }
     ],
     "dtypes": {
-      "float64": 36,
-      "int64": 24,
-      "str": 30
+      "float64": 72,
+      "int64": 21,
+      "object": 4,
+      "str": 31,
+      "string": 1
     },
     "tipos_logicos": {
       "booleano": 4,
-      "categorico": 4,
-      "fecha": 6,
+      "categorico": 3,
+      "fecha": 7,
       "geoespacial": 2,
       "identificador": 10,
-      "numerico": 54,
-      "texto": 10
+      "numerico": 90,
+      "texto": 13
     },
     "duplicados_id": 0,
     "duplicados_filas": 0,
-    "memoria_mb": 67.718113
+    "memoria_mb": 401.494543
   },
   "despues": {
-    "filas": 23109,
-    "columnas": 112,
-    "nulos_total": 117013,
-    "pct_nulos_total": 4.521004494229212,
-    "columnas_con_nulos": 33,
+    "filas": 109437,
+    "columnas": 73,
+    "nulos_total": 191243,
+    "pct_nulos_total": 2.393858679685729,
+    "columnas_con_nulos": 27,
     "columnas_100_nulas": [],
     "top_nulos": [
       {
-        "columna": "license",
-        "n": 10913,
-        "pct": 47.224025271539226
+        "columna": "neighbourhood_group_cleansed",
+        "n": 48501,
+        "pct": 44.31864908577538
       },
       {
-        "columna": "price_quote_total_price",
-        "n": 4936,
-        "pct": 21.35964342896707
-      },
-      {
-        "columna": "price_quote_price_per_night",
-        "n": 4936,
-        "pct": 21.35964342896707
+        "columna": "distancia_centro_km",
+        "n": 45244,
+        "pct": 41.342507561428036
       },
       {
         "columna": "price",
-        "n": 4324,
-        "pct": 18.711324592150245
-      },
-      {
-        "columna": "estimated_revenue_l365d",
-        "n": 4324,
-        "pct": 18.711324592150245
+        "n": 19823,
+        "pct": 18.11361788060711
       },
       {
         "columna": "log_precio",
-        "n": 4324,
-        "pct": 18.711324592150245
-      },
-      {
-        "columna": "precio_por_persona",
-        "n": 4324,
-        "pct": 18.711324592150245
-      },
-      {
-        "columna": "ingreso_hipotetico_anual",
-        "n": 4324,
-        "pct": 18.711324592150245
-      },
-      {
-        "columna": "categoria_precio",
-        "n": 4324,
-        "pct": 18.711324592150245
-      },
-      {
-        "columna": "review_scores_value",
-        "n": 3817,
-        "pct": 16.517374183218656
-      },
-      {
-        "columna": "review_scores_location",
-        "n": 3816,
-        "pct": 16.51304686485785
-      },
-      {
-        "columna": "first_review",
-        "n": 3815,
-        "pct": 16.508719546497037
-      },
-      {
-        "columna": "last_review",
-        "n": 3815,
-        "pct": 16.508719546497037
+        "n": 19823,
+        "pct": 18.11361788060711
       },
       {
         "columna": "review_scores_rating",
-        "n": 3815,
-        "pct": 16.508719546497037
+        "n": 15841,
+        "pct": 14.474994745835504
       },
       {
-        "columna": "review_scores_accuracy",
-        "n": 3815,
-        "pct": 16.508719546497037
+        "columna": "mes_cotizacion",
+        "n": 12281,
+        "pct": 11.221981596717747
+      },
+      {
+        "columna": "mes_cotizacion_agrupado",
+        "n": 12281,
+        "pct": 11.221981596717747
+      },
+      {
+        "columna": "minimum_nights",
+        "n": 10745,
+        "pct": 9.818434350356826
+      },
+      {
+        "columna": "ine_dis_renta_neta_persona",
+        "n": 427,
+        "pct": 0.39017882434642764
+      },
+      {
+        "columna": "ine_dis_renta_mediana_uc",
+        "n": 427,
+        "pct": 0.39017882434642764
+      },
+      {
+        "columna": "ine_mun_renta_neta_persona",
+        "n": 427,
+        "pct": 0.39017882434642764
+      },
+      {
+        "columna": "ine_mun_renta_mediana_uc",
+        "n": 427,
+        "pct": 0.39017882434642764
+      },
+      {
+        "columna": "ine_dis_pct_bajo_60_mediana",
+        "n": 393,
+        "pct": 0.35911072123687604
+      },
+      {
+        "columna": "ine_mun_pct_bajo_60_mediana",
+        "n": 393,
+        "pct": 0.35911072123687604
+      },
+      {
+        "columna": "codigo_distrito_ine",
+        "n": 375,
+        "pct": 0.34266290194358395
       }
     ],
     "dtypes": {
-      "bool": 31,
-      "boolean": 1,
-      "category": 3,
-      "datetime64[us]": 6,
-      "float64": 34,
-      "int64": 26,
-      "str": 6,
-      "string": 5
+      "bool": 25,
+      "category": 2,
+      "float64": 26,
+      "int64": 8,
+      "str": 5,
+      "string": 7
     },
     "tipos_logicos": {
-      "booleano": 32,
-      "categorico": 11,
-      "fecha": 6,
+      "booleano": 25,
+      "categorico": 8,
+      "fecha": 1,
       "geoespacial": 2,
       "identificador": 2,
-      "numerico": 56,
+      "numerico": 32,
       "texto": 3
     },
     "duplicados_id": 0,
     "duplicados_filas": 0,
-    "memoria_mb": 20.169015
+    "memoria_mb": 56.533898
+  },
+  "por_ciudad": {
+    "barcelona": {
+      "antes": {
+        "filas": 15236,
+        "columnas": 129,
+        "pct_nulos_total": 14.510410879170305,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 17.235494880546078,
+          "bedrooms": 0.013126804935678657,
+          "beds": 2.717248621685482,
+          "bathrooms": 100.0,
+          "bathrooms_text": 0.05907062221055395,
+          "review_scores_rating": 21.66579154633762,
+          "license": 35.875557889209766,
+          "neighbourhood_group_cleansed": 0.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 13.422158046731425,
+          "ine_dis_renta_neta_persona": 0.0
+        }
+      },
+      "despues": {
+        "filas": 15236,
+        "columnas": 73,
+        "pct_nulos_total": 1.2813020351942228,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 17.235494880546078,
+          "bedrooms": 0.0,
+          "beds": 0.0,
+          "bathrooms": 0.05907062221055395,
+          "review_scores_rating": 21.66579154633762,
+          "neighbourhood_group_cleansed": 0.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 13.422158046731425,
+          "ine_dis_renta_neta_persona": 0.0
+        }
+      },
+      "reglas": {
+        "filas": 15236,
+        "precio_nulo": 2626,
+        "pct_precio_nulo": 17.235494880546078,
+        "precio_cero": 0,
+        "precio_valido": 12610,
+        "outliers_bajo": 270,
+        "outliers_alto": 316,
+        "outliers_total": 586,
+        "pct_outliers": 4.64710547184774,
+        "minimum_nights_extremo": 4,
+        "larga_estancia": 5408,
+        "pct_larga_estancia": 35.49488054607509,
+        "fuera_bbox_o_nulas": 0,
+        "bedrooms_nulos": 0
+      }
+    },
+    "euskadi": {
+      "antes": {
+        "filas": 6248,
+        "columnas": 129,
+        "pct_nulos_total": 13.139708582715462,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 11.331626120358514,
+          "bedrooms": 0.04801536491677336,
+          "beds": 1.7285531370038414,
+          "bathrooms": 100.0,
+          "bathrooms_text": 0.27208706786171577,
+          "review_scores_rating": 8.210627400768246,
+          "license": 17.92573623559539,
+          "neighbourhood_group_cleansed": 0.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 6.482074263764405,
+          "ine_dis_renta_neta_persona": 0.3681177976952625
+        }
+      },
+      "despues": {
+        "filas": 6248,
+        "columnas": 73,
+        "pct_nulos_total": 2.2012523459561852,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 11.331626120358514,
+          "bedrooms": 0.0,
+          "beds": 0.0,
+          "bathrooms": 0.3681177976952625,
+          "review_scores_rating": 8.210627400768246,
+          "neighbourhood_group_cleansed": 0.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 6.482074263764405,
+          "ine_dis_renta_neta_persona": 0.3681177976952625
+        }
+      },
+      "reglas": {
+        "filas": 6248,
+        "precio_nulo": 708,
+        "pct_precio_nulo": 11.331626120358514,
+        "precio_cero": 0,
+        "precio_valido": 5540,
+        "outliers_bajo": 37,
+        "outliers_alto": 66,
+        "outliers_total": 103,
+        "pct_outliers": 1.8592057761732852,
+        "minimum_nights_extremo": 0,
+        "larga_estancia": 264,
+        "pct_larga_estancia": 4.225352112676056,
+        "fuera_bbox_o_nulas": 0,
+        "bedrooms_nulos": 0
+      }
+    },
+    "girona": {
+      "antes": {
+        "filas": 20470,
+        "columnas": 129,
+        "pct_nulos_total": 15.007933712788235,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 26.057645334636053,
+          "bedrooms": 0.048851978505129456,
+          "beds": 1.3922813873961895,
+          "bathrooms": 100.0,
+          "bathrooms_text": 0.024425989252564728,
+          "review_scores_rating": 14.513922813873961,
+          "license": 13.063019052271619,
+          "neighbourhood_group_cleansed": 100.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 7.3961895456766,
+          "ine_dis_renta_neta_persona": 0.996580361504641
+        }
+      },
+      "despues": {
+        "filas": 20470,
+        "columnas": 73,
+        "pct_nulos_total": 4.407050745829179,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 26.057645334636053,
+          "bedrooms": 0.0,
+          "beds": 0.0,
+          "bathrooms": 0.029311187103077674,
+          "review_scores_rating": 14.513922813873961,
+          "neighbourhood_group_cleansed": 100.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 7.3961895456766,
+          "ine_dis_renta_neta_persona": 0.996580361504641
+        }
+      },
+      "reglas": {
+        "filas": 20470,
+        "precio_nulo": 5334,
+        "pct_precio_nulo": 26.057645334636053,
+        "precio_cero": 0,
+        "precio_valido": 15136,
+        "outliers_bajo": 20,
+        "outliers_alto": 387,
+        "outliers_total": 407,
+        "pct_outliers": 2.688953488372093,
+        "minimum_nights_extremo": 1,
+        "larga_estancia": 409,
+        "pct_larga_estancia": 1.9980459208597947,
+        "fuera_bbox_o_nulas": 0,
+        "bedrooms_nulos": 0
+      }
+    },
+    "madrid": {
+      "antes": {
+        "filas": 23109,
+        "columnas": 129,
+        "pct_nulos_total": 14.284477909039769,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 18.711324592150245,
+          "bedrooms": 0.051927820329741664,
+          "beds": 2.483880739105976,
+          "bathrooms": 100.0,
+          "bathrooms_text": 0.07789173049461248,
+          "review_scores_rating": 16.508719546497037,
+          "license": 47.224025271539226,
+          "neighbourhood_group_cleansed": 0.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 7.481933445843611,
+          "ine_dis_renta_neta_persona": 0.0
+        }
+      },
+      "despues": {
+        "filas": 23109,
+        "columnas": 73,
+        "pct_nulos_total": 1.2654145897020492,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 18.711324592150245,
+          "bedrooms": 0.0,
+          "beds": 0.0,
+          "bathrooms": 0.08221904885542429,
+          "review_scores_rating": 16.508719546497037,
+          "neighbourhood_group_cleansed": 0.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 7.481933445843611,
+          "ine_dis_renta_neta_persona": 0.0
+        }
+      },
+      "reglas": {
+        "filas": 23109,
+        "precio_nulo": 4324,
+        "pct_precio_nulo": 18.711324592150245,
+        "precio_cero": 0,
+        "precio_valido": 18785,
+        "outliers_bajo": 569,
+        "outliers_alto": 192,
+        "outliers_total": 761,
+        "pct_outliers": 4.051104604737823,
+        "minimum_nights_extremo": 8,
+        "larga_estancia": 3151,
+        "pct_larga_estancia": 13.635380154917998,
+        "fuera_bbox_o_nulas": 0,
+        "bedrooms_nulos": 0
+      }
+    },
+    "malaga": {
+      "antes": {
+        "filas": 9505,
+        "columnas": 129,
+        "pct_nulos_total": 14.094580983488903,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 10.278800631246712,
+          "bedrooms": 0.052603892688058915,
+          "beds": 1.5675960021041557,
+          "bathrooms": 100.0,
+          "bathrooms_text": 0.03156233561283535,
+          "review_scores_rating": 7.837980010520779,
+          "license": 23.35612835349816,
+          "neighbourhood_group_cleansed": 100.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 16.77012098895318,
+          "ine_dis_renta_neta_persona": 0.07364544976328248
+        }
+      },
+      "despues": {
+        "filas": 9505,
+        "columnas": 73,
+        "pct_nulos_total": 2.203310442232999,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 10.278800631246712,
+          "bedrooms": 0.0,
+          "beds": 0.0,
+          "bathrooms": 0.03156233561283535,
+          "review_scores_rating": 7.837980010520779,
+          "neighbourhood_group_cleansed": 100.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 16.77012098895318,
+          "ine_dis_renta_neta_persona": 0.07364544976328248
+        }
+      },
+      "reglas": {
+        "filas": 9505,
+        "precio_nulo": 977,
+        "pct_precio_nulo": 10.278800631246712,
+        "precio_cero": 0,
+        "precio_valido": 8528,
+        "outliers_bajo": 53,
+        "outliers_alto": 149,
+        "outliers_total": 202,
+        "pct_outliers": 2.368667917448405,
+        "minimum_nights_extremo": 2,
+        "larga_estancia": 195,
+        "pct_larga_estancia": 2.0515518148342977,
+        "fuera_bbox_o_nulas": 0,
+        "bedrooms_nulos": 0
+      }
+    },
+    "mallorca": {
+      "antes": {
+        "filas": 14901,
+        "columnas": 129,
+        "pct_nulos_total": 14.780028810303039,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 25.629152405878802,
+          "bedrooms": 0.020132876988121603,
+          "beds": 2.8320246963291056,
+          "bathrooms": 100.0,
+          "bathrooms_text": 0.03355479498020267,
+          "review_scores_rating": 18.0793235353332,
+          "license": 7.03308502785048,
+          "neighbourhood_group_cleansed": 100.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 3.744715119790618,
+          "ine_dis_renta_neta_persona": 0.778471243540702
+        }
+      },
+      "despues": {
+        "filas": 14901,
+        "columnas": 73,
+        "pct_nulos_total": 4.065462187423295,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 25.629152405878802,
+          "bedrooms": 0.0,
+          "beds": 0.0,
+          "bathrooms": 0.03355479498020267,
+          "review_scores_rating": 18.0793235353332,
+          "neighbourhood_group_cleansed": 100.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 3.744715119790618,
+          "ine_dis_renta_neta_persona": 0.778471243540702
+        }
+      },
+      "reglas": {
+        "filas": 14901,
+        "precio_nulo": 3819,
+        "pct_precio_nulo": 25.629152405878802,
+        "precio_cero": 0,
+        "precio_valido": 11082,
+        "outliers_bajo": 14,
+        "outliers_alto": 1290,
+        "outliers_total": 1304,
+        "pct_outliers": 11.76682909222162,
+        "minimum_nights_extremo": 0,
+        "larga_estancia": 691,
+        "pct_larga_estancia": 4.63727266626401,
+        "fuera_bbox_o_nulas": 0,
+        "bedrooms_nulos": 0
+      }
+    },
+    "menorca": {
+      "antes": {
+        "filas": 3625,
+        "columnas": 129,
+        "pct_nulos_total": 14.241539695268646,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 16.882758620689657,
+          "bedrooms": 0.0,
+          "beds": 1.186206896551724,
+          "bathrooms": 100.0,
+          "bathrooms_text": 0.13793103448275862,
+          "review_scores_rating": 8.413793103448276,
+          "license": 4.993103448275862,
+          "neighbourhood_group_cleansed": 100.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 2.841379310344828,
+          "ine_dis_renta_neta_persona": 2.0965517241379312
+        }
+      },
+      "despues": {
+        "filas": 3625,
+        "columnas": 73,
+        "pct_nulos_total": 4.106565895134624,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 16.882758620689657,
+          "bedrooms": 0.0,
+          "beds": 0.0,
+          "bathrooms": 0.13793103448275862,
+          "review_scores_rating": 8.413793103448276,
+          "neighbourhood_group_cleansed": 100.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 2.841379310344828,
+          "ine_dis_renta_neta_persona": 2.0965517241379312
+        }
+      },
+      "reglas": {
+        "filas": 3625,
+        "precio_nulo": 612,
+        "pct_precio_nulo": 16.882758620689657,
+        "precio_cero": 0,
+        "precio_valido": 3013,
+        "outliers_bajo": 0,
+        "outliers_alto": 105,
+        "outliers_total": 105,
+        "pct_outliers": 3.484898771988052,
+        "minimum_nights_extremo": 0,
+        "larga_estancia": 44,
+        "pct_larga_estancia": 1.2137931034482758,
+        "fuera_bbox_o_nulas": 0,
+        "bedrooms_nulos": 0
+      }
+    },
+    "sevilla": {
+      "antes": {
+        "filas": 8375,
+        "columnas": 129,
+        "pct_nulos_total": 13.306675922712023,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 7.785074626865672,
+          "bedrooms": 0.023880597014925373,
+          "beds": 1.8865671641791044,
+          "bathrooms": 100.0,
+          "bathrooms_text": 0.04776119402985075,
+          "review_scores_rating": 8.023880597014925,
+          "license": 24.394029850746268,
+          "neighbourhood_group_cleansed": 0.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 17.791044776119403,
+          "ine_dis_renta_neta_persona": 0.0
+        }
+      },
+      "despues": {
+        "filas": 8375,
+        "columnas": 73,
+        "pct_nulos_total": 0.7317930893477816,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 7.785074626865672,
+          "bedrooms": 0.0,
+          "beds": 0.0,
+          "bathrooms": 0.04776119402985075,
+          "review_scores_rating": 8.023880597014925,
+          "neighbourhood_group_cleansed": 0.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 17.791044776119403,
+          "ine_dis_renta_neta_persona": 0.0
+        }
+      },
+      "reglas": {
+        "filas": 8375,
+        "precio_nulo": 652,
+        "pct_precio_nulo": 7.785074626865672,
+        "precio_cero": 0,
+        "precio_valido": 7723,
+        "outliers_bajo": 53,
+        "outliers_alto": 83,
+        "outliers_total": 136,
+        "pct_outliers": 1.7609737148776383,
+        "minimum_nights_extremo": 0,
+        "larga_estancia": 181,
+        "pct_larga_estancia": 2.161194029850746,
+        "fuera_bbox_o_nulas": 0,
+        "bedrooms_nulos": 0
+      }
+    },
+    "valencia": {
+      "antes": {
+        "filas": 7968,
+        "columnas": 129,
+        "pct_nulos_total": 13.605876996357525,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 9.676204819277109,
+          "bedrooms": 0.07530120481927711,
+          "beds": 1.8072289156626504,
+          "bathrooms": 100.0,
+          "bathrooms_text": 0.08785140562248996,
+          "review_scores_rating": 10.353915662650602,
+          "license": 35.8433734939759,
+          "neighbourhood_group_cleansed": 0.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 16.4031124497992,
+          "ine_dis_renta_neta_persona": 0.01255020080321285
+        }
+      },
+      "despues": {
+        "filas": 7968,
+        "columnas": 73,
+        "pct_nulos_total": 0.8420668977278979,
+        "duplicados_id": 0,
+        "nulos_pct": {
+          "price": 9.676204819277109,
+          "bedrooms": 0.0,
+          "beds": 0.0,
+          "bathrooms": 0.08785140562248996,
+          "review_scores_rating": 10.353915662650602,
+          "neighbourhood_group_cleansed": 0.0,
+          "host_is_superhost": 0.0,
+          "minimum_nights": 16.4031124497992,
+          "ine_dis_renta_neta_persona": 0.01255020080321285
+        }
+      },
+      "reglas": {
+        "filas": 7968,
+        "precio_nulo": 771,
+        "pct_precio_nulo": 9.676204819277109,
+        "precio_cero": 0,
+        "precio_valido": 7197,
+        "outliers_bajo": 135,
+        "outliers_alto": 43,
+        "outliers_total": 178,
+        "pct_outliers": 2.473252744198972,
+        "minimum_nights_extremo": 1,
+        "larga_estancia": 290,
+        "pct_larga_estancia": 3.639558232931727,
+        "fuera_bbox_o_nulas": 0,
+        "bedrooms_nulos": 0
+      }
+    }
   },
   "conversiones": {
     "price": {
       "a": "float64 (€)",
-      "no_nulos_antes": 18785,
+      "no_nulos_antes": 89614,
       "no_convertibles": 0
     },
     "host_response_rate": {
@@ -240,22 +728,22 @@
     },
     "host_is_superhost": {
       "a": "bool",
-      "no_nulos_antes": 23109,
+      "no_nulos_antes": 109437,
       "no_convertibles": 0
     },
     "host_has_profile_pic": {
       "a": "bool",
-      "no_nulos_antes": 23109,
+      "no_nulos_antes": 109437,
       "no_convertibles": 0
     },
     "host_identity_verified": {
       "a": "bool",
-      "no_nulos_antes": 23109,
+      "no_nulos_antes": 109437,
       "no_convertibles": 0
     },
     "has_availability": {
       "a": "boolean",
-      "no_nulos_antes": 23026,
+      "no_nulos_antes": 109126,
       "no_convertibles": 0
     },
     "instant_bookable": {
@@ -270,38 +758,38 @@
     },
     "first_review": {
       "a": "datetime64",
-      "no_nulos_antes": 19294,
+      "no_nulos_antes": 93596,
       "no_convertibles": 0
     },
     "last_review": {
       "a": "datetime64",
-      "no_nulos_antes": 19294,
+      "no_nulos_antes": 93596,
       "no_convertibles": 0
     },
     "last_scraped": {
       "a": "datetime64",
-      "no_nulos_antes": 23109,
+      "no_nulos_antes": 109437,
       "no_convertibles": 0
     },
     "calendar_last_scraped": {
       "a": "datetime64",
-      "no_nulos_antes": 23109,
+      "no_nulos_antes": 109437,
       "no_convertibles": 0
     },
     "price_quote_checkin_date": {
       "a": "datetime64",
-      "no_nulos_antes": 19541,
+      "no_nulos_antes": 97156,
       "no_convertibles": 0
     },
     "price_quote_checkout_date": {
       "a": "datetime64",
-      "no_nulos_antes": 19541,
+      "no_nulos_antes": 97156,
       "no_convertibles": 0
     },
     "bathrooms_text": {
       "a": "bathrooms (float) + bano_compartido (bool)",
-      "no_nulos_antes": 23091,
-      "no_convertibles": 1
+      "no_nulos_antes": 109364,
+      "no_convertibles": 8
     },
     "amenities": {
       "a": "n_amenities + flags",
@@ -309,15 +797,15 @@
     }
   },
   "reglas": {
-    "precio_nulo_o_no_positivo (precio_valido=False)": 4324,
+    "precio_nulo_o_no_positivo (precio_valido=False)": 19823,
     "precio negativo (precio_valido=False)": 0,
-    "outlier_precio (flag, no se borra)": 609,
-    "minimum_nights > 365 (flag)": 8,
-    "minimum_nights >= 30 (flag larga estancia)": 3151,
+    "outlier_precio (flag, no se borra)": 3782,
+    "minimum_nights > 365 (flag)": 16,
+    "minimum_nights >= 30 (flag larga estancia)": 10633,
     "coordenadas fuera del bbox o nulas (excluidas de mapa y distancia)": 0,
     "duplicados por id (eliminados)": 0,
-    "bedrooms imputado con mediana por grupo": 12,
-    "beds imputado con mediana por grupo": 574
+    "bedrooms imputado con mediana por grupo": 43,
+    "beds imputado con mediana por grupo": 2297
   },
   "columnas_eliminadas": {
     "neighborhood_overview": "100 % nulas en este snapshot",
@@ -353,8 +841,43 @@
   },
   "politica_nulos": [
     {
+      "columna": "hosts_time_as_user_years",
+      "nulos": 4,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "hosts_time_as_user_months",
+      "nulos": 4,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "hosts_time_as_host_years",
+      "nulos": 4,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "hosts_time_as_host_months",
+      "nulos": 4,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "neighbourhood_group_cleansed",
+      "nulos": 48501,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
       "columna": "bathrooms",
-      "nulos": 19,
+      "nulos": 81,
       "regla": "^bathrooms$",
       "decision": "conservar NaN",
       "justificacion": "Texto de baños no parseable en pocos casos; OLS usa casos completos."
@@ -375,184 +898,436 @@
     },
     {
       "columna": "price",
-      "nulos": 4324,
+      "nulos": 19823,
       "regla": "^price$",
       "decision": "conservar NaN; precio_valido=False",
       "justificacion": "Es la variable objetivo: imputarla fabricaría el resultado. Los nulos se concentran en anuncios sin fechas reservables (sin cotización), así que no son aleatorios."
     },
     {
       "columna": "price_quote_checkin_date",
-      "nulos": 3568,
+      "nulos": 12281,
       "regla": "^(price_quote_.*|estimated_revenue_l365d)$",
       "decision": "conservar NaN",
       "justificacion": "Derivan de la cotización de precio: faltan por el mismo motivo que price."
     },
     {
       "columna": "price_quote_checkout_date",
-      "nulos": 3568,
+      "nulos": 12281,
       "regla": "^(price_quote_.*|estimated_revenue_l365d)$",
       "decision": "conservar NaN",
       "justificacion": "Derivan de la cotización de precio: faltan por el mismo motivo que price."
     },
     {
       "columna": "price_quote_total_price",
-      "nulos": 4936,
+      "nulos": 20991,
       "regla": "^(price_quote_.*|estimated_revenue_l365d)$",
       "decision": "conservar NaN",
       "justificacion": "Derivan de la cotización de precio: faltan por el mismo motivo que price."
     },
     {
       "columna": "price_quote_price_per_night",
-      "nulos": 4936,
+      "nulos": 20991,
       "regla": "^(price_quote_.*|estimated_revenue_l365d)$",
       "decision": "conservar NaN",
       "justificacion": "Derivan de la cotización de precio: faltan por el mismo motivo que price."
     },
     {
       "columna": "minimum_nights",
-      "nulos": 1729,
+      "nulos": 10745,
       "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
       "decision": "conservar NaN",
       "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
     },
     {
       "columna": "maximum_nights",
-      "nulos": 1729,
+      "nulos": 10745,
       "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
       "decision": "conservar NaN",
       "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
     },
     {
       "columna": "minimum_minimum_nights",
-      "nulos": 1729,
+      "nulos": 10745,
       "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
       "decision": "conservar NaN",
       "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
     },
     {
       "columna": "maximum_minimum_nights",
-      "nulos": 1729,
+      "nulos": 10745,
       "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
       "decision": "conservar NaN",
       "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
     },
     {
       "columna": "minimum_maximum_nights",
-      "nulos": 1729,
+      "nulos": 10745,
       "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
       "decision": "conservar NaN",
       "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
     },
     {
       "columna": "maximum_maximum_nights",
-      "nulos": 1729,
+      "nulos": 10745,
       "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
       "decision": "conservar NaN",
       "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
     },
     {
       "columna": "has_availability",
-      "nulos": 83,
+      "nulos": 311,
       "regla": ".*",
       "decision": "conservar NaN",
       "justificacion": "Regla por defecto: no se imputa nada sin justificación."
     },
     {
       "columna": "estimated_revenue_l365d",
-      "nulos": 4324,
+      "nulos": 19823,
       "regla": "^(price_quote_.*|estimated_revenue_l365d)$",
       "decision": "conservar NaN",
       "justificacion": "Derivan de la cotización de precio: faltan por el mismo motivo que price."
     },
     {
       "columna": "first_review",
-      "nulos": 3815,
+      "nulos": 15841,
       "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
       "decision": "conservar NaN; flag tiene_resenas",
       "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
     },
     {
       "columna": "last_review",
-      "nulos": 3815,
+      "nulos": 15841,
       "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
       "decision": "conservar NaN; flag tiene_resenas",
       "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
     },
     {
       "columna": "review_scores_rating",
-      "nulos": 3815,
+      "nulos": 15841,
       "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
       "decision": "conservar NaN; flag tiene_resenas",
       "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
     },
     {
       "columna": "review_scores_accuracy",
-      "nulos": 3815,
+      "nulos": 15845,
       "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
       "decision": "conservar NaN; flag tiene_resenas",
       "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
     },
     {
       "columna": "review_scores_cleanliness",
-      "nulos": 3815,
+      "nulos": 15842,
       "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
       "decision": "conservar NaN; flag tiene_resenas",
       "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
     },
     {
       "columna": "review_scores_checkin",
-      "nulos": 3815,
+      "nulos": 15844,
       "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
       "decision": "conservar NaN; flag tiene_resenas",
       "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
     },
     {
       "columna": "review_scores_communication",
-      "nulos": 3815,
+      "nulos": 15844,
       "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
       "decision": "conservar NaN; flag tiene_resenas",
       "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
     },
     {
       "columna": "review_scores_location",
-      "nulos": 3816,
+      "nulos": 15845,
       "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
       "decision": "conservar NaN; flag tiene_resenas",
       "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
     },
     {
       "columna": "review_scores_value",
-      "nulos": 3817,
+      "nulos": 15846,
       "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
       "decision": "conservar NaN; flag tiene_resenas",
       "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
     },
     {
       "columna": "license",
-      "nulos": 10913,
+      "nulos": 28521,
       "regla": "^license$",
       "decision": "conservar NaN; license se resume en licencia_tipo",
       "justificacion": "La ausencia es informativa (p. ej. «Sin licencia»)."
     },
     {
       "columna": "reviews_per_month",
-      "nulos": 3815,
+      "nulos": 15841,
       "regla": "^(review_scores_.*|first_review|last_review|reviews_per_month)$",
       "decision": "conservar NaN; flag tiene_resenas",
       "justificacion": "Ausencia de reseñas no equivale a puntuación 0."
     },
     {
+      "columna": "codigo_seccion_ine",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "codigo_distrito_ine",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "codigo_municipio_ine",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_dis_renta_neta_persona",
+      "nulos": 427,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_dis_renta_neta_hogar",
+      "nulos": 427,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_dis_renta_media_uc",
+      "nulos": 427,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_dis_renta_mediana_uc",
+      "nulos": 427,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_dis_renta_bruta_persona",
+      "nulos": 427,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_dis_renta_bruta_hogar",
+      "nulos": 427,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_dis_gini",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_dis_p80_p20",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_dis_edad_media",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_dis_pct_menores_18",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_dis_pct_65_mas",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_dis_tamano_medio_hogar",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_dis_pct_hogares_unipersonales",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_dis_poblacion",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_dis_pct_poblacion_espanola",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_dis_pct_bajo_60_mediana",
+      "nulos": 393,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "municipio_ine",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_mun_renta_neta_persona",
+      "nulos": 427,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_mun_renta_neta_hogar",
+      "nulos": 427,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_mun_renta_media_uc",
+      "nulos": 427,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_mun_renta_mediana_uc",
+      "nulos": 427,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_mun_renta_bruta_persona",
+      "nulos": 427,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_mun_renta_bruta_hogar",
+      "nulos": 427,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_mun_gini",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_mun_p80_p20",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_mun_edad_media",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_mun_pct_menores_18",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_mun_pct_65_mas",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_mun_tamano_medio_hogar",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_mun_pct_hogares_unipersonales",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_mun_poblacion",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_mun_pct_poblacion_espanola",
+      "nulos": 375,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
+      "columna": "ine_mun_pct_bajo_60_mediana",
+      "nulos": 393,
+      "regla": ".*",
+      "decision": "conservar NaN",
+      "justificacion": "Regla por defecto: no se imputa nada sin justificación."
+    },
+    {
       "columna": "noches_cotizadas",
-      "nulos": 3568,
+      "nulos": 12281,
       "regla": ".*",
       "decision": "conservar NaN",
       "justificacion": "Regla por defecto: no se imputa nada sin justificación."
     }
   ],
   "contabilidad_filas": {
-    "filas_raw": 23109,
+    "filas_raw": 109437,
     "duplicados_eliminados": 0,
-    "filas_procesadas": 23109
+    "filas_procesadas": 109437
   },
   "duplicados": {
     "por_id": 0,
@@ -560,7 +1335,11 @@
     "eliminados": 0
   },
   "imputados": {
-    "bedrooms": 12,
-    "beds": 574
+    "bedrooms": 43,
+    "beds": 2297
+  },
+  "mojibake_reparado": {
+    "neighbourhood_cleansed": 1706,
+    "neighbourhood_group_cleansed": 2978
   }
 }

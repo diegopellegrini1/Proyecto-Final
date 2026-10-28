@@ -1,119 +1,82 @@
-# Diccionario de datos: `data/processed/listings_limpio.parquet`
+# Diccionario de datos: `data/processed/airbnb_espana_ine.parquet`
 
 Generado automáticamente por `src/diccionario.py` al ejecutar `python run_pipeline.py`.
-Origen: *original* (columna de Inside Airbnb sin cambios), *convertida* (tipo corregido) o *derivada* (creada en este proyecto).
+Columnas: 73 (35 de Derivada, 14 de INE (ADRH), 21 de Inside Airbnb, 3 de Unión (INE)).
 
-| Columna | Tipo lógico | dtype | Origen | % nulos | Descripción |
-|---|---|---|---|---|---|
-| `id` | identificador | `int64` | original | 0,0 % | Identificador único del anuncio |
-| `last_scraped` | fecha | `datetime64[us]` | convertida | 0,0 % | Fecha en que se scrapeó el anuncio |
-| `name` | texto | `str` | original | 0,0 % | Título del anuncio |
-| `host_id` | identificador | `int64` | original | 0,0 % | Identificador numérico público del anfitrión en Airbnb; se conserva solo para agrupar anuncios por anfitrión (no se cruza con otras fuentes) |
-| `hosts_time_as_user_years` | numerico | `int64` | original | 0,0 % | Años como usuario de Airbnb (parte entera) |
-| `hosts_time_as_user_months` | numerico | `int64` | original | 0,0 % | Meses adicionales como usuario (resto, 0-11) |
-| `hosts_time_as_host_years` | numerico | `int64` | original | 0,0 % | Años como anfitrión (parte entera) |
-| `hosts_time_as_host_months` | numerico | `int64` | original | 0,0 % | Meses adicionales como anfitrión (resto, 0-11) |
-| `host_is_superhost` | booleano | `bool` | convertida | 0,0 % | El anfitrión es superhost |
-| `host_listings_count` | numerico | `int64` | original | 0,0 % | Nº de anuncios del anfitrión según Airbnb |
-| `host_has_profile_pic` | booleano | `bool` | convertida | 0,0 % | El anfitrión tiene foto de perfil |
-| `host_identity_verified` | booleano | `bool` | convertida | 0,0 % | Identidad del anfitrión verificada |
-| `neighbourhood_cleansed` | categorico | `str` | original | 0,0 % | Barrio (128 barrios oficiales de Madrid) |
-| `neighbourhood_group_cleansed` | categorico | `str` | original | 0,0 % | Distrito (21 distritos de Madrid) |
-| `latitude` | geoespacial | `float64` | original | 0,0 % | Latitud (anonimizada por Airbnb, error de unos cientos de metros) |
-| `longitude` | geoespacial | `float64` | original | 0,0 % | Longitud (anonimizada por Airbnb) |
-| `property_type` | categorico | `str` | original | 0,0 % | Tipo de propiedad declarado |
-| `room_type` | categorico | `str` | original | 0,0 % | Tipo de habitación original (inglés) |
-| `accommodates` | numerico | `int64` | original | 0,0 % | Capacidad máxima de huéspedes |
-| `bathrooms` | numerico | `float64` | derivada | 0,1 % | Nº de baños reconstruido desde bathrooms_text |
-| `bedrooms` | numerico | `float64` | convertida | 0,0 % | Nº de dormitorios (imputado si faltaba, ver bedrooms_imputado) |
-| `beds` | numerico | `float64` | convertida | 0,0 % | Nº de camas (imputado si faltaba, ver beds_imputado) |
-| `price` | numerico | `float64` | convertida | 18,7 % | Precio por noche en euros (cotización para una ventana de fechas) |
-| `price_quote_checkin_date` | fecha | `datetime64[us]` | convertida | 15,4 % | Fecha de entrada de la cotización de precio |
-| `price_quote_checkout_date` | fecha | `datetime64[us]` | convertida | 15,4 % | Fecha de salida de la cotización de precio |
-| `price_quote_total_price` | numerico | `float64` | original | 21,4 % | Precio total de la cotización |
-| `price_quote_price_per_night` | numerico | `float64` | original | 21,4 % | Precio por noche de la cotización |
-| `minimum_nights` | numerico | `float64` | original | 7,5 % | Estancia mínima en noches |
-| `maximum_nights` | numerico | `float64` | original | 7,5 % | Estancia máxima en noches |
-| `minimum_minimum_nights` | numerico | `float64` | original | 7,5 % | Mínimo de la estancia mínima en el calendario |
-| `maximum_minimum_nights` | numerico | `float64` | original | 7,5 % | Máximo de la estancia mínima en el calendario |
-| `minimum_maximum_nights` | numerico | `float64` | original | 7,5 % | Mínimo de la estancia máxima en el calendario |
-| `maximum_maximum_nights` | numerico | `float64` | original | 7,5 % | Máximo de la estancia máxima en el calendario |
-| `minimum_nights_avg_ntm` | numerico | `float64` | original | 0,0 % | Media de estancia mínima en los próximos 365 días |
-| `maximum_nights_avg_ntm` | numerico | `float64` | original | 0,0 % | Media de estancia máxima en los próximos 365 días |
-| `has_availability` | booleano | `boolean` | convertida | 0,4 % | Tiene disponibilidad (nullable) |
-| `availability_30` | numerico | `int64` | original | 0,0 % | Días disponibles en los próximos 30 |
-| `availability_60` | numerico | `int64` | original | 0,0 % | Días disponibles en los próximos 60 |
-| `availability_90` | numerico | `int64` | original | 0,0 % | Días disponibles en los próximos 90 |
-| `availability_365` | numerico | `int64` | original | 0,0 % | Días disponibles en los próximos 365 |
-| `calendar_last_scraped` | fecha | `datetime64[us]` | convertida | 0,0 % | Fecha de scrape del calendario |
-| `number_of_reviews` | numerico | `int64` | original | 0,0 % | Nº total de reseñas |
-| `number_of_reviews_ltm` | numerico | `int64` | original | 0,0 % | Reseñas en los últimos 12 meses |
-| `number_of_reviews_l30d` | numerico | `int64` | original | 0,0 % | Reseñas en los últimos 30 días |
-| `availability_eoy` | numerico | `int64` | original | 0,0 % | Días disponibles hasta fin de año |
-| `number_of_reviews_ly` | numerico | `int64` | original | 0,0 % | Reseñas del último año natural |
-| `estimated_occupancy_l365d` | numerico | `int64` | original | 0,0 % | Ocupación estimada por Inside Airbnb (noches, 12 meses) |
-| `estimated_revenue_l365d` | numerico | `float64` | original | 18,7 % | Ingresos estimados por Inside Airbnb (12 meses) |
-| `first_review` | fecha | `datetime64[us]` | convertida | 16,5 % | Fecha de la primera reseña |
-| `last_review` | fecha | `datetime64[us]` | convertida | 16,5 % | Fecha de la última reseña |
-| `review_scores_rating` | numerico | `float64` | original | 16,5 % | Puntuación global (1-5) |
-| `review_scores_accuracy` | numerico | `float64` | original | 16,5 % | Puntuación de veracidad (1-5) |
-| `review_scores_cleanliness` | numerico | `float64` | original | 16,5 % | Puntuación de limpieza (1-5) |
-| `review_scores_checkin` | numerico | `float64` | original | 16,5 % | Puntuación de llegada (1-5) |
-| `review_scores_communication` | numerico | `float64` | original | 16,5 % | Puntuación de comunicación (1-5) |
-| `review_scores_location` | numerico | `float64` | original | 16,5 % | Puntuación de ubicación (1-5) |
-| `review_scores_value` | numerico | `float64` | original | 16,5 % | Puntuación calidad-precio (1-5) |
-| `license` | texto | `str` | original | 47,2 % | Texto de licencia turística (con HTML) |
-| `calculated_host_listings_count` | numerico | `int64` | original | 0,0 % | Anuncios del anfitrión en este snapshot |
-| `calculated_host_listings_count_entire_homes` | numerico | `int64` | original | 0,0 % | Alojamientos enteros del anfitrión |
-| `calculated_host_listings_count_private_rooms` | numerico | `int64` | original | 0,0 % | Habitaciones privadas del anfitrión |
-| `calculated_host_listings_count_shared_rooms` | numerico | `int64` | original | 0,0 % | Habitaciones compartidas del anfitrión |
-| `reviews_per_month` | numerico | `float64` | original | 16,5 % | Reseñas por mes |
-| `bano_compartido` | booleano | `bool` | derivada | 0,0 % | El baño es compartido (desde bathrooms_text) |
-| `n_amenities` | numerico | `int64` | derivada | 0,0 % | Nº de amenities del anuncio |
-| `tiene_wifi` | booleano | `bool` | derivada | 0,0 % | Amenity: wifi |
-| `tiene_aire_acondicionado` | booleano | `bool` | derivada | 0,0 % | Amenity: aire acondicionado |
-| `tiene_cocina` | booleano | `bool` | derivada | 0,0 % | Amenity: cocina |
-| `tiene_calefaccion` | booleano | `bool` | derivada | 0,0 % | Amenity: calefacción |
-| `tiene_lavadora` | booleano | `bool` | derivada | 0,0 % | Amenity: lavadora |
-| `tiene_ascensor` | booleano | `bool` | derivada | 0,0 % | Amenity: ascensor |
-| `tiene_terraza_balcon` | booleano | `bool` | derivada | 0,0 % | Amenity: terraza, patio o balcón |
-| `tiene_parking_cualquiera` | booleano | `bool` | derivada | 0,0 % | Amenity: cualquier tipo de parking (gratuito o de pago) |
-| `tiene_piscina` | booleano | `bool` | derivada | 0,0 % | Amenity: piscina |
-| `tiene_tv` | booleano | `bool` | derivada | 0,0 % | Amenity: televisión |
-| `tiene_espacio_trabajo` | booleano | `bool` | derivada | 0,0 % | Amenity: espacio de trabajo |
-| `admite_mascotas` | booleano | `bool` | derivada | 0,0 % | Amenity: admite mascotas |
-| `llegada_autonoma` | booleano | `bool` | derivada | 0,0 % | Amenity: llegada autónoma (self check-in) |
-| `nombre_longitud` | numerico | `int64` | derivada | 0,0 % | Longitud del título sin HTML (caracteres) |
-| `descripcion_longitud` | numerico | `int64` | derivada | 0,0 % | Longitud de la descripción sin HTML (caracteres) |
-| `descripcion_palabras` | numerico | `int64` | derivada | 0,0 % | Palabras de la descripción sin HTML |
-| `host_tiene_descripcion` | booleano | `bool` | derivada | 0,0 % | El anfitrión tiene texto «sobre mí» |
-| `noches_cotizadas` | numerico | `float64` | derivada | 15,4 % | Noches de la estancia cotizada (salida − entrada de la cotización) |
-| `es_tarifa_mensual` | booleano | `bool` | derivada | 0,0 % | La cotización usa tarifa mensual (is_monthly_priced en price_quote_raw) |
-| `precio_valido` | booleano | `bool` | derivada | 0,0 % | Precio publicado y mayor que 0 |
-| `es_outlier_bajo` | booleano | `bool` | derivada | 0,0 % | Precio por debajo de la valla inferior (IQR en log) |
-| `es_outlier_alto` | booleano | `bool` | derivada | 0,0 % | Precio por encima de la valla superior (IQR en log) |
-| `es_outlier_precio` | booleano | `bool` | derivada | 0,0 % | Precio atípico por cualquiera de las dos vallas |
-| `minimum_nights_extremo` | booleano | `bool` | derivada | 0,0 % | Estancia mínima mayor de 365 noches |
-| `alquiler_larga_estancia` | booleano | `bool` | derivada | 0,0 % | Estancia mínima de 30 noches o más |
-| `coords_validas` | booleano | `bool` | derivada | 0,0 % | Coordenadas dentro del bounding box de Madrid |
-| `bedrooms_imputado` | booleano | `bool` | derivada | 0,0 % | bedrooms se imputó |
-| `beds_imputado` | booleano | `bool` | derivada | 0,0 % | beds se imputó |
-| `tipo_habitacion` | categorico | `string` | derivada | 0,0 % | Tipo de habitación en español |
-| `tipo_habitacion_agrupado` | categorico | `string` | derivada | 0,0 % | Tipo de habitación con categorías raras (< 200 con precio) agrupadas |
-| `log_precio` | numerico | `float64` | derivada | 18,7 % | Logaritmo natural del precio |
-| `precio_por_persona` | numerico | `float64` | derivada | 18,7 % | Precio dividido por la capacidad (€) |
-| `antiguedad_host_anios` | numerico | `float64` | derivada | 0,0 % | Antigüedad del anfitrión en años |
-| `no_disponible_365` | numerico | `float64` | derivada | 0,0 % | Fracción de días NO disponibles en los próximos 365: (365 − availability_365) / 365. Mezcla reservas y bloqueos; no es ocupación real |
-| `ocupacion_inside_airbnb` | numerico | `float64` | derivada | 0,0 % | estimated_occupancy_l365d / 365 (estimación de Inside Airbnb, últimos 12 meses) |
-| `es_activo_probable` | booleano | `bool` | derivada | 0,0 % | No (availability_365 = 0 y sin reseñas en 12 meses) |
-| `ingreso_hipotetico_anual` | numerico | `float64` | derivada | 18,7 % | Proxy hipotético: price de una cotización × días no disponibles futuros (€). No es un ingreso observado ni una cota |
-| `mes_cotizacion` | categorico | `string` | derivada | 15,4 % | Mes (AAAA-MM) de la fecha de entrada de la cotización de precio |
-| `mes_cotizacion_agrupado` | categorico | `string` | derivada | 15,4 % | Mes de la cotización con meses raros (< 200 con precio) agrupados |
-| `distancia_centro_km` | numerico | `float64` | derivada | 0,0 % | Distancia haversine a la Puerta del Sol (km) |
-| `categoria_precio` | categorico | `category` | derivada | 18,7 % | Cuartil de precio (Económico … Alto) |
-| `categoria_capacidad` | categorico | `category` | derivada | 0,0 % | Tramo de capacidad (1-2, 3-4, 5-6, 7 o más) |
-| `es_multianuncio` | booleano | `bool` | derivada | 0,0 % | El anfitrión tiene más de un anuncio |
-| `segmento_host` | categorico | `category` | derivada | 0,0 % | Segmento del anfitrión por nº de anuncios |
-| `licencia_tipo` | categorico | `string` | derivada | 0,0 % | Sin licencia / Exenta / Con nº de registro / Otro o en proceso |
-| `tiene_resenas` | booleano | `bool` | derivada | 0,0 % | Tiene al menos una reseña |
-| `dias_desde_ultima_resena` | numerico | `float64` | derivada | 16,5 % | Días desde la última reseña hasta la fecha de referencia |
+Fuente: *Inside Airbnb* (fuente 1), *INE (ADRH)* (fuente 2, indicadores de la zona), *Unión (INE)* (claves asignadas por punto en polígono con el seccionado censal del INE) o *Derivada* (creada en este proyecto). Origen: *original* (sin cambios), *convertida* (tipo o texto corregido) o *derivada*.
+
+| Columna | Fuente | Tipo lógico | dtype | Origen | % nulos | Descripción |
+|---|---|---|---|---|---|---|
+| `ciudad` | Inside Airbnb | categorico | `str` | derivada | 0,0 % | Clave de la ciudad o región de Inside Airbnb (9 en España) |
+| `id` | Inside Airbnb | identificador | `int64` | original | 0,0 % | Identificador único del anuncio |
+| `fecha_snapshot` | Inside Airbnb | fecha | `str` | derivada | 0,0 % | Fecha del snapshot de Inside Airbnb (de la URL de descarga) |
+| `latitude` | Inside Airbnb | geoespacial | `float64` | original | 0,0 % | Latitud (anonimizada por Airbnb, error de unos cientos de metros) |
+| `longitude` | Inside Airbnb | geoespacial | `float64` | original | 0,0 % | Longitud (anonimizada por Airbnb) |
+| `neighbourhood_cleansed` | Inside Airbnb | categorico | `string` | convertida | 0,0 % | Barrio (ciudades) o municipio (regiones), con la doble codificación de Euskadi reparada |
+| `neighbourhood_group_cleansed` | Inside Airbnb | categorico | `string` | convertida | 44,3 % | Distrito (Madrid, Barcelona, Valencia, Sevilla) o provincia (Euskadi); vacío en el resto |
+| `coords_validas` | Derivada | booleano | `bool` | derivada | 0,0 % | Coordenadas dentro de la envolvente (bbox) de su ciudad |
+| `distancia_centro_km` | Derivada | numerico | `float64` | derivada | 41,3 % | Distancia haversine al centro de su ciudad (km); solo ciudades urbanas, NaN en las regiones |
+| `codigo_distrito_ine` | Unión (INE) | identificador | `str` | derivada | 0,3 % | Distrito censal del INE (7 dígitos) asignado por punto en polígono |
+| `codigo_municipio_ine` | Unión (INE) | identificador | `str` | derivada | 0,3 % | Municipio del INE (5 dígitos) asignado por punto en polígono |
+| `municipio_ine` | Unión (INE) | categorico | `str` | derivada | 0,3 % | Nombre del municipio según el INE |
+| `ine_dis_renta_neta_persona` | INE (ADRH) | numerico | `float64` | original | 0,4 % | Renta neta media por persona (€/año) del distrito censal (ADRH, año de referencia) |
+| `ine_dis_renta_mediana_uc` | INE (ADRH) | numerico | `float64` | original | 0,4 % | Mediana de la renta por unidad de consumo (€/año) del distrito censal (ADRH, año de referencia) |
+| `ine_dis_gini` | INE (ADRH) | numerico | `float64` | original | 0,3 % | Índice de Gini de la renta (0-100) del distrito censal (ADRH, año de referencia) |
+| `ine_dis_edad_media` | INE (ADRH) | numerico | `float64` | original | 0,3 % | Edad media de la población (años) del distrito censal (ADRH, año de referencia) |
+| `ine_dis_pct_hogares_unipersonales` | INE (ADRH) | numerico | `float64` | original | 0,3 % | % de hogares unipersonales del distrito censal (ADRH, año de referencia) |
+| `ine_dis_poblacion` | INE (ADRH) | numerico | `float64` | original | 0,3 % | Población (personas) del distrito censal (ADRH, año de referencia) |
+| `ine_dis_pct_bajo_60_mediana` | INE (ADRH) | numerico | `float64` | original | 0,4 % | % de población con ingresos por unidad de consumo por debajo del 60 % de la mediana del distrito censal (ADRH, año de referencia) |
+| `ine_mun_renta_neta_persona` | INE (ADRH) | numerico | `float64` | original | 0,4 % | Renta neta media por persona (€/año) del municipio (ADRH, año de referencia) |
+| `ine_mun_renta_mediana_uc` | INE (ADRH) | numerico | `float64` | original | 0,4 % | Mediana de la renta por unidad de consumo (€/año) del municipio (ADRH, año de referencia) |
+| `ine_mun_gini` | INE (ADRH) | numerico | `float64` | original | 0,3 % | Índice de Gini de la renta (0-100) del municipio (ADRH, año de referencia) |
+| `ine_mun_edad_media` | INE (ADRH) | numerico | `float64` | original | 0,3 % | Edad media de la población (años) del municipio (ADRH, año de referencia) |
+| `ine_mun_pct_hogares_unipersonales` | INE (ADRH) | numerico | `float64` | original | 0,3 % | % de hogares unipersonales del municipio (ADRH, año de referencia) |
+| `ine_mun_poblacion` | INE (ADRH) | numerico | `float64` | original | 0,3 % | Población (personas) del municipio (ADRH, año de referencia) |
+| `ine_mun_pct_bajo_60_mediana` | INE (ADRH) | numerico | `float64` | original | 0,4 % | % de población con ingresos por unidad de consumo por debajo del 60 % de la mediana del municipio (ADRH, año de referencia) |
+| `tipo_habitacion` | Inside Airbnb | categorico | `string` | convertida | 0,0 % | Tipo de habitación en español |
+| `tipo_habitacion_agrupado` | Derivada | categorico | `string` | derivada | 0,0 % | Tipo de habitación con categorías raras (< 200 con precio) agrupadas |
+| `accommodates` | Inside Airbnb | numerico | `int64` | original | 0,0 % | Capacidad máxima de huéspedes |
+| `categoria_capacidad` | Derivada | categorico | `category` | derivada | 0,0 % | Tramo de capacidad (1-2, 3-4, 5-6, 7 o más) |
+| `bedrooms` | Inside Airbnb | numerico | `float64` | convertida | 0,0 % | Nº de dormitorios (imputado si faltaba, ver bedrooms_imputado) |
+| `beds` | Inside Airbnb | numerico | `float64` | convertida | 0,0 % | Nº de camas (imputado si faltaba, ver beds_imputado) |
+| `bathrooms` | Inside Airbnb | numerico | `float64` | derivada | 0,1 % | Nº de baños reconstruido desde bathrooms_text |
+| `bano_compartido` | Derivada | booleano | `bool` | derivada | 0,0 % | El baño es compartido (desde bathrooms_text) |
+| `bedrooms_imputado` | Derivada | booleano | `bool` | derivada | 0,0 % | bedrooms se imputó (mediana por tipo y capacidad) |
+| `beds_imputado` | Derivada | booleano | `bool` | derivada | 0,0 % | beds se imputó (mediana por tipo y capacidad) |
+| `n_amenities` | Derivada | numerico | `int64` | derivada | 0,0 % | Nº de amenities del anuncio |
+| `tiene_wifi` | Derivada | booleano | `bool` | derivada | 0,0 % | Amenity: wifi |
+| `tiene_aire_acondicionado` | Derivada | booleano | `bool` | derivada | 0,0 % | Amenity: aire acondicionado |
+| `tiene_cocina` | Derivada | booleano | `bool` | derivada | 0,0 % | Amenity: cocina |
+| `tiene_calefaccion` | Derivada | booleano | `bool` | derivada | 0,0 % | Amenity: calefacción |
+| `tiene_lavadora` | Derivada | booleano | `bool` | derivada | 0,0 % | Amenity: lavadora |
+| `tiene_ascensor` | Derivada | booleano | `bool` | derivada | 0,0 % | Amenity: ascensor |
+| `tiene_terraza_balcon` | Derivada | booleano | `bool` | derivada | 0,0 % | Amenity: terraza, patio o balcón |
+| `tiene_parking_cualquiera` | Derivada | booleano | `bool` | derivada | 0,0 % | Amenity: cualquier tipo de parking (gratuito o de pago) |
+| `tiene_piscina` | Derivada | booleano | `bool` | derivada | 0,0 % | Amenity: piscina |
+| `tiene_tv` | Derivada | booleano | `bool` | derivada | 0,0 % | Amenity: televisión |
+| `tiene_espacio_trabajo` | Derivada | booleano | `bool` | derivada | 0,0 % | Amenity: espacio de trabajo |
+| `admite_mascotas` | Derivada | booleano | `bool` | derivada | 0,0 % | Amenity: admite mascotas |
+| `llegada_autonoma` | Derivada | booleano | `bool` | derivada | 0,0 % | Amenity: llegada autónoma (self check-in) |
+| `price` | Inside Airbnb | numerico | `float64` | convertida | 18,1 % | Precio por noche en euros de una cotización fechada (descuentos aplicados, sin tasas) |
+| `precio_valido` | Derivada | booleano | `bool` | derivada | 0,0 % | Precio publicado y mayor que 0 |
+| `log_precio` | Derivada | numerico | `float64` | derivada | 18,1 % | Logaritmo natural del precio |
+| `es_outlier_precio` | Derivada | booleano | `bool` | derivada | 0,0 % | Precio fuera de las vallas de Tukey sobre ln(precio) del conjunto |
+| `es_tarifa_mensual` | Derivada | booleano | `bool` | derivada | 0,0 % | La cotización usa tarifa mensual (is_monthly_priced en price_quote_raw) |
+| `minimum_nights` | Inside Airbnb | numerico | `float64` | original | 9,8 % | Estancia mínima en noches |
+| `alquiler_larga_estancia` | Derivada | booleano | `bool` | derivada | 0,0 % | Estancia mínima de 30 noches o más |
+| `mes_cotizacion` | Derivada | categorico | `string` | derivada | 11,2 % | Mes (AAAA-MM) de la fecha de entrada de la cotización de precio |
+| `mes_cotizacion_agrupado` | Derivada | categorico | `string` | derivada | 11,2 % | Mes de la cotización con meses raros (< 200 con precio) agrupados |
+| `host_id` | Inside Airbnb | identificador | `int64` | original | 0,0 % | Identificador numérico público del anfitrión en Airbnb; solo para agrupar anuncios por anfitrión (no se cruza con otras fuentes) |
+| `host_is_superhost` | Inside Airbnb | booleano | `bool` | convertida | 0,0 % | El anfitrión es superhost |
+| `calculated_host_listings_count` | Inside Airbnb | numerico | `int64` | original | 0,0 % | Anuncios del anfitrión en el snapshot de su ciudad |
+| `es_multianuncio` | Derivada | booleano | `bool` | derivada | 0,0 % | El anfitrión tiene más de un anuncio en su ciudad |
+| `segmento_host` | Derivada | categorico | `category` | derivada | 0,0 % | Segmento del anfitrión por nº de anuncios (1, 2-5, 6 o más) |
+| `antiguedad_host_anios` | Derivada | numerico | `float64` | derivada | 0,0 % | Antigüedad como anfitrión en años (hosts_time_as_host_*) |
+| `licencia_tipo` | Derivada | categorico | `string` | derivada | 0,0 % | Sin licencia / Exenta / Con nº de registro / Otro o en proceso |
+| `licencia_registro_nacional` | Derivada | booleano | `bool` | derivada | 0,0 % | El texto de licencia incluye el número del registro único nacional |
+| `availability_365` | Inside Airbnb | numerico | `int64` | original | 0,0 % | Días disponibles en los próximos 365 |
+| `no_disponible_365` | Derivada | numerico | `float64` | derivada | 0,0 % | Proxy de ocupación: % de días NO disponibles en los próximos 365, (365 − availability_365) / 365; mezcla reservas y bloqueos |
+| `es_activo_probable` | Derivada | booleano | `bool` | derivada | 0,0 % | No (availability_365 = 0 y sin reseñas en 12 meses) |
+| `number_of_reviews` | Inside Airbnb | numerico | `int64` | original | 0,0 % | Nº total de reseñas |
+| `review_scores_rating` | Inside Airbnb | numerico | `float64` | original | 14,5 % | Puntuación global (1-5) |
+| `estimated_occupancy_l365d` | Inside Airbnb | numerico | `int64` | original | 0,0 % | Noches ocupadas estimadas por Inside Airbnb (últimos 12 meses) |
