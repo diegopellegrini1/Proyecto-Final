@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 from src import analisis, calidad, config
+from src.errores import ErrorDatos
 
 
 def test_clasificar_columnas_tipos_conocidos():
@@ -24,13 +25,37 @@ def test_clasificar_columnas_tipos_conocidos():
     }
 
 
-def test_comprobar_requisitos_y_conteo():
-    perfil = {"filas": 1000, "columnas": 20, "tipos_logicos": calidad.contar_tipos(
-        {"a": "numerico", "b": "booleano", "c": "fecha", "d": "texto", "e": "geoespacial", "f": "numerico"})}
-    r = calidad.comprobar_requisitos(perfil)
-    assert perfil["tipos_logicos"] == {"booleano": 1, "fecha": 1, "geoespacial": 1, "numerico": 2, "texto": 1}
+def test_comprobar_requisitos_50000_por_20_y_conteo():
+    tipos = calidad.contar_tipos({"a": "numerico", "b": "booleano", "c": "fecha", "d": "texto", "e": "geoespacial",
+                                  "f": "numerico"})
+    assert tipos == {"booleano": 1, "fecha": 1, "geoespacial": 1, "numerico": 2, "texto": 1}
+    perfil = {"tipos_logicos": tipos}
+    ok = pd.DataFrame(np.zeros((config.MIN_FILAS_UNION, config.MIN_COLUMNAS_UNION)))
+    r = calidad.comprobar_requisitos(ok, perfil)
     assert r["cumple_filas"] and r["cumple_columnas"] and r["cumple_tipos"]
-    assert not calidad.comprobar_requisitos({**perfil, "filas": 999})["cumple_filas"]
+    assert (r["filas_final"], r["columnas_final"]) == (config.MIN_FILAS_UNION, config.MIN_COLUMNAS_UNION)
+    with pytest.raises(ErrorDatos, match="filas"):
+        calidad.comprobar_requisitos(ok.iloc[:-1], perfil)
+    with pytest.raises(ErrorDatos, match="columnas"):
+        calidad.comprobar_requisitos(ok.iloc[:, :-1], perfil)
+
+
+def test_perfilar_por_ciudad():
+    df = pd.DataFrame({"ciudad": ["a", "a", "b"], "id": [1, 1, 2], "price": [1.0, np.nan, np.nan]})
+    r = calidad.perfilar_por_ciudad(df, ("price", "no_existe"))
+    assert r["a"]["filas"] == 2 and r["a"]["duplicados_id"] == 1 and r["a"]["nulos_pct"] == {"price": 50.0}
+    assert r["b"]["nulos_pct"]["price"] == 100.0
+
+
+def test_conjunto_final_real_cumple_requisitos():
+    if not config.RUTA_PARQUET.exists():
+        pytest.skip("falta el conjunto final (ejecuta run_pipeline.py)")
+    df = pd.read_parquet(config.RUTA_PARQUET)
+    assert df.shape[0] >= config.MIN_FILAS_UNION and df.shape[1] >= config.MIN_COLUMNAS_UNION
+    assert list(df.columns) == list(config.COLUMNAS_FINALES) and df["ciudad"].nunique() == len(config.CIUDADES_ESPANA)
+    assert config.RUTA_PARQUET.stat().st_size < config.LIMITE_PARQUET_BYTES
+    regiones = ~analisis.es_urbana(df["ciudad"])
+    assert df.loc[regiones, "distancia_centro_km"].isna().all()
 
 
 def test_descriptivos_valores_calculados_a_mano():
@@ -64,30 +89,24 @@ def test_composicion_hosts_valores_conocidos():
     assert h["pct_anuncios_hosts_6_o_mas"] == 0.0 and h["pct_anuncios_top10_hosts"] == 100.0
 
 
-def test_ocupacion_ingresos_misma_mascara():
-    activos = pd.DataFrame({
-        "no_disponible_365": [0.5, 0.2, 0.8, 0.1], "ocupacion_inside_airbnb": [0.3, 0.1, 0.4, np.nan],
-        "ingreso_hipotetico_anual": [1000.0, 200.0, 3000.0, 50.0],
-        "estimated_revenue_l365d": [500.0, 100.0, np.nan, 10_000.0],
-    })
-    r = analisis.ocupacion_ingresos(activos)
-    assert r["n_comparacion_ocupacion"] == 3 and r["no_disponible_media"] == pytest.approx(50.0)
+def test_ocupacion_misma_mascara():
+    activos = pd.DataFrame({"no_disponible_365": [0.5, 0.2, 0.8, 0.1],
+                            "estimated_occupancy_l365d": [365 * 0.3, 365 * 0.1, 365 * 0.4, np.nan]})
+    r = analisis.ocupacion(activos)
+    assert r["n_comparacion"] == 3 and r["no_disponible_media"] == pytest.approx(50.0)
     assert r["ocupacion_inside_airbnb_media"] == pytest.approx(80 / 3)
-    # Ingresos: solo filas 0, 1 y 3 tienen ambos valores → medianas 200 y 500 sobre las mismas filas.
-    assert r["n_comparacion_ingresos"] == 3
-    assert (r["ingreso_hipotetico_mediana"], r["ingresos_inside_airbnb_mediana"]) == (200.0, 500.0)
-    assert r["cociente_medianas"] == pytest.approx(0.4)
 
 
 def test_sensibilidad_sin_mensuales_excluye_estancias_largas_y_tarifas_mensuales():
     n = config.MIN_N_GRUPO
     cp = pd.DataFrame({
         "price": [100.0] * n + [50.0] * n + [10.0] * 5,
-        "neighbourhood_group_cleansed": ["A"] * n + ["B"] * n + ["A"] * 5,
+        "ciudad": ["madrid"] * n + ["sevilla"] * n + ["madrid"] * 5,
         "minimum_nights": [2] * (2 * n) + [30, 31, 2, 2, 90],
         "es_tarifa_mensual": [False] * (2 * n) + [True, True, True, True, False],
     })
     assert analisis.mascara_sin_mensuales(cp).sum() == 2 * n
     r = analisis.sensibilidad_sin_mensuales(cp)
     assert (r["n"], r["n_excluidos"]) == (2 * n, 5)
-    assert [g["grupo"] for g in r["top_distritos"]] == ["A", "B"] and r["precio"]["mediana"] == 75.0
+    assert [g["grupo"] for g in r["por_ciudad"]] == ["Madrid", "Sevilla"] and r["precio"]["mediana"] == 75.0
+    assert r["misma_ciudad_mas_cara"]

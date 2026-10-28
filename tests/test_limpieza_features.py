@@ -9,8 +9,7 @@ import pytest
 from src import config, diccionario, features, limpieza
 from src.errores import ErrorDatos
 
-CIUDAD = config.CIUDADES["madrid"]
-BARRIOS = pd.DataFrame({"neighbourhood_group": ["Centro"], "neighbourhood": ["Sol"]})
+BARRIOS = {"madrid": {"Sol"}, "mallorca": {"Palma de Mallorca"}, "euskadi": {"Donostia-San Sebastián"}}
 
 
 @pytest.mark.parametrize("texto,esperado", [
@@ -135,43 +134,60 @@ def _cotizacion(subtotal: float, descuento: float, mensual: bool) -> str:
 
 
 def _listings_sinteticos() -> pd.DataFrame:
-    """Entrada de prueba mínima con el formato de Inside Airbnb (no son datos de análisis)."""
-    n = 6
-    return pd.DataFrame({
-        "id": [1, 2, 3, 3, 5, 6], "name": ["A", "B<br/>", "C", "C", "D", "E"], "host_id": [10, 10, 11, 11, 12, 13],
-        "price": ["$100.00", "$0.00", np.nan, "$50.00", "$1,000.00", "$-80.00"],
-        "room_type": ["Entire home/apt"] * 3 + ["Private room"] * 3, "accommodates": [2, 4, 0, 1, 2, 3],
-        "latitude": [40.42, 40.40, 41.5, 40.41, 40.43, 40.44], "longitude": [-3.70] * n,
-        "neighbourhood_cleansed": ["Sol"] * n, "neighbourhood_group_cleansed": ["Centro"] * n,
-        "host_is_superhost": ["t", "f", "f", "f", "t", "f"], "availability_365": [0, 365, 100, 0, 200, 50],
-        "number_of_reviews_ltm": [0, 1, 2, 3, 0, 1], "number_of_reviews": [0, 5, 2, 3, 1, 1],
+    """Entrada de prueba mínima con el formato del conjunto unido (no son datos de análisis).
+
+    Filas 0-4 en Madrid (la fila 2 con latitud fuera de la envolvente de Madrid), fila 5 en Mallorca (región:
+    sin distancia al centro) y fila 6 en Euskadi con el nombre doblemente codificado.
+    """
+    n = 7
+    base = pd.DataFrame({
+        "ciudad": ["madrid"] * 5 + ["mallorca", "euskadi"], "fecha_snapshot": ["2026-09-17"] * n,
+        "id": [1, 2, 3, 3, 5, 6, 7], "name": ["A", "B<br/>", "C", "C", "D", "E", "F"],
+        "host_id": [10, 10, 11, 11, 12, 13, 14],
+        "price": ["$100.00", "$0.00", np.nan, "$50.00", "$1,000.00", "$-80.00", "$120.00"],
+        "room_type": ["Entire home/apt"] * 3 + ["Private room"] * 4, "accommodates": [2, 4, 0, 1, 2, 3, 2],
+        "latitude": [40.42, 40.40, 41.5, 40.41, 40.43, 39.57, 43.32],
+        "longitude": [-3.70] * 5 + [2.65, -1.98],
+        "neighbourhood_cleansed": ["Sol"] * 5 + ["Palma de Mallorca", "Donostia-San SebastiÃ¡n"],
+        "neighbourhood_group_cleansed": ["Centro"] * 5 + [np.nan, "GuipÃºzcoa"],
+        "host_is_superhost": ["t", "f", "f", "f", "t", "f", "f"], "availability_365": [0, 365, 100, 0, 200, 50, 10],
+        "number_of_reviews_ltm": [0, 1, 2, 3, 0, 1, 1], "number_of_reviews": [0, 5, 2, 3, 1, 1, 1],
         "amenities": ['["Wifi"]', '["Kitchen", "Heating"]', '["Washer"]', "[malo", '["Elevator", "Air conditioning"]',
-                      '["Balcony", "Pool", "TV", "Dedicated workspace", "Pets allowed", "Self check-in", "Free parking"]'],
-        "minimum_nights": [1, 400, 30, np.nan, 2, 3], "bathrooms_text": ["1 bath"] * n, "bathrooms": [np.nan] * n,
-        "bedrooms": [1, np.nan, 2, 1, 1, 1], "beds": [1, 2, np.nan, 1, 1, 1],
+                      '["Balcony", "Pool", "TV", "Dedicated workspace", "Pets allowed", "Self check-in", "Free parking"]',
+                      '["Wifi"]'],
+        "minimum_nights": [1, 400, 30, np.nan, 2, 3, 1], "bathrooms_text": ["1 bath"] * n, "bathrooms": [np.nan] * n,
+        "bedrooms": [1, np.nan, 2, 1, 1, 1, 1], "beds": [1, 2, np.nan, 1, 1, 1, 1],
         "last_scraped": ["2026-09-20"] * n, "last_review": ["2026-01-01"] * n,
-        "calculated_host_listings_count": [2, 2, 2, 2, 1, 7], "license": [np.nan, "Exempt", "En proceso",
-                                                                          "Spain - National registration number<br />X", np.nan, "VT"],
-        "hosts_time_as_host_years": [1, 2, 3, 3, 4, 5], "hosts_time_as_host_months": [6, 0, 0, 0, 0, 0],
-        "estimated_occupancy_l365d": [0, 10, 20, 30, 40, 50],
-        "estimated_revenue_l365d": [0, 100, 200, 300, 400, 500],
-        "review_scores_rating": [np.nan, 4.5, 4.0, 4.0, 5.0, 4.8],
-        "price_quote_checkin_date": ["2026-09-20", "2026-10-01", None, "2026-09-25", "2026-11-02", "2026-09-21"],
-        "price_quote_checkout_date": ["2026-09-21", "2027-11-05", None, "2026-09-27", "2026-11-04", "2026-09-24"],
+        "calculated_host_listings_count": [2, 2, 2, 2, 1, 7, 1],
+        "license": [np.nan, "Exempt", "En proceso", "Spain - National registration number<br />X", np.nan, "VT", np.nan],
+        "hosts_time_as_host_years": [1, 2, 3, 3, 4, 5, 1], "hosts_time_as_host_months": [6, 0, 0, 0, 0, 0, 0],
+        "estimated_occupancy_l365d": [0, 10, 20, 30, 40, 50, 0],
+        "estimated_revenue_l365d": [0, 100, 200, 300, 400, 500, 0],
+        "review_scores_rating": [np.nan, 4.5, 4.0, 4.0, 5.0, 4.8, 4.9],
+        "price_quote_checkin_date": ["2026-09-20", "2026-10-01", None, "2026-09-25", "2026-11-02", "2026-09-21",
+                                     "2026-09-28"],
+        "price_quote_checkout_date": ["2026-09-21", "2027-11-05", None, "2026-09-27", "2026-11-04", "2026-09-24",
+                                      "2026-09-29"],
         "price_quote_raw": [_cotizacion(100, 0, False), _cotizacion(0, 0, False), np.nan, _cotizacion(330, 30, True),
-                            _cotizacion(2000, 0, False), "no es json"],
+                            _cotizacion(2000, 0, False), "no es json", _cotizacion(120, 0, False)],
+        "codigo_distrito_ine": ["2807901"] * 5 + ["0704001", "2006901"],
+        "codigo_municipio_ine": ["28079"] * 5 + ["07040", "20069"],
+        "municipio_ine": ["Madrid"] * 5 + ["Palma", "Donostia/San Sebastián"],
     })
+    for col in config.COLUMNAS_INE_FINALES:
+        base[col] = np.linspace(10, 20, n)
+    return base
 
 
 def test_limpiar_contabilidad_no_muta_y_reglas():
     raw = _listings_sinteticos()
     copia = raw.copy()
-    df, reg = limpieza.limpiar(raw, BARRIOS, CIUDAD)
+    df, reg = limpieza.limpiar(raw, BARRIOS)
     pd.testing.assert_frame_equal(raw, copia)
-    assert reg["duplicados"]["eliminados"] == 1 and len(df) == 5
-    assert reg["contabilidad_filas"] == {"filas_raw": 6, "duplicados_eliminados": 1, "filas_procesadas": 5}
+    assert reg["duplicados"]["eliminados"] == 1 and len(df) == 6
+    assert reg["contabilidad_filas"] == {"filas_raw": 7, "duplicados_eliminados": 1, "filas_procesadas": 6}
     assert reg["precio"]["cero"] == 1 and reg["precio"]["nulo"] == 1 and reg["precio"]["negativo"] == 1
-    assert df["precio_valido"].sum() == 2  # 100 € y 1.000 €; el negativo y el cero no son válidos
+    assert df["precio_valido"].sum() == 3  # 100 €, 1.000 € y 120 €; el negativo y el cero no son válidos
     assert reg["minimum_nights"]["extremo_mayor_365"] == 1
     assert reg["coordenadas"]["fuera_bbox_o_nulas"] == 1
     assert reg["imputados"] == {"bedrooms": 1, "beds": 1}
@@ -181,14 +197,33 @@ def test_limpiar_contabilidad_no_muta_y_reglas():
     assert "host_location" not in df
 
 
+def test_limpieza_por_ciudad_bbox_propio_y_recuentos():
+    df, reg = limpieza.limpiar(_listings_sinteticos(), BARRIOS)
+    # La latitud 41,5 está fuera de Madrid; el anuncio de Mallorca (39,57) y el de Euskadi son válidos en SU bbox.
+    assert df.groupby("ciudad")["coords_validas"].sum().to_dict() == {"euskadi": 1, "madrid": 3, "mallorca": 1}
+    pc = reg["por_ciudad"]
+    assert set(pc) == {"madrid", "mallorca", "euskadi"}
+    assert pc["madrid"]["filas"] == 4 and pc["madrid"]["fuera_bbox_o_nulas"] == 1
+    assert pc["madrid"]["precio_cero"] == 1 and pc["madrid"]["precio_nulo"] == 1
+    assert pc["mallorca"]["precio_valido"] == 0 and pc["euskadi"]["precio_valido"] == 1
+    assert sum(v["filas"] for v in pc.values()) == len(df)
+    assert reg["barrios"]["por_ciudad"]["euskadi"]["no_oficiales"] == []  # el nombre reparado sí es oficial
+
+
+def test_reparar_mojibake_en_nombres():
+    df, reg = limpieza.limpiar(_listings_sinteticos(), BARRIOS)
+    eus = df[df["ciudad"] == "euskadi"].iloc[0]
+    assert eus["neighbourhood_cleansed"] == "Donostia-San Sebastián" and eus["neighbourhood_group_cleansed"] == "Guipúzcoa"
+    assert reg["mojibake_reparado"] == {"neighbourhood_cleansed": 1, "neighbourhood_group_cleansed": 1}
+    assert limpieza.reparar_nombres(pd.Series(["Sol", np.nan])).tolist()[0] == "Sol"
+
+
 def test_naturaleza_del_precio_desde_cotizacion():
-    raw = _listings_sinteticos()
-    df, reg = limpieza.limpiar(raw, BARRIOS, CIUDAD)
+    df, reg = limpieza.limpiar(_listings_sinteticos(), BARRIOS)
     pn = reg["precio_naturaleza"]
-    # Se calcula antes de quitar duplicados. Con precio > 0 y cotización parseable: filas de 100 €, 50 €
-    # (30 € de descuento sobre 330 €, tarifa mensual) y 1.000 €; el cero, el nulo y el negativo no cuentan.
-    assert pn["n_cotizaciones_con_precio"] == 3
-    assert pn["n_con_descuento"] == 1 and pn["pct_con_descuento"] == pytest.approx(100 / 3)
+    # Con precio > 0 y cotización parseable: 100 €, 50 € (30 € de descuento sobre 330 €, mensual), 1.000 € y 120 €.
+    assert pn["n_cotizaciones_con_precio"] == 4
+    assert pn["n_con_descuento"] == 1 and pn["pct_con_descuento"] == pytest.approx(25.0)
     assert pn["mediana_pct_descuento"] == pytest.approx(30 / 330 * 100)
     assert pn["n_tarifa_mensual"] == 1 and pn["partidas_descuento"] == {"Weekly stay discount": 1}
     assert df.loc[df["id"] == 1, "noches_cotizadas"].iloc[0] == 1.0
@@ -197,43 +232,56 @@ def test_naturaleza_del_precio_desde_cotizacion():
 
 def test_limpiar_columna_obligatoria_ausente_da_error_accionable():
     with pytest.raises(ErrorDatos, match="name"):
-        limpieza.limpiar(_listings_sinteticos().drop(columns="name"), BARRIOS, CIUDAD)
+        limpieza.limpiar(_listings_sinteticos().drop(columns="name"), BARRIOS)
+
+
+def _procesado() -> tuple[pd.DataFrame, dict]:
+    df, _ = limpieza.limpiar(_listings_sinteticos(), BARRIOS)
+    return features.agregar_features(df, pd.Timestamp("2026-09-20"))
 
 
 def test_features_y_validacion():
-    df, _ = limpieza.limpiar(_listings_sinteticos(), BARRIOS, CIUDAD)
-    df, meta = features.agregar_features(df, CIUDAD, pd.Timestamp("2026-09-20"))
+    df, meta = _procesado()
     assert df["no_disponible_365"].between(0, 1).all()
-    assert df.loc[df["accommodates"] == 0, "precio_por_persona"].isna().all()
     assert df.loc[~df["coords_validas"], "distancia_centro_km"].isna().all()
     assert meta["antiguedad_fuente"].startswith("hosts_time_as_host_years")
     assert df.loc[df["id"] == 1, "antiguedad_host_anios"].iloc[0] == pytest.approx(1.5)
     assert df.loc[df["id"] == 1, "mes_cotizacion"].iloc[0] == "2026-09"
-    assert limpieza.validar_procesado(df, diccionario.documentadas()) == []
+    assert limpieza.validar_procesado(df, diccionario.documentadas()) == sorted(
+        set(df.columns) - diccionario.documentadas())
+    assert set(config.COLUMNAS_FINALES) <= diccionario.documentadas()
 
 
-def test_licencia_tipo_sin_columna_license_es_serie_string():
-    df, _ = limpieza.limpiar(_listings_sinteticos().drop(columns="license"), BARRIOS, CIUDAD)
-    df, meta = features.agregar_features(df, CIUDAD, pd.Timestamp("2026-09-20"))
-    assert str(df["licencia_tipo"].dtype) == "string"
-    assert df["licencia_tipo"].eq("Sin licencia").all() and meta["licencia_tipo_conteo"] == {"Sin licencia": 5}
+def test_distancia_centro_solo_en_ciudades_urbanas():
+    df, meta = _procesado()
+    madrid = df[(df["ciudad"] == "madrid") & df["coords_validas"]]
+    assert madrid["distancia_centro_km"].notna().all() and (madrid["distancia_centro_km"] < 5).all()
+    assert df.loc[df["ciudad"].isin(["mallorca", "euskadi"]), "distancia_centro_km"].isna().all()
+    assert set(meta["centros"]) == set(config.CIUDADES_URBANAS)
 
 
-def test_validar_procesado_detecta_violaciones():
-    df, _ = limpieza.limpiar(_listings_sinteticos(), BARRIOS, CIUDAD)
-    df, _ = features.agregar_features(df, CIUDAD, pd.Timestamp("2026-09-20"))
-    roto = df.assign(no_disponible_365=df["no_disponible_365"] + 5)
-    with pytest.raises(ErrorDatos):
+def test_validar_procesado_rechaza_distancia_en_region():
+    df, _ = _procesado()
+    roto = df.assign(distancia_centro_km=df["distancia_centro_km"].fillna(3.0))
+    with pytest.raises(ErrorDatos, match="región"):
         limpieza.validar_procesado(roto)
 
 
-def test_columna_sin_documentar_avisa_sin_abortar():
-    df, _ = limpieza.limpiar(_listings_sinteticos(), BARRIOS, CIUDAD)
-    df, _ = features.agregar_features(df, CIUDAD, pd.Timestamp("2026-09-20"))
-    df["columna_nueva_futura"] = 1
-    assert limpieza.validar_procesado(df, diccionario.documentadas()) == ["columna_nueva_futura"]
-    fila = next(f for f in diccionario.tabla(df) if f["columna"] == "columna_nueva_futura")
-    assert fila["tipo_logico"] == "sin documentar"
+def test_licencia_tipo_sin_columna_license_es_serie_string():
+    df, _ = limpieza.limpiar(_listings_sinteticos().drop(columns="license"), BARRIOS)
+    df, meta = features.agregar_features(df, pd.Timestamp("2026-09-20"))
+    assert str(df["licencia_tipo"].dtype) == "string"
+    assert df["licencia_tipo"].eq("Sin licencia").all() and meta["licencia_tipo_conteo"] == {"Sin licencia": 6}
+    assert not df["licencia_registro_nacional"].any()
+
+
+def test_validar_procesado_detecta_violaciones():
+    df, _ = _procesado()
+    roto = df.assign(no_disponible_365=df["no_disponible_365"] + 5)
+    with pytest.raises(ErrorDatos):
+        limpieza.validar_procesado(roto)
+    with pytest.raises(ErrorDatos, match="falta la columna final"):
+        limpieza.validar_procesado(df.drop(columns=config.RENTA_PRINCIPAL))
 
 
 def test_no_disponible_limites():
@@ -250,9 +298,11 @@ def test_antiguedad_con_host_since():
 
 def test_licencia_tipo():
     s = pd.Series([np.nan, "Exempt", "Madrid - Regional registration number<br />Exempt - seasonal",
-                   "Spain - National registration number<br />ESF", "En proceso", "VT"])
+                   "Spain - National registration number<br />ESF", "En proceso", "VT",
+                   "Spain - National registration number<br />ESF<br />Madrid - Regional registration number<br />Exempt"])
     assert features.licencia_tipo(s).tolist() == ["Sin licencia", "Exenta", "Exenta", "Con nº de registro",
-                                                  "Otro / en proceso", "Otro / en proceso"]
+                                                  "Otro / en proceso", "Otro / en proceso", "Con nº de registro"]
+    assert features.registro_nacional(s).tolist() == [False, False, False, True, False, False, True]
 
 
 def test_categoria_precio_cuartiles():

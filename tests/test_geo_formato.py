@@ -7,7 +7,16 @@ import pytest
 from src import config, formato as fmt
 from src.geo import dentro_bbox, haversine_km
 
-SOL = config.CIUDADES["madrid"].centro
+SOL = config.CIUDADES_ESPANA["madrid"].centro
+
+
+def test_centros_dentro_de_su_bbox_y_regiones_sin_centro():
+    for c in config.CIUDADES_ESPANA.values():
+        if c.tipo == config.TIPO_URBANA:
+            assert c.centro is not None
+            assert dentro_bbox(pd.Series([c.centro[0]]), pd.Series([c.centro[1]]), c.bbox).all()
+        else:
+            assert c.centro is None
 
 
 def test_haversine_cero_en_puerta_del_sol():

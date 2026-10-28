@@ -1,6 +1,5 @@
 """Tests del render de documentos, del verificador y de la descarga (con sesión HTTP falsa, sin red)."""
 
-import dataclasses
 import gzip
 import importlib.util
 import io
@@ -10,7 +9,7 @@ import re
 import pandas as pd
 import pytest
 
-from src import carga, config, informe
+from src import carga, config, fuentes, informe
 from src.errores import ErrorDatos, ErrorDescarga, ErrorInforme
 
 _spec = importlib.util.spec_from_file_location("verificar_consistencia", config.RAIZ / "scripts" / "verificar_consistencia.py")
@@ -58,13 +57,21 @@ def test_invariante_falsa_detiene_el_pipeline():
 @requiere_findings
 def test_interpretativa_falsa_avisa_y_no_aborta(tmp_path, caplog):
     f = _findings()
-    f["estadistica"]["kruskal_tipo"]["extra"]["grupo_mas_caro"] = "Habitación privada"
+    f["descriptivo"]["por_capacidad"][0]["mediana"] = 1e9
     resultado = informe.evaluar_afirmaciones(f)
-    assert resultado["entero_mas_caro"] is False and "entero_mas_caro" in caplog.text
+    assert resultado["capacidad_creciente"] is False and "capacidad_creciente" in caplog.text
     f["afirmaciones"] = resultado
-    texto = _entorno(tmp_path, '{{ afirmacion("entero_mas_caro") }}{% if cumple("entero_mas_caro") %}A{% else %}B'
-                               '{% endif %}', f).render()
+    texto = _entorno(tmp_path, '{{ afirmacion("capacidad_creciente") }}{% if cumple("capacidad_creciente") %}A'
+                               '{% else %}B{% endif %}', f).render()
     assert "Aviso automático" in texto and texto.endswith("B")
+
+
+@requiere_findings
+def test_requisitos_del_enunciado_son_invariantes():
+    f = _findings()
+    f["dataset"]["requisitos"]["cumple_filas"] = False
+    with pytest.raises(ErrorInforme, match="dataset_cumple_requisitos"):
+        informe.evaluar_afirmaciones(f)
 
 
 def test_invariantes_e_interpretativas_no_se_solapan():
@@ -135,11 +142,17 @@ def _gz_csv() -> bytes:
 URL = "https://data.insideairbnb.com/spain/comunidad-de-madrid/madrid/2026-09-17/data/listings.csv.gz"
 
 
+def _descargar(sesion, destino):
+    return fuentes.descargar_verificado(URL, destino, sesion, config.DOMINIOS_PERMITIDOS,
+                                        validar=fuentes._validador_airbnb("listings.csv.gz"), espera_base=0)
+
+
 def test_descarga_reintenta_tras_gzip_truncado(tmp_path):
     bueno = _gz_csv()
     sesion = _Sesion({URL: [_Resp(contenido=bueno[:-6]), _Resp(contenido=bueno, headers={"Content-Length": str(len(bueno))})]})
-    destino = carga.descargar_fichero(URL, tmp_path / "listings.csv.gz", sesion, espera_base=0)
-    assert destino.read_bytes() == bueno and len(sesion.urls) == 2
+    entrada = _descargar(sesion, tmp_path / "listings.csv.gz")
+    assert (tmp_path / "listings.csv.gz").read_bytes() == bueno and len(sesion.urls) == 2
+    assert entrada["sha256"] == carga.sha256_fichero(tmp_path / "listings.csv.gz")
     assert not list(tmp_path.glob("*.part"))
 
 
@@ -147,93 +160,24 @@ def test_descarga_tamano_incompleto_agota_reintentos(tmp_path):
     bueno = _gz_csv()
     sesion = _Sesion({URL: [_Resp(contenido=bueno, headers={"Content-Length": "999999"}) for _ in range(3)]})
     with pytest.raises(ErrorDescarga):
-        carga.descargar_fichero(URL, tmp_path / "listings.csv.gz", sesion, espera_base=0)
+        _descargar(sesion, tmp_path / "listings.csv.gz")
 
 
 def test_redireccion_a_dominio_no_permitido(tmp_path):
     sesion = _Sesion({URL: [_Resp(status=302, headers={"Location": "https://malicioso.example/x.gz"})]})
     with pytest.raises(ErrorDescarga):
-        carga.descargar_fichero(URL, tmp_path / "x.csv.gz", sesion, espera_base=0)
+        _descargar(sesion, tmp_path / "x.csv.gz")
 
 
 def test_validar_url():
     with pytest.raises(ErrorDescarga):
-        carga.validar_url("http://data.insideairbnb.com/x")
-    carga.validar_url(URL)
+        fuentes.validar_url("http://data.insideairbnb.com/x", config.DOMINIOS_PERMITIDOS)
+    fuentes.validar_url(URL, config.DOMINIOS_PERMITIDOS)
 
 
-def test_extraer_urls_y_licencia():
-    base = "https://data.insideairbnb.com/spain/comunidad-de-madrid/madrid/2026-09-17"
-    html = (f'<a href="{base}/data/listings.csv.gz"></a><a href="{base}/visualisations/neighbourhoods.csv"></a>'
-            f'<a href="{base}/visualisations/neighbourhoods.geojson"></a><a href="{base}/data/neighbourhoods.csv"></a>'
-            '<a href="http://creativecommons.org/licenses/by/4.0/">CC</a>')
-    urls = carga.extraer_urls(html, config.CIUDADES["madrid"])
-    assert set(urls["2026-09-17"]) == set(config.FICHEROS_OBLIGATORIOS)
-    assert urls["2026-09-17"]["neighbourhoods.csv"].endswith("/visualisations/neighbourhoods.csv")
-    assert carga.detectar_licencia(html)["verificada_en_pagina"] is True
-
-
-BASE_A = "https://data.insideairbnb.com/spain/comunidad-de-madrid/madrid/2026-09-17"
-BASE_B = "https://data.insideairbnb.com/spain/comunidad-de-madrid/madrid/2026-06-10"
-
-
-def _ok(contenido: bytes) -> "_Resp":
-    return _Resp(contenido=contenido, headers={"Content-Length": str(len(contenido))})
-
-
-def _ficheros_validos() -> dict[str, bytes]:
-    return {"listings.csv.gz": _gz_csv(), "neighbourhoods.csv": b"neighbourhood_group,neighbourhood\nCentro,Sol\n",
-            "neighbourhoods.geojson": json.dumps({"features": [{"properties": {"neighbourhood": "Sol"}}]}).encode()}
-
-
-def test_snapshot_con_fechas_distintas_no_toca_data_raw(tmp_path):
-    """Si el fallback trae un fichero de otro snapshot, se aborta y data/raw queda intacto."""
-    dir_raw = tmp_path / "raw"
-    dir_raw.mkdir()
-    previo = {n: f"previo {n}".encode() for n in config.FICHEROS_OBLIGATORIOS}
-    for n, b in previo.items():
-        (dir_raw / n).write_bytes(b)
-    f = _ficheros_validos()
-    urls = {n: f"{BASE_A}/{config.FICHEROS_OBLIGATORIOS[n]}/{n}" for n in config.FICHEROS_OBLIGATORIOS}
-    directa_geo = f"{BASE_B}/visualisations/neighbourhoods.geojson"
-    ciudad = dataclasses.replace(config.CIUDADES["madrid"], url_directa_conocida={"neighbourhoods.geojson": directa_geo})
-    sesion = _Sesion({urls["listings.csv.gz"]: [_ok(f["listings.csv.gz"])],
-                      urls["neighbourhoods.csv"]: [_ok(f["neighbourhoods.csv"])],
-                      urls["neighbourhoods.geojson"]: [_Resp(status=404)],
-                      directa_geo: [_ok(f["neighbourhoods.geojson"])]})
-    snapshot = carga.UrlsSnapshot(fecha="2026-09-17", urls=urls, licencia={}, origen="pagina")
-    with pytest.raises(ErrorDescarga, match="snapshots distintos"):
-        carga.descargar_snapshot(ciudad, snapshot, dir_raw, sesion)
-    assert {n: (dir_raw / n).read_bytes() for n in previo} == previo
-    assert not [p for p in tmp_path.iterdir() if p.name.startswith(".descarga_")]  # temporal borrado
-
-
-def test_snapshot_coherente_registra_url_y_fecha_por_fichero(tmp_path):
-    f = _ficheros_validos()
-    urls = {n: f"{BASE_A}/{config.FICHEROS_OBLIGATORIOS[n]}/{n}" for n in config.FICHEROS_OBLIGATORIOS}
-    sesion = _Sesion({urls[n]: [_ok(f[n])] for n in urls})
-    snapshot = carga.UrlsSnapshot(fecha="2026-09-17", urls=urls, licencia={}, origen="pagina")
-    ficheros = carga.descargar_snapshot(config.CIUDADES["madrid"], snapshot, tmp_path / "raw", sesion)
-    assert {x["archivo"]: (x["url"], x["fecha_snapshot"]) for x in ficheros} == {n: (urls[n], "2026-09-17") for n in urls}
-    assert (tmp_path / "raw" / "listings.csv.gz").read_bytes() == f["listings.csv.gz"]
-
-
-class _SinRed:
-    def get(self, url, **kw):
-        raise AssertionError(f"petición de red en modo offline: {url}")
-
-
-def test_extras_en_modo_offline_no_usan_la_red(tmp_path):
-    manifiesto = {"fecha_snapshot": "2026-09-17", "extras": []}
-    with pytest.raises(ErrorDescarga, match="sin descarga"):
-        carga.asegurar_extras(config.CIUDADES["madrid"], manifiesto, ["reviews"], sin_descarga=True,
-                              dir_extra=tmp_path, dir_raw=tmp_path, sesion=_SinRed())
-    # Con el extra ya en caché y registrado en el manifiesto, tampoco hay red (ni en modo normal).
-    (tmp_path / "reviews.csv.gz").write_bytes(b"x")
-    manifiesto["extras"] = [{"archivo": "reviews.csv.gz", "sha256": carga.sha256_fichero(tmp_path / "reviews.csv.gz")}]
-    for offline in (True, False):
-        assert carga.asegurar_extras(config.CIUDADES["madrid"], manifiesto, ["reviews"], sin_descarga=offline,
-                                     dir_extra=tmp_path, dir_raw=tmp_path, sesion=_SinRed()) is manifiesto
+def test_detectar_licencia():
+    assert carga.detectar_licencia('<a href="http://creativecommons.org/licenses/by/4.0/">CC</a>')["verificada_en_pagina"]
+    assert carga.detectar_licencia("<p>sin licencia</p>")["verificada_en_pagina"] is False
 
 
 def test_gzip_con_demasiados_bytes_descomprimidos(tmp_path):
@@ -253,9 +197,9 @@ def test_leer_listings_sin_columna_obligatoria(tmp_path):
         carga.leer_listings(ruta)
 
 
-def test_manifiesto_real_coincide_con_hash():
-    if not config.RUTA_MANIFIESTO.exists():
-        pytest.skip("data/raw no descargado")
-    manifiesto = carga.verificar_manifiesto()
-    assert {f["archivo"] for f in manifiesto["ficheros"]} == set(config.FICHEROS_OBLIGATORIOS)
-    assert json.loads(config.RUTA_MANIFIESTO.read_text(encoding="utf-8"))["licencia"]["nombre"]
+def test_manifiestos_reales_coinciden_con_hash():
+    for directorio in (config.DIR_RAW_AIRBNB, config.DIR_RAW_INE):
+        if not (directorio / "MANIFEST.json").exists():
+            pytest.skip("data/raw no descargado")
+        manifiesto = fuentes.verificar_manifiesto(directorio)
+        assert manifiesto["licencia"]["nombre"] and manifiesto["ficheros"]
