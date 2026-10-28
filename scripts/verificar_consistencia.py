@@ -16,6 +16,8 @@ Comprobaciones:
 5. Las figuras de findings.json existen, pesan > 5 KB y no están en blanco.
 6. (--autotest) Una cifra alterada se detecta.
 7. Lint de plantillas: ningún número literal fuera de bloques Jinja, código, URLs, rutas o la lista permitida.
+8. Dashboard de Excel (dashboard/): existe con su guía y su vista previa, pesa < 25 MB, tiene las hojas esperadas,
+   ningún valor cacheado es un error y las tablas copiadas de findings.json coinciden con él.
 """
 
 from __future__ import annotations
@@ -75,7 +77,75 @@ PERMITIDOS_PLANTILLA: tuple[str, ...] = (
     r"\bH[01]\b", r"IC 95 %", r"CC BY 4\.0", r"Python 3\.13", r"py -3\.13", r"25 MB", r"SHA-256", r"UTF-8",
     r"\bHC3\b", r"\b[QP]\d{1,2}\b", r"\bP80/P20\b", r"^\| \d+ \|", r"^#+ \d+\.\d*", r"^\d+\. ",
     r"\b10 % (?:mayor|más|de renta)", r"\(\+10 %\)", r"\+10 %", r"(?i:\bfuente [12]\b)", r"ln\(1 \+",
+    r"Excel 2016", r"Microsoft 365",
 )
+HOJAS_DASHBOARD: tuple[str, ...] = ("Inicio", "Dashboard", "Comparador", "Renta y precio", "Resumen ciudades",
+                                    "Datos", "Cálculos")
+ERRORES_EXCEL: frozenset[str] = frozenset({"#REF!", "#NAME?", "#DIV/0!", "#VALUE!", "#N/A", "#NUM!", "#NULL!"})
+
+
+def verificar_dashboard(findings: dict) -> list[str]:
+    """Dashboard de Excel: existe, < 25 MB, hojas esperadas, sin errores cacheados y con las cifras de findings.
+
+    Lee el libro en modo solo lectura (sin la hoja Datos) y compara las tablas copiadas de findings.json
+    («Renta y precio» y «Resumen ciudades») con findings, para detectar un libro desactualizado o alterado.
+    """
+    import openpyxl
+
+    errores: list[str] = []
+    ruta = config.RUTA_DASHBOARD_XLSX
+    for p in (ruta, config.RUTA_DASHBOARD_README, config.RUTA_VISTA_PREVIA_DASHBOARD):
+        if not p.exists():
+            errores.append(f"[8] falta {p.relative_to(RAIZ).as_posix()}")
+    if errores:
+        return errores
+    if ruta.stat().st_size >= config.LIMITE_SUBIDA_BYTES:
+        errores.append(f"[8] {ruta.name} supera {config.LIMITE_SUBIDA_BYTES} bytes")
+    if config.RUTA_VISTA_PREVIA_DASHBOARD.stat().st_size < 5_000:
+        errores.append("[8] la vista previa del dashboard está vacía")
+    for roto in enlaces_rotos(_leer(config.RUTA_DASHBOARD_README), config.DIR_DASHBOARD):
+        errores.append(f"[8] enlace roto en dashboard/README_dashboard.md: {roto}")
+    wb = openpyxl.load_workbook(ruta, read_only=True, data_only=True)
+    try:
+        if tuple(wb.sheetnames) != HOJAS_DASHBOARD:
+            return errores + [f"[8] hojas del dashboard inesperadas: {wb.sheetnames}"]
+        valores: dict[tuple[str, str], object] = {}
+        for nombre in HOJAS_DASHBOARD:
+            if nombre == "Datos":
+                continue
+            for fila in wb[nombre].iter_rows():
+                for c in fila:
+                    v = getattr(c, "value", None)
+                    if v is None:
+                        continue
+                    valores[(nombre, c.coordinate)] = v
+                    if isinstance(v, str) and v.strip() in ERRORES_EXCEL:
+                        errores.append(f"[8] error cacheado {v} en {nombre}!{c.coordinate}")
+    finally:
+        wb.close()
+
+    def comparar(hoja: str, celda: str, esperado: object) -> None:
+        v = valores.get((hoja, celda))
+        if isinstance(esperado, float):
+            ok = isinstance(v, (int, float)) and abs(v - esperado) <= 1e-9 * max(1.0, abs(esperado))
+        else:
+            ok = v == esperado
+        if not ok:
+            errores.append(f"[8] {hoja}!{celda} = {v!r}; findings.json: {esperado!r}")
+
+    rp = findings["estadistica"]["renta_precio"]
+    comparar("Renta y precio", "D6", float(rp["global_distrito"]["rho"]))
+    for i, c in enumerate(rp["por_ciudad"]):
+        comparar("Renta y precio", f"B{7 + i}", c["ciudad"])
+        comparar("Renta y precio", f"D{7 + i}", float(c["distrito"]["rho"]))
+        comparar("Renta y precio", f"G{7 + i}", float(c["distrito"]["cluster_zona"]["p_boot"]))
+    for i, c in enumerate(findings["descriptivo"]["por_ciudad"]):
+        comparar("Resumen ciudades", f"B{5 + i}", c["grupo"])
+        comparar("Resumen ciudades", f"E{5 + i}", c["n"])
+        comparar("Resumen ciudades", f"H{5 + i}", float(c["mediana"]))
+    comparar("Dashboard", "B8", findings["descriptivo"]["precio"]["n"])
+    comparar("Dashboard", "C8", float(findings["descriptivo"]["precio"]["mediana"]))
+    return errores
 
 
 def _leer(ruta: Path) -> str:
@@ -198,6 +268,9 @@ def verificar(autotest: bool = False) -> list[str]:
     for nombre in PLANTILLAS:
         for p in lint_plantilla(_leer(config.DIR_PLANTILLAS / nombre)):
             errores.append(f"[7] número literal en {nombre}, {p}")
+
+    # 8. Dashboard de Excel
+    errores += verificar_dashboard(findings)
     return errores
 
 
@@ -215,7 +288,7 @@ def main() -> int:
             print(" -", e)
         return 5
     print("Verificación de consistencia correcta: README, informe y diccionario coinciden con findings.json; "
-          "sin placeholders, enlaces rotos ni números literales en plantillas.")
+          "sin placeholders, enlaces rotos ni números literales en plantillas; dashboard de Excel coherente.")
     return 0
 
 

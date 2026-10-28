@@ -10,7 +10,9 @@ Falla si algún archivo a subir supera 25 MB (límite de subida web), si hay res
 virtuales, logs, temporales) o patrones de secretos.
 
 La subida web de GitHub admite un número limitado de archivos por vez: los lotes agrupan los archivos por
-carpeta y no superan ``config.LOTE_SUBIDA_ARCHIVOS`` (100) archivos cada uno.
+carpeta, no superan ``config.LOTE_SUBIDA_ARCHIVOS`` (100) archivos y, si una carpeta pesa más de
+``config.LOTE_SUBIDA_BYTES``, se parte por subcarpetas (por ejemplo, cada ciudad de data/raw/inside_airbnb).
+También comprueba que están los entregables (README, informe, Parquet, dashboard de Excel...).
 """
 
 from __future__ import annotations
@@ -28,6 +30,13 @@ from src import config  # noqa: E402
 
 LIMITE_BYTES = config.LIMITE_SUBIDA_BYTES  # fuente de verdad única (límite de subida web de GitHub)
 LIMITE_LOTE = config.LOTE_SUBIDA_ARCHIVOS
+LIMITE_LOTE_BYTES = config.LOTE_SUBIDA_BYTES
+# Archivos que deben estar en la subida (entregables del enunciado que no se ven en una lista larga).
+OBLIGATORIOS: tuple[Path, ...] = (
+    config.RUTA_README, config.RUTA_INFORME, config.RUTA_FINDINGS, config.RUTA_PARQUET,
+    config.RUTA_DASHBOARD_XLSX, config.RUTA_DASHBOARD_README, config.RUTA_VISTA_PREVIA_DASHBOARD,
+    RAIZ / ".gitignore", RAIZ / ".gitattributes", RAIZ / "requirements.txt", RAIZ / "run_pipeline.py",
+)
 EXCLUIDOS_DIRS = {".git", ".agents"}
 EXCLUIDOS_PREFIJOS = (("data", "extra"),)
 DIRS_PROHIBIDOS = {"__pycache__", ".venv", "venv", ".ipynb_checkpoints", ".pytest_cache"}
@@ -62,32 +71,57 @@ def problemas(archivos: list[Path]) -> list[str]:
     for d in RAIZ.rglob("*"):
         if d.is_dir() and d.name in DIRS_PROHIBIDOS and not excluido(d.relative_to(RAIZ)):
             salida.append(f"carpeta no permitida: {d.relative_to(RAIZ).as_posix()}")
+    presentes = set(archivos)
+    for p in OBLIGATORIOS:
+        if p not in presentes:
+            salida.append(f"falta un entregable: {p.relative_to(RAIZ).as_posix()}")
     return sorted(set(salida))
 
 
-def proponer_lotes(archivos: list[Path], limite: int = LIMITE_LOTE) -> list[tuple[str, list[Path]]]:
-    """Agrupa los archivos por carpeta (la carpeta de primer nivel o, si no cabe, la de segundo nivel)
-    en lotes de como máximo ``limite`` archivos. Las carpetas pequeñas se juntan en un mismo lote."""
-    por_carpeta: dict[str, list[Path]] = {}
-    for p in archivos:
-        rel = p.relative_to(RAIZ)
-        clave = rel.parts[0] if len(rel.parts) > 1 else "(raíz)"
-        por_carpeta.setdefault(clave, []).append(p)
-    bloques: list[tuple[str, list[Path]]] = []
-    for carpeta, lista in sorted(por_carpeta.items()):
-        if len(lista) <= limite:
-            bloques.append((carpeta, lista))
-            continue
+def _peso(lista: list[Path]) -> int:
+    return sum(p.stat().st_size for p in lista)
+
+
+def _carpeta(p: Path, nivel: int) -> str:
+    """Carpeta de la ruta relativa hasta ``nivel`` niveles ("(raíz)" para archivos de la raíz)."""
+    partes = p.relative_to(RAIZ).parts[:-1]
+    return "/".join(partes[:nivel]) if partes else "(raíz)"
+
+
+def proponer_lotes(archivos: list[Path], limite: int = LIMITE_LOTE,
+                   limite_bytes: int = LIMITE_LOTE_BYTES) -> list[tuple[str, list[Path]]]:
+    """Agrupa los archivos por carpeta en lotes de como máximo ``limite`` archivos y, en lo posible,
+    ``limite_bytes`` bytes. Si una carpeta no cabe, se parte por subcarpetas (hasta cuatro niveles) y, si aún
+    no cabe, en trozos consecutivos. Las carpetas pequeñas se juntan en un mismo lote."""
+    def cabe(lista: list[Path]) -> bool:
+        return len(lista) <= limite and _peso(lista) <= limite_bytes
+
+    def partir(nombre: str, lista: list[Path], nivel: int) -> list[tuple[str, list[Path]]]:
+        if cabe(lista):
+            return [(nombre, lista)]
         sub: dict[str, list[Path]] = {}
         for p in lista:
-            partes = p.relative_to(RAIZ).parts
-            sub.setdefault("/".join(partes[:2]) if len(partes) > 2 else carpeta, []).append(p)
-        for nombre, trozo in sorted(sub.items()):
-            for i in range(0, len(trozo), limite):
-                bloques.append((nombre, trozo[i:i + limite]))
+            sub.setdefault(_carpeta(p, nivel), []).append(p)
+        if len(sub) > 1 and nivel <= 4:
+            return [b for k, v in sorted(sub.items()) for b in partir(k, v, nivel + 1)]
+        if nivel <= 4:
+            return partir(nombre, lista, nivel + 1)
+        trozos, actual = [], []
+        for p in lista:
+            if actual and not cabe(actual + [p]):
+                trozos.append(actual)
+                actual = []
+            actual.append(p)
+        trozos.append(actual)
+        return [(f"{nombre} ({i}/{len(trozos)})", t) for i, t in enumerate(trozos, 1)]
+
+    por_carpeta: dict[str, list[Path]] = {}
+    for p in archivos:
+        por_carpeta.setdefault(_carpeta(p, 1), []).append(p)
+    bloques = [b for k, v in sorted(por_carpeta.items()) for b in partir(k, v, 2)]
     lotes: list[tuple[str, list[Path]]] = []
     for nombre, lista in bloques:
-        if lotes and len(lotes[-1][1]) + len(lista) <= limite:
+        if lotes and cabe(lotes[-1][1] + lista):
             lotes[-1] = (f"{lotes[-1][0]} + {nombre}", lotes[-1][1] + lista)
         else:
             lotes.append((nombre, list(lista)))
@@ -126,9 +160,15 @@ def main() -> int:
     print(f"\nTotal: {len(archivos)} archivos, {total:,} bytes; mayor: {mayor.relative_to(RAIZ).as_posix()} "
           f"({mayor.stat().st_size:,} bytes). No se suben: .git/, .agents/ y data/extra/.")
     lotes = proponer_lotes(archivos)
-    print(f"\nLotes de subida propuestos (máximo {LIMITE_LOTE} archivos cada uno, agrupados por carpeta):")
+    print(f"\nLotes de subida propuestos (máximo {LIMITE_LOTE} archivos y, en lo posible, "
+          f"{LIMITE_LOTE_BYTES / 1e6:.0f} MB cada uno, agrupados por carpeta):")
     for i, (nombre, lista) in enumerate(lotes, 1):
-        print(f"  Lote {i}: {nombre} — {len(lista)} archivos, {sum(p.stat().st_size for p in lista):,} bytes")
+        peso = _peso(lista)
+        aviso = "  [AVISO: lote pesado, la subida web puede tardar]" if peso > LIMITE_LOTE_BYTES / 2 else ""
+        print(f"  Lote {i}: {nombre} — {len(lista)} archivos, {peso:,} bytes{aviso}")
+        if args.markdown:
+            for p in lista:
+                print(f"      {p.relative_to(RAIZ).as_posix()}")
     assert sum(len(lista) for _, lista in lotes) == len(archivos)
     errores = problemas(archivos)
     if errores:
