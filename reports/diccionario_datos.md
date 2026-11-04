@@ -1,7 +1,7 @@
 # Diccionario de datos: `data/processed/airbnb_espana_ine.parquet`
 
 Generado automáticamente por `src/diccionario.py` al ejecutar `python run_pipeline.py`.
-Columnas: 73 (35 de Derivada, 14 de INE (ADRH), 21 de Inside Airbnb, 3 de Unión (INE)).
+Columnas: 74 (36 de Derivada, 14 de INE (ADRH), 21 de Inside Airbnb, 3 de Unión (INE)).
 
 Fuente: *Inside Airbnb* (fuente 1), *INE (ADRH)* (fuente 2, indicadores de la zona), *Unión (INE)* (claves asignadas por punto en polígono con el seccionado censal del INE) o *Derivada* (creada en este proyecto). Origen: *original* (sin cambios), *convertida* (tipo o texto corregido) o *derivada*.
 
@@ -62,7 +62,8 @@ Fuente: *Inside Airbnb* (fuente 1), *INE (ADRH)* (fuente 2, indicadores de la zo
 | `log_precio` | Derivada | numerico | `float64` | derivada | 18,1 % | Logaritmo natural del precio |
 | `es_outlier_precio` | Derivada | booleano | `bool` | derivada | 0,0 % | Precio fuera de las vallas de Tukey sobre ln(precio) del conjunto |
 | `es_tarifa_mensual` | Derivada | booleano | `bool` | derivada | 0,0 % | La cotización usa tarifa mensual (is_monthly_priced en price_quote_raw) |
-| `minimum_nights` | Inside Airbnb | numerico | `float64` | original | 9,8 % | Estancia mínima en noches |
+| `minimum_nights` | Inside Airbnb | numerico | `float64` | convertida | 0,0 % | Estancia mínima en noches (si faltaba, minimum_nights_avg_ntm; ver minimum_nights_imputado) |
+| `minimum_nights_imputado` | Derivada | booleano | `bool` | derivada | 0,0 % | minimum_nights faltaba y se rellenó con minimum_nights_avg_ntm (media de los próximos 30 días) |
 | `alquiler_larga_estancia` | Derivada | booleano | `bool` | derivada | 0,0 % | Estancia mínima de 30 noches o más |
 | `mes_cotizacion` | Derivada | categorico | `string` | derivada | 11,2 % | Mes (AAAA-MM) de la fecha de entrada de la cotización de precio |
 | `mes_cotizacion_agrupado` | Derivada | categorico | `string` | derivada | 11,2 % | Mes de la cotización con meses raros (< 200 con precio) agrupados |

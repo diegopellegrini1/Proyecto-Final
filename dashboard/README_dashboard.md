@@ -28,8 +28,11 @@ Ninguna cifra está escrita a mano. No tiene macros y funciona sin Python.
   anuncios por tramo de precio y por capacidad (responden a los dos) y mediana por tipo (responde a la ciudad). La
   dispersión renta-precio por distrito censal muestra siempre todos los distritos con al menos 30
   anuncios con precio.
+- **Base de los porcentajes:** las tarjetas de % superhost y % de anuncios de anfitriones con varios anuncios se
+  calculan sobre los anuncios **con precio** (la hoja Datos). El README y el informe dan esos porcentajes sobre
+  **todos** los anuncios, así que difieren ligeramente; no es una incoherencia.
 - **Comparador:** elige ciudad, tipo y capacidad (1 persona, 2 personas, 3-4 personas, 5-6 personas, 7 o más personas).
-- Tramos de precio del gráfico de columnas (intervalos cerrados por la izquierda): < 50 €, 50-100 €, 100-150 €, 150-200 €, 200-300 €, 300-500 €, ≥ 500 €.
+- Tramos de precio del gráfico de columnas (intervalos cerrados por la izquierda): Menos de 50 €, 50-100 €, 100-150 €, 150-200 €, 200-300 €, 300-500 €, 500 € o más.
 
 ## Fórmulas y compatibilidad
 

@@ -119,10 +119,10 @@
   },
   "despues": {
     "filas": 109437,
-    "columnas": 73,
-    "nulos_total": 191243,
-    "pct_nulos_total": 2.393858679685729,
-    "columnas_con_nulos": 27,
+    "columnas": 74,
+    "nulos_total": 180498,
+    "pct_nulos_total": 2.2288276927932618,
+    "columnas_con_nulos": 26,
     "columnas_100_nulas": [],
     "top_nulos": [
       {
@@ -161,11 +161,6 @@
         "pct": 11.221981596717747
       },
       {
-        "columna": "minimum_nights",
-        "n": 10745,
-        "pct": 9.818434350356826
-      },
-      {
         "columna": "ine_dis_renta_neta_persona",
         "n": 427,
         "pct": 0.39017882434642764
@@ -199,10 +194,15 @@
         "columna": "codigo_distrito_ine",
         "n": 375,
         "pct": 0.34266290194358395
+      },
+      {
+        "columna": "codigo_municipio_ine",
+        "n": 375,
+        "pct": 0.34266290194358395
       }
     ],
     "dtypes": {
-      "bool": 25,
+      "bool": 26,
       "category": 2,
       "float64": 26,
       "int64": 8,
@@ -210,7 +210,7 @@
       "string": 7
     },
     "tipos_logicos": {
-      "booleano": 25,
+      "booleano": 26,
       "categorico": 8,
       "fecha": 1,
       "geoespacial": 2,
@@ -220,7 +220,7 @@
     },
     "duplicados_id": 0,
     "duplicados_filas": 0,
-    "memoria_mb": 56.533898
+    "memoria_mb": 56.643335
   },
   "por_ciudad": {
     "barcelona": {
@@ -245,8 +245,8 @@
       },
       "despues": {
         "filas": 15236,
-        "columnas": 73,
-        "pct_nulos_total": 1.2813020351942228,
+        "columnas": 74,
+        "pct_nulos_total": 1.082606628681714,
         "duplicados_id": 0,
         "nulos_pct": {
           "price": 17.235494880546078,
@@ -256,7 +256,7 @@
           "review_scores_rating": 21.66579154633762,
           "neighbourhood_group_cleansed": 0.0,
           "host_is_superhost": 0.0,
-          "minimum_nights": 13.422158046731425,
+          "minimum_nights": 0.0,
           "ine_dis_renta_neta_persona": 0.0
         }
       },
@@ -271,8 +271,8 @@
         "outliers_total": 586,
         "pct_outliers": 4.64710547184774,
         "minimum_nights_extremo": 4,
-        "larga_estancia": 5408,
-        "pct_larga_estancia": 35.49488054607509,
+        "larga_estancia": 5867,
+        "pct_larga_estancia": 38.507482278813335,
         "fuera_bbox_o_nulas": 0,
         "bedrooms_nulos": 0
       }
@@ -299,8 +299,8 @@
       },
       "despues": {
         "filas": 6248,
-        "columnas": 73,
-        "pct_nulos_total": 2.2012523459561852,
+        "columnas": 74,
+        "pct_nulos_total": 2.0839100944734748,
         "duplicados_id": 0,
         "nulos_pct": {
           "price": 11.331626120358514,
@@ -310,7 +310,7 @@
           "review_scores_rating": 8.210627400768246,
           "neighbourhood_group_cleansed": 0.0,
           "host_is_superhost": 0.0,
-          "minimum_nights": 6.482074263764405,
+          "minimum_nights": 0.0,
           "ine_dis_renta_neta_persona": 0.3681177976952625
         }
       },
@@ -325,8 +325,8 @@
         "outliers_total": 103,
         "pct_outliers": 1.8592057761732852,
         "minimum_nights_extremo": 0,
-        "larga_estancia": 264,
-        "pct_larga_estancia": 4.225352112676056,
+        "larga_estancia": 277,
+        "pct_larga_estancia": 4.433418693982074,
         "fuera_bbox_o_nulas": 0,
         "bedrooms_nulos": 0
       }
@@ -353,8 +353,8 @@
       },
       "despues": {
         "filas": 20470,
-        "columnas": 73,
-        "pct_nulos_total": 4.407050745829179,
+        "columnas": 74,
+        "pct_nulos_total": 4.247547498646668,
         "duplicados_id": 0,
         "nulos_pct": {
           "price": 26.057645334636053,
@@ -364,7 +364,7 @@
           "review_scores_rating": 14.513922813873961,
           "neighbourhood_group_cleansed": 100.0,
           "host_is_superhost": 0.0,
-          "minimum_nights": 7.3961895456766,
+          "minimum_nights": 0.0,
           "ine_dis_renta_neta_persona": 0.996580361504641
         }
       },
@@ -378,9 +378,9 @@
         "outliers_alto": 387,
         "outliers_total": 407,
         "pct_outliers": 2.688953488372093,
-        "minimum_nights_extremo": 1,
-        "larga_estancia": 409,
-        "pct_larga_estancia": 1.9980459208597947,
+        "minimum_nights_extremo": 2,
+        "larga_estancia": 428,
+        "pct_larga_estancia": 2.090864680019541,
         "fuera_bbox_o_nulas": 0,
         "bedrooms_nulos": 0
       }
@@ -407,8 +407,8 @@
       },
       "despues": {
         "filas": 23109,
-        "columnas": 73,
-        "pct_nulos_total": 1.2654145897020492,
+        "columnas": 74,
+        "pct_nulos_total": 1.1472071838162972,
         "duplicados_id": 0,
         "nulos_pct": {
           "price": 18.711324592150245,
@@ -418,7 +418,7 @@
           "review_scores_rating": 16.508719546497037,
           "neighbourhood_group_cleansed": 0.0,
           "host_is_superhost": 0.0,
-          "minimum_nights": 7.481933445843611,
+          "minimum_nights": 0.0,
           "ine_dis_renta_neta_persona": 0.0
         }
       },
@@ -433,8 +433,8 @@
         "outliers_total": 761,
         "pct_outliers": 4.051104604737823,
         "minimum_nights_extremo": 8,
-        "larga_estancia": 3151,
-        "pct_larga_estancia": 13.635380154917998,
+        "larga_estancia": 3356,
+        "pct_larga_estancia": 14.522480418884417,
         "fuera_bbox_o_nulas": 0,
         "bedrooms_nulos": 0
       }
@@ -461,8 +461,8 @@
       },
       "despues": {
         "filas": 9505,
-        "columnas": 73,
-        "pct_nulos_total": 2.203310442232999,
+        "columnas": 74,
+        "pct_nulos_total": 1.9469127201899428,
         "duplicados_id": 0,
         "nulos_pct": {
           "price": 10.278800631246712,
@@ -472,7 +472,7 @@
           "review_scores_rating": 7.837980010520779,
           "neighbourhood_group_cleansed": 100.0,
           "host_is_superhost": 0.0,
-          "minimum_nights": 16.77012098895318,
+          "minimum_nights": 0.0,
           "ine_dis_renta_neta_persona": 0.07364544976328248
         }
       },
@@ -487,8 +487,8 @@
         "outliers_total": 202,
         "pct_outliers": 2.368667917448405,
         "minimum_nights_extremo": 2,
-        "larga_estancia": 195,
-        "pct_larga_estancia": 2.0515518148342977,
+        "larga_estancia": 215,
+        "pct_larga_estancia": 2.261967385586533,
         "fuera_bbox_o_nulas": 0,
         "bedrooms_nulos": 0
       }
@@ -515,8 +515,8 @@
       },
       "despues": {
         "filas": 14901,
-        "columnas": 73,
-        "pct_nulos_total": 4.065462187423295,
+        "columnas": 74,
+        "pct_nulos_total": 3.9599192508393237,
         "duplicados_id": 0,
         "nulos_pct": {
           "price": 25.629152405878802,
@@ -526,7 +526,7 @@
           "review_scores_rating": 18.0793235353332,
           "neighbourhood_group_cleansed": 100.0,
           "host_is_superhost": 0.0,
-          "minimum_nights": 3.744715119790618,
+          "minimum_nights": 0.0,
           "ine_dis_renta_neta_persona": 0.778471243540702
         }
       },
@@ -541,8 +541,8 @@
         "outliers_total": 1304,
         "pct_outliers": 11.76682909222162,
         "minimum_nights_extremo": 0,
-        "larga_estancia": 691,
-        "pct_larga_estancia": 4.63727266626401,
+        "larga_estancia": 719,
+        "pct_larga_estancia": 4.825179518153144,
         "fuera_bbox_o_nulas": 0,
         "bedrooms_nulos": 0
       }
@@ -569,8 +569,8 @@
       },
       "despues": {
         "filas": 3625,
-        "columnas": 73,
-        "pct_nulos_total": 4.106565895134624,
+        "columnas": 74,
+        "pct_nulos_total": 4.012674743709226,
         "duplicados_id": 0,
         "nulos_pct": {
           "price": 16.882758620689657,
@@ -580,7 +580,7 @@
           "review_scores_rating": 8.413793103448276,
           "neighbourhood_group_cleansed": 100.0,
           "host_is_superhost": 0.0,
-          "minimum_nights": 2.841379310344828,
+          "minimum_nights": 0.0,
           "ine_dis_renta_neta_persona": 2.0965517241379312
         }
       },
@@ -595,8 +595,8 @@
         "outliers_total": 105,
         "pct_outliers": 3.484898771988052,
         "minimum_nights_extremo": 0,
-        "larga_estancia": 44,
-        "pct_larga_estancia": 1.2137931034482758,
+        "larga_estancia": 46,
+        "pct_larga_estancia": 1.2689655172413792,
         "fuera_bbox_o_nulas": 0,
         "bedrooms_nulos": 0
       }
@@ -623,8 +623,8 @@
       },
       "despues": {
         "filas": 8375,
-        "columnas": 73,
-        "pct_nulos_total": 0.7317930893477816,
+        "columnas": 74,
+        "pct_nulos_total": 0.48148446954417107,
         "duplicados_id": 0,
         "nulos_pct": {
           "price": 7.785074626865672,
@@ -634,7 +634,7 @@
           "review_scores_rating": 8.023880597014925,
           "neighbourhood_group_cleansed": 0.0,
           "host_is_superhost": 0.0,
-          "minimum_nights": 17.791044776119403,
+          "minimum_nights": 0.0,
           "ine_dis_renta_neta_persona": 0.0
         }
       },
@@ -649,8 +649,8 @@
         "outliers_total": 136,
         "pct_outliers": 1.7609737148776383,
         "minimum_nights_extremo": 0,
-        "larga_estancia": 181,
-        "pct_larga_estancia": 2.161194029850746,
+        "larga_estancia": 213,
+        "pct_larga_estancia": 2.5432835820895523,
         "fuera_bbox_o_nulas": 0,
         "bedrooms_nulos": 0
       }
@@ -677,8 +677,8 @@
       },
       "despues": {
         "filas": 7968,
-        "columnas": 73,
-        "pct_nulos_total": 0.8420668977278979,
+        "columnas": 74,
+        "pct_nulos_total": 0.6090239335721264,
         "duplicados_id": 0,
         "nulos_pct": {
           "price": 9.676204819277109,
@@ -688,7 +688,7 @@
           "review_scores_rating": 10.353915662650602,
           "neighbourhood_group_cleansed": 0.0,
           "host_is_superhost": 0.0,
-          "minimum_nights": 16.4031124497992,
+          "minimum_nights": 0.0,
           "ine_dis_renta_neta_persona": 0.01255020080321285
         }
       },
@@ -703,8 +703,8 @@
         "outliers_total": 178,
         "pct_outliers": 2.473252744198972,
         "minimum_nights_extremo": 1,
-        "larga_estancia": 290,
-        "pct_larga_estancia": 3.639558232931727,
+        "larga_estancia": 307,
+        "pct_larga_estancia": 3.8529116465863456,
         "fuera_bbox_o_nulas": 0,
         "bedrooms_nulos": 0
       }
@@ -800,8 +800,8 @@
     "precio_nulo_o_no_positivo (precio_valido=False)": 19823,
     "precio negativo (precio_valido=False)": 0,
     "outlier_precio (flag, no se borra)": 3782,
-    "minimum_nights > 365 (flag)": 16,
-    "minimum_nights >= 30 (flag larga estancia)": 10633,
+    "minimum_nights > 365 (flag)": 17,
+    "minimum_nights >= 30 (flag larga estancia)": 11428,
     "coordenadas fuera del bbox o nulas (excluidas de mapa y distancia)": 0,
     "duplicados por id (eliminados)": 0,
     "bedrooms imputado con mediana por grupo": 43,
@@ -933,43 +933,43 @@
     },
     {
       "columna": "minimum_nights",
-      "nulos": 10745,
-      "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
-      "decision": "conservar NaN",
-      "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
+      "nulos": 0,
+      "regla": "^minimum_nights$",
+      "decision": "rellenar con minimum_nights_avg_ntm de la misma fila; flag minimum_nights_imputado",
+      "justificacion": "Falta también en anuncios con precio; Inside Airbnb publica para todos ellos la estancia mínima media de los próximos 30 días, que casi siempre da la misma clasificación de estancia larga en los anuncios que tienen ambas (concordancia en calidad_datos.json). No usa información de otras filas: no hay fuga."
     },
     {
       "columna": "maximum_nights",
       "nulos": 10745,
-      "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
+      "regla": "^(maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
       "decision": "conservar NaN",
       "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
     },
     {
       "columna": "minimum_minimum_nights",
       "nulos": 10745,
-      "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
+      "regla": "^(maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
       "decision": "conservar NaN",
       "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
     },
     {
       "columna": "maximum_minimum_nights",
       "nulos": 10745,
-      "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
+      "regla": "^(maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
       "decision": "conservar NaN",
       "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
     },
     {
       "columna": "minimum_maximum_nights",
       "nulos": 10745,
-      "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
+      "regla": "^(maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
       "decision": "conservar NaN",
       "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
     },
     {
       "columna": "maximum_maximum_nights",
       "nulos": 10745,
-      "regla": "^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
+      "regla": "^(maximum_nights|minimum_minimum_nights|maximum_minimum_nights|minimum_maximum_nights|maximum_maximum_nights)$",
       "decision": "conservar NaN",
       "justificacion": "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."
     },
