@@ -59,6 +59,17 @@ N_BOOT: int = 2000
 N_BOOT_MIN: int = 100
 N_BOOT_MAX: int = 20_000
 N_BOOT_CORRELACION: int = 1000   # tope de réplicas del bootstrap por clusters de la ρ de Spearman (coste)
+# ρ global renta-precio: su p queda cerca de α, así que se recalcula con más réplicas (con N_BOOT por defecto,
+# 10.000) y un generador propio (semilla, SUBSEMILLA_RHO_GLOBAL) que no altera el resto del análisis.
+N_BOOT_RHO_GLOBAL: int = 10_000
+FACTOR_N_BOOT_RHO_GLOBAL: int = 5
+SUBSEMILLA_RHO_GLOBAL: int = 1
+# Lectura prudente de un p bootstrap: «en el límite» si p está en esta banda o el IC 95 % roza el 0 (su extremo
+# más cercano a 0 está a menos de MARGEN_IC_LIMITE), sin depender de que p caiga a un lado u otro de α.
+BANDA_P_LIMITE: tuple[float, float] = (0.03, 0.07)
+MARGEN_IC_LIMITE: float = 0.01
+# Año del ADRH: el más reciente en el que cada indicador tiene dato en al menos esta fracción de distritos.
+COBERTURA_MIN_ADRH: float = 0.5
 MIN_DISTRITOS_ECOLOGICO: int = 5 # mínimo de distritos con n ≥ MIN_N_GRUPO para la correlación por distrito
 N_SHAPIRO: int = 5000
 MIN_N_GRUPO: int = 30            # mínimo de anuncios con precio para tests y rankings
@@ -322,11 +333,14 @@ ETIQUETA_OTRAS_TIPO: str = "Otras (compartida + hotel)"
 # Casos ambiguos resueltos (comprobados con cadenas reales del snapshot, ver tests):
 # «HDTV» sí es TV; «Dishwasher» no es lavadora; «Pool table», «Pool toys» y «Pool view» no son
 # piscina; «Pocket wifi» (router portátil) no es wifi del alojamiento; «Outdoor kitchen» no es cocina.
+# Aire acondicionado: «AC - split type ductless system» y «Window AC unit» también lo son, pero su gemela
+# «Heating - split type ductless system» es calefacción (se excluye todo lo que empieza por «heating»).
+# Calefacción: «Portable heater» y «Heat pump» cuentan; «fast-heating» dentro de la descripción de un horno, no.
 PATRONES_AMENITIES: dict[str, str] = {
     "tiene_wifi": r"^(?:fast )?wifi\b",
-    "tiene_aire_acondicionado": r"\bair conditioning\b",
+    "tiene_aire_acondicionado": r"^(?!heating\b).*\b(?:air ?conditioning|airconditioner|ac|aire acondicionado)\b",
     "tiene_cocina": r"^kitchen(?:ette)?$",
-    "tiene_calefaccion": r"\bheating\b",
+    "tiene_calefaccion": r"^(?:central |radiant )?heating\b|^portable heaters?$|^heat pump$",
     "tiene_lavadora": r"(?<!dish)\bwasher\b",
     "tiene_ascensor": r"\belevator\b",
     "tiene_terraza_balcon": r"\b(?:balcony|patio|terrace)\b",
@@ -374,7 +388,7 @@ COLUMNAS_FINALES: tuple[str, ...] = (
     *PATRONES_AMENITIES.keys(),
     # Precio (cotización fechada), estancias y outliers
     "price", "precio_valido", "log_precio", "es_outlier_precio", "es_tarifa_mensual", "minimum_nights",
-    "alquiler_larga_estancia", "mes_cotizacion", "mes_cotizacion_agrupado",
+    "minimum_nights_imputado", "alquiler_larga_estancia", "mes_cotizacion", "mes_cotizacion_agrupado",
     # Anfitrión y licencia
     "host_id", "host_is_superhost", "calculated_host_listings_count", "es_multianuncio", "segmento_host",
     "antiguedad_host_anios", "licencia_tipo", "licencia_registro_nacional",

@@ -86,7 +86,10 @@ DICCIONARIO: dict[str, tuple[str, str, str, str]] = {
     "es_outlier_precio": ("booleano", "Precio fuera de las vallas de Tukey sobre ln(precio) del conjunto", PROPIA, D),
     "es_tarifa_mensual": ("booleano", "La cotización usa tarifa mensual (is_monthly_priced en price_quote_raw)",
                           PROPIA, D),
-    "minimum_nights": ("numerico", "Estancia mínima en noches", AIRBNB, O),
+    "minimum_nights": ("numerico", "Estancia mínima en noches (si faltaba, minimum_nights_avg_ntm; ver "
+                                   "minimum_nights_imputado)", AIRBNB, C),
+    "minimum_nights_imputado": ("booleano", "minimum_nights faltaba y se rellenó con minimum_nights_avg_ntm "
+                                            "(media de los próximos 30 días)", PROPIA, D),
     "alquiler_larga_estancia": ("booleano", "Estancia mínima de 30 noches o más", PROPIA, D),
     "mes_cotizacion": ("categorico", "Mes (AAAA-MM) de la fecha de entrada de la cotización de precio", PROPIA, D),
     "mes_cotizacion_agrupado": ("categorico", "Mes de la cotización con meses raros (< 200 con precio) agrupados",

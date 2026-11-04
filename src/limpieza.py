@@ -55,7 +55,11 @@ POLITICA_NULOS: tuple[tuple[str, str, str], ...] = (
      "sin fechas reservables (sin cotización), así que no son aleatorios."),
     (r"^(review_scores_.*|first_review|last_review|reviews_per_month)$", "conservar NaN; flag tiene_resenas",
      "Ausencia de reseñas no equivale a puntuación 0."),
-    (r"^(minimum_nights|maximum_nights|minimum_minimum_nights|maximum_minimum_nights|"
+    (r"^minimum_nights$", "rellenar con minimum_nights_avg_ntm de la misma fila; flag minimum_nights_imputado",
+     "Falta también en anuncios con precio; Inside Airbnb publica para todos ellos la estancia mínima media de "
+     "los próximos 30 días, que casi siempre da la misma clasificación de estancia larga en los anuncios que "
+     "tienen ambas (concordancia en calidad_datos.json). No usa información de otras filas: no hay fuga."),
+    (r"^(maximum_nights|minimum_minimum_nights|maximum_minimum_nights|"
      r"minimum_maximum_nights|maximum_maximum_nights)$", "conservar NaN",
      "Faltan en anuncios sin calendario; imputar mezclaría anuncios inactivos con activos."),
     (r"^(bedrooms|beds)$", "imputar mediana por (room_type, accommodates); flag *_imputado",
@@ -511,12 +515,30 @@ def limpiar(df_raw: pd.DataFrame, barrios: dict[str, set[str]]) -> tuple[pd.Data
     }
 
     # 6. Estancias mínimas -----------------------------------------------------------
+    # Si falta minimum_nights se usa minimum_nights_avg_ntm de la misma fila (estancia mínima media de los
+    # próximos 30 días). Sin esto, los anuncios con precio y sin estancia mínima contarían como «no larga».
+    largo = config.MIN_NIGHTS_LARGA_ESTANCIA
+    nulos_originales = df["minimum_nights"].isna()
+    alternativa = (pd.to_numeric(df["minimum_nights_avg_ntm"], errors="coerce").astype("float64")
+                   if "minimum_nights_avg_ntm" in df else pd.Series(np.nan, index=df.index, dtype="float64"))
+    ambas = ~nulos_originales & alternativa.notna()
+    df["minimum_nights_imputado"] = (nulos_originales & alternativa.notna()).astype(bool)
+    df["minimum_nights"] = df["minimum_nights"].fillna(alternativa)
     df["minimum_nights_extremo"] = (df["minimum_nights"] > config.MIN_NIGHTS_EXTREMO).astype(bool)
-    df["alquiler_larga_estancia"] = (df["minimum_nights"] >= config.MIN_NIGHTS_LARGA_ESTANCIA).astype(bool)
+    df["alquiler_larga_estancia"] = (df["minimum_nights"] >= largo).astype(bool)
+    rellenados_cp = df["minimum_nights_imputado"] & df["precio_valido"]
     registro["minimum_nights"] = {
         "extremo_mayor_365": _contar(df["minimum_nights_extremo"]),
         "larga_estancia_30_o_mas": _contar(df["alquiler_larga_estancia"]),
         "max": float(df["minimum_nights"].max()),
+        "nulos_originales": _contar(nulos_originales),
+        "nulos_originales_con_precio": _contar(nulos_originales & df["precio_valido"]),
+        "rellenados_avg_ntm": _contar(df["minimum_nights_imputado"]),
+        "rellenados_con_precio": _contar(rellenados_cp),
+        "rellenados_con_precio_larga_estancia": _contar(rellenados_cp & df["alquiler_larga_estancia"]),
+        "pct_concordancia_larga_estancia_avg_ntm": float(
+            ((df.loc[ambas, "minimum_nights"] >= largo) == (alternativa[ambas] >= largo)).mean() * 100)
+        if ambas.any() else None,
         "nulos": _contar(df["minimum_nights"].isna()),
     }
 

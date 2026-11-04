@@ -250,6 +250,28 @@ def test_renta_precio_global_por_ciudad_y_sensibilidades():
     assert set(r["sensibilidades"]) == {"sin_estancias_30", "sin_outliers", "un_anuncio_por_anfitrion", "solo_urbanas"}
     assert r["sensibilidades"]["un_anuncio_por_anfitrion"]["n"] == df["host_id"].nunique()
     assert r["sensibilidades_mismo_signo"]
+    # El ρ global usa más réplicas (con un generador propio) y lleva su lectura prudente.
+    gz = r["global_distrito"]["cluster_zona"]
+    assert gz["n_boot"] == r["n_boot_global"] == 50 * config.FACTOR_N_BOOT_RHO_GLOBAL
+    assert gz["lectura"] in {"significativa", "en el límite", "no significativa"}
+    assert r["global_distrito"]["cluster_zona_replicas_generales"]["n_replicas_validas"] == 50
+    assert r["n_ciudades_positivas"] <= r["n_ciudades_evaluables"]
+
+
+@pytest.mark.parametrize("p,lo,hi,esperada", [
+    (0.04995, 0.001, 0.138, "en el límite"),   # el caso del proyecto: p justo por debajo de α e IC que roza 0
+    (0.054, -0.001, 0.14, "en el límite"),     # la misma ρ con otra semilla: p por encima de α
+    (0.02, 0.005, 0.2, "en el límite"),        # p pequeño pero el IC roza el 0
+    (0.002, 0.10, 0.30, "significativa"),
+    (0.40, -0.20, 0.30, "no significativa"),
+])
+def test_lectura_significacion_no_depende_del_lado_de_alfa(p, lo, hi, esperada):
+    from src import estadistica as est
+
+    r = est.lectura_significacion({"p_boot": p, "ic_inf": lo, "ic_sup": hi}, 10_000)
+    assert r["lectura"] == esperada
+    assert r["en_el_limite"] is (esperada == "en el límite")
+    assert r["p_error_montecarlo"] == pytest.approx(np.sqrt(p * (1 - p) / 10_000))
 
 
 def test_gvif_coincide_con_vif_para_un_grado_de_libertad():

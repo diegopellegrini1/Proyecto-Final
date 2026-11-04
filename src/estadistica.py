@@ -451,6 +451,29 @@ def spearman_cluster(x: pd.Series, y: pd.Series, clusters: dict[str, pd.Series],
     return salida
 
 
+LECTURA_SIGNIFICATIVA, LECTURA_LIMITE, LECTURA_NO_SIGNIFICATIVA = "significativa", "en el límite", "no significativa"
+
+
+def lectura_significacion(res: dict[str, Any], n_boot: int) -> dict[str, Any]:
+    """Lectura prudente de un p bootstrap: significativa / en el límite / no significativa.
+
+    «En el límite» si p está en ``config.BANDA_P_LIMITE`` o si el IC 95 % roza el 0 (su extremo más cercano
+    a 0 está a menos de ``config.MARGEN_IC_LIMITE``), aunque p quede a un lado u otro de α: así la frase no
+    depende del azar del remuestreo. Incluye el error de Monte Carlo de p, √(p(1 − p)/B).
+    """
+    p, lo, hi = res["p_boot"], res["ic_inf"], res["ic_sup"]
+    banda_lo, banda_hi = config.BANDA_P_LIMITE
+    roza = min(abs(lo), abs(hi)) < config.MARGEN_IC_LIMITE
+    if banda_lo <= p <= banda_hi or roza:
+        lectura = LECTURA_LIMITE
+    elif p < banda_lo:
+        lectura = LECTURA_SIGNIFICATIVA
+    else:
+        lectura = LECTURA_NO_SIGNIFICATIVA
+    return {"lectura": lectura, "en_el_limite": lectura == LECTURA_LIMITE, "ic_roza_cero": bool(roza),
+            "p_error_montecarlo": float(np.sqrt(p * (1 - p) / n_boot)) if n_boot > 0 else float("nan")}
+
+
 def holm(pvalores: dict[str, float], alfa: float = config.ALFA) -> dict[str, dict[str, Any]]:
     """Corrección de Holm sobre una familia de p-valores ``{nombre: p}``."""
     from statsmodels.stats.multitest import multipletests

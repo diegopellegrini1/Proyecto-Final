@@ -559,7 +559,7 @@ def leer_adrh(dir_ine: Path = config.DIR_RAW_INE) -> pd.DataFrame:
     return pd.concat(partes, ignore_index=True)
 
 
-def elegir_anio_adrh(largo: pd.DataFrame, cobertura_min: float = 0.5) -> int:
+def elegir_anio_adrh(largo: pd.DataFrame, cobertura_min: float = config.COBERTURA_MIN_ADRH) -> int:
     """Año más reciente en el que todos los indicadores de ``config.INDICADORES_ADRH`` tienen dato en al
     menos ``cobertura_min`` de los distritos censales. ``ErrorDatos`` si ningún año lo cumple."""
     dis = largo[(largo["nivel"] == "distrito") & largo["indicador"].isin(config.INDICADORES_ADRH)]

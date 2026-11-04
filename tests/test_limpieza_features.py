@@ -73,7 +73,21 @@ CASOS_AMENITIES = [
     ("tiene_wifi", "Wifi", True), ("tiene_wifi", "Fast wifi – 500 Mbps", True), ("tiene_wifi", "Pocket wifi", False),
     ("tiene_cocina", "Kitchen", True), ("tiene_cocina", "Kitchenette", True), ("tiene_cocina", "Outdoor kitchen", False),
     ("tiene_aire_acondicionado", "Central air conditioning", True), ("tiene_aire_acondicionado", "Ceiling fan", False),
+    ("tiene_aire_acondicionado", "Air conditioning", True),
+    ("tiene_aire_acondicionado", "AC - split type ductless system", True),
+    ("tiene_aire_acondicionado", "Window AC unit", True),
+    ("tiene_aire_acondicionado", "Portable air conditioning", True),
+    ("tiene_aire_acondicionado", "Aire acondicionado dentro del salón Mitsubishi. conditioner", True),
+    ("tiene_aire_acondicionado", "Heating - split type ductless system", False),
+    ("tiene_aire_acondicionado", "Conditioner", False), ("tiene_aire_acondicionado", "Hair dryer", False),
+    ("tiene_aire_acondicionado", "High chair", False),
     ("tiene_calefaccion", "Heating - split type ductless system", True), ("tiene_calefaccion", "Hot water", False),
+    ("tiene_calefaccion", "Heating", True), ("tiene_calefaccion", "Central heating", True),
+    ("tiene_calefaccion", "Radiant heating", True), ("tiene_calefaccion", "Portable heater", True),
+    ("tiene_calefaccion", "Heat pump", True), ("tiene_calefaccion", "AC - split type ductless system", False),
+    ("tiene_calefaccion", "Movie theater", False),
+    ("tiene_calefaccion", "Oven with a fast-heating, small oven with grill when something smaller is required. oven",
+     False),
     ("tiene_ascensor", "Elevator", True), ("tiene_ascensor", "Stairs", False),
     ("tiene_terraza_balcon", "Private patio or balcony", True), ("tiene_terraza_balcon", "Backyard", False),
     ("tiene_parking_cualquiera", "Free street parking", True),
@@ -195,6 +209,23 @@ def test_limpiar_contabilidad_no_muta_y_reglas():
     assert df["price"].dtype == "float64" and df["host_is_superhost"].dtype == bool
     assert "amenities" not in df and "bathrooms" in df and "bathrooms" not in reg["columnas_eliminadas"]
     assert "host_location" not in df
+
+
+def test_minimum_nights_vacio_se_rellena_con_la_media_de_los_proximos_30_dias():
+    raw = _listings_sinteticos()
+    raw.loc[4, "minimum_nights"] = np.nan  # anuncio id 5, con precio
+    raw["minimum_nights_avg_ntm"] = [1.0, 400.0, 30.0, 45.0, 45.0, 3.0, 1.0]
+    df, reg = limpieza.limpiar(raw, BARRIOS)
+    fila = df.loc[df["id"] == 5].iloc[0]
+    assert fila["minimum_nights"] == 45.0 and fila["minimum_nights_imputado"] and fila["alquiler_larga_estancia"]
+    mn = reg["minimum_nights"]
+    assert mn["rellenados_avg_ntm"] == int(df["minimum_nights_imputado"].sum()) >= 1
+    assert mn["rellenados_con_precio"] == mn["rellenados_con_precio_larga_estancia"] == 1 and mn["nulos"] == 0
+    assert mn["pct_concordancia_larga_estancia_avg_ntm"] == 100.0
+    # Sin la columna alternativa no se inventa nada: el nulo se conserva.
+    df2, reg2 = limpieza.limpiar(_listings_sinteticos(), BARRIOS)
+    assert reg2["minimum_nights"]["nulos"] == reg2["minimum_nights"]["nulos_originales"]
+    assert not df2["minimum_nights_imputado"].any()
 
 
 def test_limpieza_por_ciudad_bbox_propio_y_recuentos():

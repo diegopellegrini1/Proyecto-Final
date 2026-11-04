@@ -300,7 +300,8 @@ def correlacion_ecologica(cp: pd.DataFrame, columna_renta: str, clave_zona: str)
             "significativo": bool(r.pvalue < config.ALFA)}
 
 
-def renta_precio(df: pd.DataFrame, n_boot: int, rng: np.random.Generator) -> dict[str, Any]:
+def renta_precio(df: pd.DataFrame, n_boot: int, rng: np.random.Generator,
+                 semilla: int = config.SEMILLA) -> dict[str, Any]:
     """ρ de Spearman renta de la zona (INE) - precio: global y por ciudad, con IC bootstrap por clusters.
 
     - Anuncio a anuncio con la renta del distrito censal (``ine_dis_*``) y del municipio (``ine_mun_*``).
@@ -324,6 +325,19 @@ def renta_precio(df: pd.DataFrame, n_boot: int, rng: np.random.Generator) -> dic
     salida: dict[str, Any] = {"n_boot": b, "hipotesis": dict(zip(("h0", "h1"), est.HIPOTESIS["spearman_renta"])),
                               "variable_renta": renta_d, "variable_renta_municipal": renta_m}
     salida["global_distrito"] = _rho(cp, renta_d, "codigo_distrito_ine")
+    # El p del ρ global queda cerca de α: se recalcula con más réplicas (menos error de Monte Carlo) y con un
+    # generador propio derivado de la semilla, para no alterar la secuencia aleatoria del resto del análisis.
+    b_global = max(b, min(config.N_BOOT_RHO_GLOBAL, n_boot * config.FACTOR_N_BOOT_RHO_GLOBAL))
+    logger.info("ρ global remuestreando distritos con %d réplicas…", b_global)
+    g = salida["global_distrito"]
+    if g.get("evaluable"):
+        preciso = est.spearman_cluster(cp[renta_d], cp["price"],
+                                       {"cluster_zona": cp["codigo_distrito_ine"].astype("string")}, b_global,
+                                       np.random.default_rng([semilla, config.SUBSEMILLA_RHO_GLOBAL]))
+        g["cluster_zona_replicas_generales"] = g["cluster_zona"]
+        g["cluster_zona"] = {**preciso["cluster_zona"], "n_boot": b_global,
+                             **est.lectura_significacion(preciso["cluster_zona"], b_global)}
+    salida["n_boot_global"] = b_global
     salida["global_municipio"] = _rho(cp, renta_m, "codigo_municipio_ine")
 
     por_ciudad = []
@@ -352,6 +366,16 @@ def renta_precio(df: pd.DataFrame, n_boot: int, rng: np.random.Generator) -> dic
     salida["n_ciudades_negativas_holm"] = int(sum(
         f["distrito"]["rho"] < 0 and f["distrito"].get("holm", {}).get("significativo_holm", False)
         for f in evaluables))
+    salida["n_ciudades_positivas"] = int(sum(f["distrito"]["rho"] > 0 for f in evaluables))
+    # Pocos distritos por ciudad urbana → el bootstrap por clusters es inestable y el recuento tras Holm, orientativo.
+    n_dis_urb = [f["distrito"]["cluster_zona"]["n_clusters"] for f in evaluables
+                 if config.CIUDADES_ESPANA[f["clave"]].tipo == config.TIPO_URBANA]
+    salida["n_distritos_urbanas_min"] = int(min(n_dis_urb)) if n_dis_urb else None
+    salida["n_distritos_urbanas_max"] = int(max(n_dis_urb)) if n_dis_urb else None
+    eco_eval = [f for f in por_ciudad if f["ecologico"].get("evaluable")]
+    salida["n_ciudades_ecologico_evaluables"] = len(eco_eval)
+    salida["n_ciudades_ecologico_positivo_significativo"] = int(sum(
+        f["ecologico"]["rho"] > 0 and f["ecologico"]["significativo"] for f in eco_eval))
     salida["rho_ciudad_max"] = max(evaluables, key=lambda f: f["distrito"]["rho"]) if evaluables else None
     salida["rho_ciudad_min"] = min(evaluables, key=lambda f: f["distrito"]["rho"]) if evaluables else None
     salida["ecologico_global"] = correlacion_ecologica(cp, renta_d, "codigo_distrito_ine")
@@ -432,7 +456,7 @@ def ejecutar(df: pd.DataFrame, semilla: int, n_boot: int, con_ml: bool) -> tuple
                       "tipo": boot_tipo, "ciudades": boot_ciudad,
                       "top_ciudad_distinguible": boot_ciudad[0]["ic_inf_cluster"] > boot_ciudad[1]["ic_sup_cluster"]}
 
-    r["renta_precio"] = renta_precio(df, n_boot, rng)
+    r["renta_precio"] = renta_precio(df, n_boot, rng, semilla)
 
     logger.info("Sensibilidad de los contrastes: un anuncio por anfitrión…")
     uno = est.un_anuncio_por_host(cp, rng)
