@@ -127,6 +127,9 @@ INTERPRETATIVAS: list[_Afirmacion] = [
      lambda f: abs(RP(f)["global_distrito"]["rho"]) < 0.1),
     ("renta_global_no_significativa", "La ρ global no es significativa remuestreando distritos",
      lambda f: not RP(f)["global_distrito"]["cluster_zona"]["significativo"]),
+    ("renta_global_en_el_limite", "El p bootstrap de la ρ global está en el límite de la significación (p cerca "
+                                  "de α o IC que roza el 0)",
+     lambda f: RP(f)["global_distrito"]["cluster_zona"]["en_el_limite"]),
     ("renta_global_significativa_anfitrion", "Remuestreando solo anfitriones la ρ global sí sería significativa",
      lambda f: RP(f)["global_distrito"]["cluster_anfitrion"]["significativo"]),
     ("renta_ciudades_todas_positivas", "Dentro de cada ciudad la ρ renta-precio es positiva",

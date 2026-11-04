@@ -185,11 +185,13 @@ print(f"IC remuestreando anfitriones = [{fmt.n3(g['cluster_anfitrion']['ic_inf']
 lectura(f"**Lectura.** La correlación global entre la renta del distrito y el precio es muy débil "
         f"(ρ = {fmt.n3(g['rho'])}). El p asintótico ({fmt.pvalor(rho_celda.pvalue)}) daría una falsa sensación de "
         f"certeza. Remuestreando los {fmt.n0(g['cluster_zona']['n_clusters'])} distritos, el IC 95 % va de "
-        f"{fmt.n3(g['cluster_zona']['ic_inf'])} a {fmt.n3(g['cluster_zona']['ic_sup'])} y el p bootstrap es "
-        f"{fmt.n3(g['cluster_zona']['p_boot'])}: "
-        f"{'en el límite de la significación' if g['cluster_zona']['p_boot'] >= 0.01 else 'significativo'}, y en "
-        "cualquier caso la magnitud es pequeña. Remuestreando solo anfitriones el intervalo es mucho más estrecho, "
-        "porque ignora que la renta solo varía entre distritos.")
+        f"{fmt.n3(g['cluster_zona']['ic_inf'])} a {fmt.n3(g['cluster_zona']['ic_sup'])} y el p bootstrap, con "
+        f"{fmt.n0(g['cluster_zona']['n_boot'])} réplicas, es {fmt.n3(g['cluster_zona']['p_boot'])}. Lectura: "
+        f"**{g['cluster_zona']['lectura']}**"
+        + (f" (p ≈ {fmt.n2(config.ALFA)} y un IC que roza el 0; según la semilla, el p cae a un lado u otro de α)"
+           if g["cluster_zona"]["en_el_limite"] else "")
+        + ". En cualquier caso la magnitud es pequeña. Remuestreando solo anfitriones el intervalo es mucho más "
+        "estrecho, porque ignora que la renta solo varía entre distritos.")
 
 # %%
 viz.fig_renta_precio_zonas(df, findings);
@@ -223,10 +225,12 @@ viz.fig_spearman_ciudad(findings);
 
 # %%
 sig = tabla_rp[tabla_rp["p_holm"] < config.ALFA]["ciudad"].tolist()
-lectura(f"**Lectura.** Dentro de cada ciudad la correlación es positiva en {(tabla_rp['rho'] > 0).sum()} de las {len(tabla_rp)} zonas, de "
+lectura(f"**Lectura.** Como estimación puntual, la correlación es positiva en {(tabla_rp['rho'] > 0).sum()} de las {len(tabla_rp)} zonas, de "
         f"{fmt.n3(tabla_rp['rho'].min())} en {tabla_rp.loc[tabla_rp['rho'].idxmin(), 'ciudad']} a "
         f"{fmt.n3(tabla_rp['rho'].max())} en {tabla_rp.loc[tabla_rp['rho'].idxmax(), 'ciudad']}. Tras Holm son "
-        f"significativas {len(sig)}: {', '.join(sig) or 'ninguna'}. En las ciudades con una o dos decenas de distritos "
+        f"significativas {len(sig)} ({', '.join(sig) or 'ninguna'}), un recuento orientativo: las ciudades urbanas "
+        f"tienen solo {RP['n_distritos_urbanas_min']}-{RP['n_distritos_urbanas_max']} distritos y con tan pocos "
+        "clusters el bootstrap es inestable (otra semilla puede cambiar qué ciudades superan Holm). En las ciudades con una o dos decenas de distritos "
         "los intervalos son anchos, porque la renta solo toma esos pocos valores distintos. La correlación entre "
         "distritos puede ser alta en ellas (cada distrito resume cientos de anuncios), pero con tan pocos puntos es "
         "poco precisa y no permite extrapolar al anuncio individual.")
@@ -382,8 +386,11 @@ pd.Series(E["multiplicidad"], name="número").to_frame()
 # ## Conclusiones
 #
 # 1. **Ciudad y tipo de habitación** se asocian claramente con el precio; el tipo de habitación separa más.
-# 2. **La renta de la zona** se relaciona positivamente con el precio **dentro de cada ciudad**, de forma estable en
-#    todas las sensibilidades, pero con un efecto modesto. Mezclando ciudades la relación casi desaparece.
+# 2. **La renta de la zona** se relaciona positivamente con el precio: la correlación es positiva en todas las
+#    ciudades como estimación puntual y significativa en algunas tras Holm (recuento orientativo, con muy pocos
+#    distritos por ciudad). En la regresión conjunta con efectos fijos de ciudad la asociación es positiva y
+#    conserva el signo en las sensibilidades, pero el efecto es modesto. Mezclando ciudades la relación casi
+#    desaparece: la ρ global está en el límite de la significación.
 # 3. En la regresión con controles, la renta añade poco a la explicación del precio, y en el modelo predictivo
 #    también. **La renta explica poco del precio**: pesan mucho más el tamaño y el tipo del alojamiento, la estancia
 #    mínima y la ciudad.
