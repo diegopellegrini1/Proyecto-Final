@@ -91,13 +91,61 @@ def igual(a, b) -> bool:
 # --------------------------------------------------------------------------
 # Evaluador de las fórmulas del libro (subconjunto de Excel que usa el dashboard)
 # --------------------------------------------------------------------------
+OPERADORES_CRITERIO = (">=", "<=", "<>", ">", "<", "=")
+
+
+def _comodines(texto: str) -> re.Pattern:
+    """Patrón de un criterio de texto de Excel: ``*`` y ``?`` son comodines y ``~`` escapa el siguiente carácter."""
+    partes, i = [], 0
+    while i < len(texto):
+        ch = texto[i]
+        if ch == "~" and i + 1 < len(texto):
+            partes.append(re.escape(texto[i + 1]))
+            i += 2
+            continue
+        partes.append(".*" if ch == "*" else "." if ch == "?" else re.escape(ch))
+        i += 1
+    return re.compile("".join(partes), re.IGNORECASE | re.DOTALL)
+
+
+def _a_numero(texto: str) -> float | None:
+    try:
+        return float(texto.strip())
+    except ValueError:
+        return None
+
+
 def _criterio(arr: np.ndarray, crit) -> np.ndarray:
-    if isinstance(crit, str):
-        if crit == "*":
-            return np.array([isinstance(x, str) and x != "" for x in arr])
-        c = crit.lower()
-        return np.array([isinstance(x, str) and x.lower() == c for x in arr])
-    return np.array([x == crit for x in arr])
+    """Celdas de ``arr`` que cumplen ``crit`` con la semántica de COUNTIFS/AVERAGEIFS de Excel.
+
+    Un criterio de texto que empieza por ``>=``, ``<=``, ``<>``, ``>``, ``<`` o ``=`` es una COMPARACIÓN (el
+    resto es el operando), no un texto literal: «< 50 €» significa «menor que " 50 €"» y no cuenta las celdas
+    que contienen «< 50 €». Sin operador, es igualdad sin distinguir mayúsculas y con comodines ``*``, ``?`` y ``~``.
+    Los números se comparan solo con números y el texto solo con texto (las celdas vacías no cumplen).
+    """
+    if not isinstance(crit, str):
+        return np.array([isinstance(x, (int, float)) and not isinstance(x, bool) and x == crit for x in arr])
+    op = next((o for o in OPERADORES_CRITERIO if crit.startswith(o)), "")
+    operando = crit[len(op):]
+    num = _a_numero(operando)
+    es_texto = lambda x: isinstance(x, str)  # noqa: E731
+    es_num = lambda x: isinstance(x, (int, float)) and not isinstance(x, bool) and not np.isnan(x)  # noqa: E731
+    if op in ("", "="):
+        if num is not None:
+            # Excel también convierte el texto con aspecto de número (p. ej. el código «0801902»).
+            return np.array([(es_num(x) and x == num) or (es_texto(x) and _a_numero(x) == num) for x in arr])
+        patron = _comodines(operando)
+        return np.array([es_texto(x) and patron.fullmatch(x) is not None for x in arr])
+    if op == "<>":
+        if num is not None:
+            return np.array([not (es_num(x) and x == num) for x in arr])
+        patron = _comodines(operando)
+        return np.array([not (es_texto(x) and patron.fullmatch(x) is not None) for x in arr])
+    comparar = {">": np.greater, "<": np.less, ">=": np.greater_equal, "<=": np.less_equal}[op]
+    if num is not None:
+        return np.array([es_num(x) and bool(comparar(x, num)) for x in arr])
+    o = operando.lower()
+    return np.array([es_texto(x) and bool(comparar(x.lower(), o)) for x in arr])
 
 
 def _mascara(pares) -> np.ndarray:
@@ -261,6 +309,87 @@ def test_graficos_nativos_con_titulo_y_texto_alternativo(wb):
         assert not any(n.endswith(".bin") or "vbaProject" in n for n in z.namelist())  # sin macros
 
 
+def test_evaluador_usa_la_semantica_de_criterios_de_excel():
+    """El evaluador interpreta «<», «>», «=» iniciales como operadores (así se habría detectado H1)."""
+    textos = np.array(["< 50 €", "Menos de 50 €", "50-100 €", None], dtype=object)
+    assert _criterio(textos, "< 50 €").sum() == 0                      # «<» es un operador, no texto literal
+    assert _criterio(textos, "Menos de 50 €").tolist() == [False, True, False, False]
+    assert _criterio(textos, "=< 50 €").tolist() == [True, False, False, False]
+    assert _criterio(textos, "*").tolist() == [True, True, True, False]
+    assert _criterio(textos, "menos*").tolist() == [False, True, False, False]
+    assert _criterio(textos, "<>50-100 €").tolist() == [True, True, False, True]
+    numeros = np.array([10.0, 50.0, 120.0, np.nan])
+    assert _criterio(numeros, "<50").tolist() == [True, False, False, False]
+    assert _criterio(numeros, ">=50").tolist() == [False, True, True, False]
+    assert _criterio(np.array(["0801902", "0801903"], dtype=object), "0801902").tolist() == [True, False]
+
+
+def _llamadas(formula: str, funcion: str) -> list[list[str]]:
+    """Argumentos (texto) de cada llamada a ``funcion`` en ``formula``, respetando paréntesis y comillas."""
+    salida = []
+    for m in re.finditer(rf"\b{funcion}\(", formula):
+        i, nivel, actual, args, en_cadena = m.end(), 1, "", [], False
+        while i < len(formula) and nivel:
+            ch = formula[i]
+            if ch == '"':
+                en_cadena = not en_cadena
+            elif not en_cadena and ch == "(":
+                nivel += 1
+            elif not en_cadena and ch == ")":
+                nivel -= 1
+                if nivel == 0:
+                    break
+            if not en_cadena and ch == "," and nivel == 1:
+                args.append(actual)
+                actual = ""
+            else:
+                actual += ch
+            i += 1
+        salida.append([*args, actual])
+    return salida
+
+
+def _empieza_por_operador(v) -> bool:
+    return isinstance(v, str) and v[:1] in ("<", ">", "=")
+
+
+def test_ningun_criterio_empieza_por_operador(wb):
+    """Ninguna celda o valor usado como criterio de COUNTIFS/AVERAGEIFS (ni como etiqueta comparada en
+    MEDIAN(IF())/PERCENTILE(IF())) empieza por «<», «>» o «=» (H1: «< 50 €» contaba 0 en Excel)."""
+    ev = Evaluador(wb)
+    revisados = 0
+    for hoja, coord, f in celdas_formula(wb):
+        criterios = [a for args in _llamadas(f, "COUNTIFS") for a in args[1::2]]
+        criterios += [a for args in _llamadas(f, "AVERAGEIFS") for a in args[2::2]]
+        criterios += re.findall(r"\(d\w+=(\$?[A-Z]{1,3}\$?\d+|[a-z]+[A-Z]\w*)\)", f)
+        for crit in criterios:
+            valor = ev.evaluar("=" + crit.strip(), hoja)
+            assert not _empieza_por_operador(valor), (hoja, coord, crit, valor)
+            revisados += 1
+    assert revisados > 300
+    # Los criterios que dependen de los desplegables toman cualquier valor de sus listas.
+    for lista in ("listaCiudades", "listaTipos", "listaCapacidades"):
+        assert not any(_empieza_por_operador(v) for v in ev.nombre(lista)), lista
+    # Y ninguna etiqueta de las columnas de texto usadas como rango de criterio.
+    for nombre in ("dTramoPrecio", "dTramoCap", "dCiudad", "dTipo"):
+        assert not any(_empieza_por_operador(v) for v in set(ev.nombre(nombre))), nombre
+
+
+def test_tramo_mas_barato_cuenta_lo_mismo_que_pandas(wb, pandas_ref):
+    """La primera barra del gráfico de tramos de precio (H1) con criterios de Excel frente a pandas."""
+    r = _bloque(wb, "Anuncios por tramo de precio")
+    assert wb["Cálculos"].cell(r, 1).value == f"Menos de {config.LIMITES_TRAMOS_PRECIO_EXCEL[0]} €"
+    for ciudad, tipo in [("Todas", "Todos"), *COMBINACIONES]:
+        ev = Evaluador(wb, {"selCiudad": ciudad, "selTipo": tipo})
+        m = pandas_ref["price"] < config.LIMITES_TRAMOS_PRECIO_EXCEL[0]
+        if ciudad != "Todas":
+            m &= pandas_ref["nombre"] == ciudad
+        if tipo != "Todos":
+            m &= pandas_ref["tipo_habitacion"] == tipo
+        assert ev.celda("Cálculos", f"B{r}") == int(m.sum()), (ciudad, tipo)
+    assert Evaluador(wb).celda("Cálculos", f"B{r}") > 0
+
+
 def test_formulas_compatibles_excel_2016(wb):
     formulas = list(celdas_formula(wb))
     assert len(formulas) > 300
@@ -405,6 +534,12 @@ def test_resumen_y_renta_leen_findings(cache, findings):
         assert igual(cache[("Resumen ciudades", f"H{fila}")], c["mediana"])
     rp = findings["estadistica"]["renta_precio"]
     assert igual(cache[("Renta y precio", "D6")], rp["global_distrito"]["rho"])
+    # España no tiene Holm: la columna da la lectura prudente del p bootstrap (H2), nunca un «Sí» suelto.
+    gz = rp["global_distrito"]["cluster_zona"]
+    assert cache[("Renta y precio", "H6")] == "No aplica"
+    assert cache[("Renta y precio", "I6")] == gz["lectura"].capitalize()
+    if gz["en_el_limite"]:
+        assert cache[("Renta y precio", "I6")] == "En el límite"
     for i, c in enumerate(rp["por_ciudad"]):
         assert cache[("Renta y precio", f"B{7 + i}")] == c["ciudad"]
         assert igual(cache[("Renta y precio", f"D{7 + i}")], c["distrito"]["rho"])

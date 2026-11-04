@@ -137,7 +137,8 @@ def fig_precio_por_ciudad(df: pd.DataFrame) -> Figure:
     fig, ax = plt.subplots(figsize=(10, 6.5))
     _boxplot_horizontal(ax, orden, datos, [COLORES_CIUDAD[c] for c in orden])
     _ticks_log_euros(ax, MARCAS_EUROS)
-    ax.set(title="Precio por noche según ciudad o región (escala logarítmica; caja = Q1–Q3, línea = mediana)",
+    ax.set(title="Precio por noche según ciudad o región (escala logarítmica; caja = Q1–Q3, línea = mediana)\n"
+                 "Bigotes: hasta el dato más extremo a 1,5 × RIC de la caja; los atípicos no se dibujan",
            xlabel="Precio por noche (escala log)")
     return fig
 
@@ -329,23 +330,29 @@ def fig_spearman_ciudad(hallazgos: dict[str, Any]) -> Figure:
     filas = [f for f in rp["por_ciudad"] if f["distrito"].get("evaluable")]
     g = rp["global_distrito"]
     etiquetas = [f"{f['ciudad']} (n = {fmt.n0(f['distrito']['n'])}; {fmt.n0(f['distrito']['cluster_zona']['n_clusters'])} distritos)"
-                 for f in filas] + [f"Total 9 ciudades (n = {fmt.n0(g['n'])})"]
+                 for f in filas]
+    # El total no lleva Holm: se dibuja aparte (negro, cuadrado) con su lectura prudente del p bootstrap.
+    gz = g["cluster_zona"]
+    etiquetas.append(f"Total {len(filas)} ciudades (n = {fmt.n0(g['n'])})\n"
+                     f"{gz.get('lectura', '')}: p bootstrap = {fmt.n3(gz['p_boot'])}")
     rho = [f["distrito"]["rho"] for f in filas] + [g["rho"]]
-    inf = [f["distrito"]["cluster_zona"]["ic_inf"] for f in filas] + [g["cluster_zona"]["ic_inf"]]
-    sup = [f["distrito"]["cluster_zona"]["ic_sup"] for f in filas] + [g["cluster_zona"]["ic_sup"]]
-    sig = [f["distrito"].get("holm", {}).get("significativo_holm", False) for f in filas] + \
-          [g["cluster_zona"]["significativo"]]
+    inf = [f["distrito"]["cluster_zona"]["ic_inf"] for f in filas] + [gz["ic_inf"]]
+    sup = [f["distrito"]["cluster_zona"]["ic_sup"] for f in filas] + [gz["ic_sup"]]
+    colores = [PALETA[0] if f["distrito"].get("holm", {}).get("significativo_holm", False) else GRIS
+               for f in filas] + ["black"]
+    marcas = ["o"] * len(filas) + ["s"]
     y = np.arange(len(rho))
-    fig, ax = plt.subplots(figsize=(10, 6))
-    for yi, r, a, b, s in zip(y, rho, inf, sup, sig):
-        color = PALETA[0] if s else GRIS
-        ax.errorbar(r, yi, xerr=[[r - a], [b - r]], fmt="o", color=color, ecolor=color, capsize=4)
+    fig, ax = plt.subplots(figsize=(10, 6.4))
+    for yi, r, a, b, color, m in zip(y, rho, inf, sup, colores, marcas):
+        ax.errorbar(r, yi, xerr=[[r - a], [b - r]], fmt=m, color=color, ecolor=color, capsize=4)
     ax.axvline(0, color="black", lw=0.8)
+    ax.axhline(len(filas) - 0.5, color=GRIS, lw=0.6, ls=":")
     ax.set_yticks(y, etiquetas)
     ax.invert_yaxis()
     ax.set_xlim(-1, 1)
     ax.set(title="Renta neta por persona del distrito (INE) y precio: ρ de Spearman por ciudad\n"
-                 "IC 95 % bootstrap remuestreando distritos censales; gris = no significativo tras Holm",
+                 "IC 95 % bootstrap remuestreando distritos censales; azul = significativo tras Holm, gris = no;\n"
+                 "total en negro (sin Holm; su lectura figura en la etiqueta)",
            xlabel="ρ de Spearman (anuncio a anuncio)")
     return fig
 

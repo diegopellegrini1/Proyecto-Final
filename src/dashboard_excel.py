@@ -44,7 +44,6 @@ TITULO_VISTA_PREVIA = "Vista previa generada con Python de los gráficos del das
 AVISO_MUESTRA = "Muestra pequeña: interpretar con cautela"
 AVISO_SIN_DATOS = "Sin anuncios con precio para esta combinación"
 SIN_DATO = ""                     # valor que muestran las fórmulas cuando no hay anuncios (IFERROR)
-MARGEN_P_FRAGIL = 0.01            # |p − α| por debajo del cual se avisa de que la significación es frágil
 
 # Paleta sobria y apta para daltónicos (Okabe-Ito) y colores neutros.
 AZUL, AZUL_OSCURO, AZUL_CLARO = "#0072B2", "#1F3B57", "#E8F1F8"
@@ -101,9 +100,13 @@ SI, NO = "Sí", "No"
 
 
 def etiquetas_tramos_precio() -> list[str]:
-    """Etiquetas de los tramos de precio [a, b): «< 50 €», «50-100 €», …, «≥ 500 €»."""
+    """Etiquetas de los tramos de precio [a, b): «Menos de 50 €», «50-100 €», …, «500 € o más».
+
+    Ninguna empieza por «<», «>» o «=»: en un criterio de COUNTIFS Excel leería ese primer carácter como
+    un operador de comparación y el tramo contaría 0 anuncios.
+    """
     lim = config.LIMITES_TRAMOS_PRECIO_EXCEL
-    return ([f"< {lim[0]} €"] + [f"{a}-{b} €" for a, b in zip(lim, lim[1:])] + [f"≥ {lim[-1]} €"])
+    return ([f"Menos de {lim[0]} €"] + [f"{a}-{b} €" for a, b in zip(lim, lim[1:])] + [f"{lim[-1]} € o más"])
 
 
 def tramo_precio(precio: pd.Series) -> pd.Series:
@@ -574,8 +577,11 @@ def _hoja_dashboard(lb: _Libro, pos: dict[str, Any], tablas: dict[str, pd.DataFr
         _formula(ws, 7, 1 + j, formula, f[fmt], valor)
     ws.merge_range(8, 1, 8, 8, "Precio = cotización por noche de Airbnb con los descuentos aplicados y sin tasas (no "
                                "es el precio pagado). Renta: INE, distrito censal, año " + str(findings["meta"]["anio_ine"])
-                   + ". Las relaciones son asociaciones, no efectos causales.", f["nota"])
-    ws.set_row(8, 28)
+                   + ". Todas las tarjetas, incluidos los % de superhost y de anfitriones con varios anuncios, se "
+                     "calculan sobre los anuncios CON PRECIO (el README y el informe dan esos % sobre todos los "
+                     "anuncios, por eso difieren un poco). Las relaciones son asociaciones, no efectos causales.",
+                   f["nota"])
+    ws.set_row(8, 42)
     ws.freeze_panes(9, 0)
     hc = HOJA_CALCULOS
     ct = pos["celdas_titulo"]
@@ -711,7 +717,8 @@ def _hoja_renta(lb: _Libro, findings: dict[str, Any]) -> None:
                            g["cluster_zona"]["p_boot"])):
         ws.write_number(fila, 3 + j, v, f["total_dec3"])
     ws.write(fila, 7, "No aplica", f["total"])
-    ws.write(fila, 8, SI if g["cluster_zona"]["significativo"] else NO, f["total"])
+    # Sin Holm: se muestra la lectura prudente del p bootstrap (p. ej. «En el límite»), no un Sí/No.
+    ws.write(fila, 8, str(g["cluster_zona"]["lectura"]).capitalize(), f["total"])
     for c in rp["por_ciudad"]:
         fila += 1
         d = c["distrito"]
@@ -725,7 +732,13 @@ def _hoja_renta(lb: _Libro, findings: dict[str, Any]) -> None:
                                           "min_type": "num", "min_value": 0})
     fila += 1
     ws.merge_range(fila, 1, fila, 8, "IC 95 % y p por bootstrap remuestreando distritos censales (la renta solo varía "
-                                     "entre distritos). En España (global) el p es el del bootstrap, sin Holm.", f["nota"])
+                                     "entre distritos). En España (global) no hay Holm: el p sale de "
+                                     f"{formato.n0(g['cluster_zona']['n_boot'])} réplicas y se lee con prudencia "
+                                     f"(«En el límite» si p está cerca de {formato.n2(meta['alfa'])} o el IC roza el 0)."
+                                     " El recuento por "
+                                     "ciudad tras Holm es orientativo: hay ciudades con muy pocos distritos.",
+                   f["nota"])
+    ws.set_row(fila, 30)
     fila += 2
     ws.write(fila, 1, "Regresión OLS sobre ln(precio) con efectos fijos de ciudad (elasticidad)", f["h2"])
     fila += 1
@@ -752,18 +765,23 @@ def _hoja_renta(lb: _Libro, findings: dict[str, Any]) -> None:
     fila += 2
     ws.write(fila, 1, "Cómo leerlo", f["h2"])
     eco = rp["ecologico_global"]
-    p_glob = g["cluster_zona"]["p_boot"]
-    fragil = abs(p_glob - meta["alfa"]) < MARGEN_P_FRAGIL
+    gz = g["cluster_zona"]
+    lecturas = {
+        "en el límite": (f"Está en el límite de la significación (p bootstrap = {formato.n3(gz['p_boot'])} con "
+                         f"{formato.n0(gz['n_boot'])} réplicas, p ≈ {formato.n2(meta['alfa'])}; el IC roza el 0): "
+                         "no se apoya ninguna conclusión en ella."),
+        "significativa": "Es significativa remuestreando distritos, pero débil.",
+        "no significativa": "No es significativa remuestreando distritos.",
+    }
     textos = [
-        (f"Mezclando todas las zonas, la correlación anuncio a anuncio es débil (ρ = {formato.n3(g['rho'])}). "
-         + (f"Su p bootstrap ({formato.n3(p_glob)}) queda {'justo por debajo' if p_glob < meta['alfa'] else 'por encima'}"
-            f" de α = {formato.n2(meta['alfa'])}: es un resultado frágil, que otra semilla podría cambiar."
-            if fragil else ("Es significativa remuestreando distritos." if g["cluster_zona"]["significativo"]
-                            else "No es significativa remuestreando distritos."))),
-        f"Dentro de cada ciudad la relación es {'positiva en todas' if af['renta_ciudades_todas_positivas'] else 'de signo variable'}"
-        f" y modesta (de {formato.n2(rp['rho_ciudad_min']['distrito']['rho'])} a "
-        f"{formato.n2(rp['rho_ciudad_max']['distrito']['rho'])}); es significativa tras Holm en "
-        f"{rp['n_ciudades_positivas_holm']} de {rp['n_ciudades_evaluables']}.",
+        f"Mezclando todas las zonas, la correlación anuncio a anuncio es débil (ρ = {formato.n3(g['rho'])}). "
+        + lecturas[gz["lectura"]],
+        f"Por ciudad, la estimación puntual es positiva en {rp['n_ciudades_positivas']} de "
+        f"{rp['n_ciudades_evaluables']} y modesta (de {formato.n2(rp['rho_ciudad_min']['distrito']['rho'])} a "
+        f"{formato.n2(rp['rho_ciudad_max']['distrito']['rho'])}); tras Holm es significativa en "
+        f"{rp['n_ciudades_positivas_holm']}. Es un recuento orientativo: las ciudades urbanas tienen solo "
+        f"{rp['n_distritos_urbanas_min']}-{rp['n_distritos_urbanas_max']} distritos y el bootstrap por distritos "
+        "es inestable con tan pocos.",
         f"Entre distritos de toda España (cada distrito con al menos {config.MIN_N_GRUPO} anuncios cuenta una vez), "
         f"ρ = {formato.n3(eco['rho'])} ({formato.p_texto(eco['p'])}): "
         + ("sin relación significativa." if not eco["significativo"] else "relación significativa."),
@@ -1072,6 +1090,9 @@ Ninguna cifra está escrita a mano. No tiene macros y funciona sin Python.
   anuncios por tramo de precio y por capacidad (responden a los dos) y mediana por tipo (responde a la ciudad). La
   dispersión renta-precio por distrito censal muestra siempre todos los distritos con al menos {config.MIN_N_GRUPO}
   anuncios con precio.
+- **Base de los porcentajes:** las tarjetas de % superhost y % de anuncios de anfitriones con varios anuncios se
+  calculan sobre los anuncios **con precio** (la hoja {HOJA_DATOS}). El README y el informe dan esos porcentajes sobre
+  **todos** los anuncios, así que difieren ligeramente; no es una incoherencia.
 - **Comparador:** elige ciudad, tipo y capacidad ({cap}).
 - Tramos de precio del gráfico de columnas (intervalos cerrados por la izquierda): {precio}.
 

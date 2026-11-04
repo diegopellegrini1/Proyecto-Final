@@ -135,6 +135,8 @@ def verificar_dashboard(findings: dict) -> list[str]:
 
     rp = findings["estadistica"]["renta_precio"]
     comparar("Renta y precio", "D6", float(rp["global_distrito"]["rho"]))
+    comparar("Renta y precio", "G6", float(rp["global_distrito"]["cluster_zona"]["p_boot"]))
+    comparar("Renta y precio", "I6", str(rp["global_distrito"]["cluster_zona"]["lectura"]).capitalize())
     for i, c in enumerate(rp["por_ciudad"]):
         comparar("Renta y precio", f"B{7 + i}", c["ciudad"])
         comparar("Renta y precio", f"D{7 + i}", float(c["distrito"]["rho"]))
